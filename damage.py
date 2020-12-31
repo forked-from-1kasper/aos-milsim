@@ -6,6 +6,7 @@ from pyspades.constants import (
 )
 from pyspades.packet import register_packet_handler
 from pyspades.collision import distance_3d_vector
+from pyspades.common import Vertex3
 from pyspades import contained as loaders
 from piqueserver.commands import command
 from math import pi, exp, sqrt, e, floor
@@ -58,8 +59,19 @@ class Bullet:
 bullets = {
     RIFLE_WEAPON:   Bullet(850, 10.00/1000, 146.9415,  7.62/1000),
     SMG_WEAPON:     Bullet(400,  8.03/1000, 104.7573,  9.00/1000),
-    SHOTGUN_WEAPON: Bullet(457, 38.00/1000,  53.0817, 18.40/1000)
+    SHOTGUN_WEAPON: Bullet(457, 38.00/1000,   5.0817, 18.40/1000)
 }
+
+def energy(bullet, pos1, pos2):
+    dist = distance_3d_vector(pos1, pos2)
+    Δh = pos1.z - pos2.z
+    ΔW = -bullet.mass * g * Δh
+
+    t = (exp(bullet.k * dist) - 1)/(bullet.k * bullet.velocity)
+    v = bullet.velocity / (1 + bullet.k * t * bullet.velocity)
+
+    T = (bullet.mass / 2) * (v ** 2)
+    return T + ΔW
 
 @dataclass
 class Part:
@@ -123,17 +135,7 @@ def apply_script(protocol, connection, config):
             pos2 = player.world_object.position
 
             if not melee:
-                bullet = bullets[self.weapon]
-
-                dist = distance_3d_vector(pos1, pos2)
-                Δh = pos1.z - pos2.z
-                ΔW = -bullet.mass * g * Δh
-
-                t = (exp(bullet.k * dist) - 1)/(bullet.k * bullet.velocity)
-                v = bullet.velocity / (1 + bullet.k * t * bullet.velocity)
-
-                T = (bullet.mass / 2) * (v ** 2)
-                E = T + ΔW
+                E = energy(bullets[self.weapon], pos1, pos2)
                 if E <= 0: return
 
                 val = contained.value
