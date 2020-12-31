@@ -36,7 +36,7 @@ distr = sqrt
 limit = lambda m, M, f: lambda x: max(m, min(M, f(x)))
 scale = lambda x, y, f: lambda z: y * f(z / x)
 
-guaranteed_death_energy = {TORSO: 3000, HEAD: 400, ARMS: 1500, LEGS: 2000}
+guaranteed_death_energy = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
 guaranteed_bleeding_energy = {TORSO: 250, HEAD: 100, ARMS: 200, LEGS: 300}
 
 damage = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
