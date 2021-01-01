@@ -94,7 +94,7 @@ def health(conn, *args):
 
 @command('position')
 def position(conn, *args):
-    return str(self.world_object.position)
+    return str(conn.world_object.position)
 
 def apply_script(protocol, connection, config):
     class DamageProtocol(protocol):
