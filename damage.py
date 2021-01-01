@@ -96,32 +96,48 @@ def health(conn, *args):
 def position(conn, *args):
     return str(conn.world_object.position)
 
+@command('bandage', 'b')
+def bandage(conn, *args):
+    if not conn.hp: return
+    if conn.bandage == 0: return "You do not have a bandage."
+
+    for part in conn.body:
+        if part.bleeding:
+            part.bleeding = False
+            conn.bandage -= 1
+            return f"You have bandaged your {names[part]}"
+
+    return "You are not bleeding."
+
 def apply_script(protocol, connection, config):
     class DamageProtocol(protocol):
         def on_world_update(self):
             τ = time()
             for _, player in self.players.items():
-                if player.last is not None and player.hp is not None and player.hp > 0:
+                if player.last_hp_update is not None and player.hp is not None and player.hp > 0:
                     for _, part in player.body.items():
                         if part.bleeding:
-                            part.hit(bleeding_curve(τ - player.last))
+                            part.hit(bleeding_curve(τ - player.last_hp_update))
                     player.set_hp(player.display(), kill_type=MELEE_KILL)
-                player.last = τ
+                player.last_hp_update = τ
 
             protocol.on_world_update(self)
 
     class DamageConnection(connection):
         def on_connect(self):
-            self.heal()
+            self.reset_health()
             return connection.on_connect(self)
 
         def on_spawn(self, pos):
-            self.heal()
+            self.reset_health()
             return connection.on_spawn(self, pos)
 
-        def heal(self):
-            self.last = None
+        def reset_health(self):
+            self.last_hp_update = None
             self.body = healthy()
+
+            self.bandage = 2
+            self.splint  = 1
 
         @register_packet_handler(loaders.HitPacket)
         def on_hit_recieved(self, contained):
