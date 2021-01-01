@@ -101,11 +101,11 @@ def bandage(conn, *args):
     if not conn.hp: return
     if conn.bandage == 0: return "You do not have a bandage."
 
-    for _, part in conn.body.items():
+    for idx, part in conn.body.items():
         if part.bleeding:
             part.bleeding = False
             conn.bandage -= 1
-            return f"You have bandaged your {names[part]}"
+            return f"You have bandaged your {names[idx]}."
 
     return "You are not bleeding."
 
