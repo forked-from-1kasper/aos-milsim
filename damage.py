@@ -92,6 +92,10 @@ def health(conn, *args):
     except AttributeError:
         return "Body not initialized."
 
+@command('position')
+def position(conn, *args):
+    return str(self.world_object.position)
+
 def apply_script(protocol, connection, config):
     class DamageProtocol(protocol):
         def on_world_update(self):
