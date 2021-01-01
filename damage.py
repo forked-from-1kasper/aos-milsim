@@ -4,12 +4,12 @@ from pyspades.constants import (
     WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
     FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL
 )
+from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
-from pyspades.collision import distance_3d_vector
-from pyspades.common import Vertex3
 from pyspades import contained as loaders
 from piqueserver.commands import command
 from math import pi, exp, sqrt, e, floor
+from pyspades.common import Vertex3
 from dataclasses import dataclass
 from random import choice, random
 from time import time
@@ -27,6 +27,12 @@ shoot_warning = {
     ARMS:  "You got hit in the arm.",
     LEGS:  "You got shot in the leg."
 }
+fracture_warning = {
+    TORSO: "You broke your spine.",
+    HEAD:  "You broke your neck.",
+    ARMS:  "You broke your arm.",
+    LEGS:  "You broke your leg."
+}
 bleeding_warning = "You’re bleeding."
 
 #distr = lambda x: (exp(x) - 1) / (e - 1)
@@ -39,7 +45,7 @@ scale = lambda x, y, f: lambda z: y * f(z / x)
 guaranteed_death_energy = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
 guaranteed_bleeding_energy = {TORSO: 250, HEAD: 100, ARMS: 200, LEGS: 300}
 
-damage = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
+hit = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
 bleeding_prob = lambda part: limit(0, 1, scale(guaranteed_bleeding_energy[part], 1, distr))
 
 randbool = lambda prob: random() <= prob
@@ -78,6 +84,7 @@ class Part:
     hp       : int  = 100
     bleeding : bool = False
     fracture : bool = False
+    splint   : bool = False
 
     def hit(self, value):
         self.hp = max(0, self.hp - value)
@@ -109,6 +116,19 @@ def bandage(conn, *args):
 
     return "You are not bleeding."
 
+@command('splint', 's')
+def splint(conn, *args):
+    if not conn.hp: return
+    if conn.splint == 0: return "You do not have a split."
+
+    for idx, part in conn.body.items():
+        if part.fracture:
+            part.splint = True
+            conn.splint -= 0
+            return f"You put a splint on your {names[idx]}."
+    
+    return "You have no fractures."
+
 def apply_script(protocol, connection, config):
     class DamageProtocol(protocol):
         def on_world_update(self):
@@ -135,6 +155,7 @@ def apply_script(protocol, connection, config):
         def reset_health(self):
             self.last_hp_update = None
             self.body = healthy()
+            self.hp = 100
 
             self.bandage = 2
             self.splint  = 1
@@ -160,16 +181,28 @@ def apply_script(protocol, connection, config):
 
                 val = contained.value
                 kill_type = (HEADSHOT_KILL if contained.value == HEAD else WEAPON_KILL)
-                player.damage(
-                    val, damage(val)(E), hit_by=self,
+                player.hit(
+                    hit(val)(E), part=val, hit_by=self,
                     bleeding=randbool(bleeding_prob(val)(E)),
                     kill_type=kill_type
                 )
             else:
-                player.damage(
-                    choice(parts), floor(50 + 50 * random()),
+                player.hit(
+                    floor(50 + 50 * random()), part=choice(parts),
                     bleeding=True, hit_by=self, kill_type=MELEE_KILL
                 )
+
+        def refill(self, local=False):
+            self.grenades = 3
+            self.blocks   = 50
+            self.bandage  = 2
+            self.splint   = 1
+
+            self.weapon_object.restock()
+
+            if not local:
+                restock = loaders.Restock()
+                self.send_contained(restock)
 
         def display(self):
             total = 1
@@ -182,8 +215,12 @@ def apply_script(protocol, connection, config):
                 if part.bleeding: return True
             return False
 
-        def damage(self, part, value, hit_by=None, kill_type=WEAPON_KILL,
-                   bleeding=False, fracture=False):
+        def can_walk(self):
+            legs = self.body[LEGS]
+            return (not legs.fracture) or (legs.fracture and legs.splint)
+
+        def hit(self, value, hit_by=None, kill_type=WEAPON_KILL,
+                bleeding=False, fracture=False, part=TORSO):
             if hit_by is not None and self.team is hit_by.team:
                 if kill_type == MELEE_KILL: return
                 elif not self.protocol.friendly_fire: return
@@ -197,8 +234,20 @@ def apply_script(protocol, connection, config):
                     self.send_chat(bleeding_warning)
 
                 self.set_hp(self.display(), hit_by=hit_by, kill_type=kill_type)
+                self.body[part].bleeding = bleeding
+                self.body[part].fracture = fracture
 
-            self.body[part].bleeding = bleeding
-            self.body[part].fracture = fracture
+        def _on_fall(self, damage):
+            if not self.hp: return
+            returned = self.on_fall(damage)
+            if returned is False: return
+            elif returned is not None: damage = returned
+
+            self.body[LEGS].hit(damage)
+            if randbool(damage / 100):
+                self.body[LEGS].fracture = True
+                self.send_chat(fracture_warning[LEGS])
+
+            self.set_hp(self.display(), kill_type=FALL_KILL)
 
     return DamageProtocol, DamageConnection
