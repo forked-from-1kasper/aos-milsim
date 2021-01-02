@@ -21,6 +21,9 @@ g      = 9.81
 parts = [TORSO, HEAD, ARMS, LEGS]
 names = {TORSO: "torso", HEAD: "head", ARMS: "arms", LEGS: "legs", MELEE: "melee"}
 
+bounded_damage = lambda min: floor(min + (100 - min) * random())
+SHOVEL_GUARANTEED_DAMAGE = 50
+
 shoot_warning = {
     TORSO: "You got shot in the torso.",
     HEAD:  "You’ve been shot in the head.",
@@ -188,7 +191,7 @@ def apply_script(protocol, connection, config):
                 )
             else:
                 player.hit(
-                    floor(50 + 50 * random()), part=choice(parts),
+                    bounded_damage(SHOVEL_GUARANTEED_DAMAGE), part=choice(parts),
                     bleeding=True, hit_by=self, kill_type=MELEE_KILL
                 )
 
