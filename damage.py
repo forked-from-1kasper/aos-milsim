@@ -2,7 +2,7 @@ from pyspades.constants import (
     TORSO, HEAD, ARMS, LEGS, MELEE,
     RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON,
     WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
-    FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL
+    FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL, GRENADE_DESTROY
 )
 from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
@@ -12,6 +12,7 @@ from math import pi, exp, sqrt, e, floor
 from pyspades.common import Vertex3
 from dataclasses import dataclass
 from random import choice, random
+from itertools import product
 from time import time
 
 ρ      = 1.225 # Air density
@@ -90,6 +91,7 @@ class Part:
     splint   : bool = False
 
     def hit(self, value):
+        if value <= 0: return
         self.hp = max(0, self.hp - value)
 
 healthy = lambda: {TORSO: Part(), HEAD: Part(), ARMS: Part(), LEGS: Part()}
@@ -129,7 +131,7 @@ def splint(conn, *args):
             part.splint = True
             conn.splint -= 0
             return f"You put a splint on your {names[idx]}."
-    
+
     return "You have no fractures."
 
 def apply_script(protocol, connection, config):
@@ -226,7 +228,7 @@ def apply_script(protocol, connection, config):
                 bleeding=False, fracture=False, part=TORSO):
             if hit_by is not None and self.team is hit_by.team:
                 if kill_type == MELEE_KILL: return
-                elif not self.protocol.friendly_fire: return
+                elif (not self.protocol.friendly_fire) and (hit_by.name != self.name): return
 
             self.body[part].hit(value)
 
@@ -252,5 +254,42 @@ def apply_script(protocol, connection, config):
                 self.send_chat(fracture_warning[LEGS])
 
             self.set_hp(self.display(), kill_type=FALL_KILL)
+
+        def grenade_exploded(self, grenade):
+            if self.name is None or self.team.spectator:
+                return
+
+            pos = grenade.position
+            x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
+            if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
+                return
+
+            for _, player in self.protocol.players.items():
+                if not player.hp: continue
+
+                damage = grenade.get_damage(player.world_object.position)
+                if damage == 0: continue
+
+                player.hit(
+                    damage, part=choice(parts), bleeding=True,
+                    hit_by=self, kill_type=GRENADE_KILL
+                )
+
+            for x, y, z in product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2)):
+                if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
+                    continue
+                count = self.protocol.map.destroy_point(x, y, z)
+                if count:
+                    self.total_blocks_removed += count
+                    self.on_block_removed(x, y, z)
+
+            block_action = loaders.BlockAction()
+            block_action.x = x
+            block_action.y = y
+            block_action.z = z
+            block_action.value = GRENADE_DESTROY
+            block_action.player_id = self.player_id
+            self.protocol.broadcast_contained(block_action, save=True)
+            self.protocol.update_entities()
 
     return DamageProtocol, DamageConnection
