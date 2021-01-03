@@ -508,7 +508,7 @@ def apply_script(protocol, connection, config):
             self.send_contained(weapon_reload)
 
         def _on_reload(self):
-            if not self.ammo.continuous:
+            if not self.weapon_object.ammo.continuous:
                 self.send_chat(self.weapon_object.ammo.info())
 
             self.update_hud()
