@@ -50,7 +50,7 @@ scale = lambda x, y, f: lambda z: y * f(z / x)
 
 guaranteed_death_energy    = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
 guaranteed_bleeding_energy = {TORSO:  250, HEAD: 100, ARMS:  200, LEGS:  300}
-guaranteed_fracture_energy = {TORSO: 2300, HEAD: 300, ARMS: 3400, LEGS: 3200}
+guaranteed_fracture_energy = {TORSO: 2700, HEAD: 500, ARMS: 4000, LEGS: 4500}
 
 energy_to_damage = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
 weighted_prob = lambda tbl, part: limit(0, 1, scale(tbl[part], 1, distr))
