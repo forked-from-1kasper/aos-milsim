@@ -27,6 +27,8 @@ names = {TORSO: "torso", HEAD: "head", ARMS: "arms", LEGS: "legs", MELEE: "melee
 bounded_damage = lambda min: floor(min + (100 - min) * random())
 SHOVEL_GUARANTEED_DAMAGE = 50
 
+BANDAGE_WARNING = "Type /b or /bandage to stop bleeding."
+
 shoot_warning = {
     TORSO: "You got shot in the torso.",
     HEAD:  "You’ve been shot in the head.",
@@ -137,7 +139,8 @@ class Magazines(Ammo):
         self.container = [self.capacity] * self.magazines
 
     def info(self):
-        return "{} magazines: {}".format(self.magazines, str(self.container))
+        containers = ", ".join(map(str, self.container))
+        return "{} magazines: {}".format(self.magazines, containers)
 
 @dataclass
 class Heap(Ammo):
@@ -348,6 +351,11 @@ def apply_script(protocol, connection, config):
             self.reset_health()
             return connection.on_spawn(self, pos)
 
+        def on_kill(self, killer, kill_type, grenade):
+            self.reset_health()
+            self.send_chat(BANDAGE_WARNING)
+            return connection.on_kill(self, killer, kill_type, grenade)
+
         def reset_health(self):
             self.last_hp_update = None
             self.body = healthy()
@@ -515,6 +523,6 @@ def apply_script(protocol, connection, config):
 
         def on_shoot_set(self, fire):
             self.update_hud()
-            connection.on_shoot_set(self, fire)
+            return connection.on_shoot_set(self, fire)
 
     return DamageProtocol, DamageConnection
