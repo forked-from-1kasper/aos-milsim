@@ -102,9 +102,23 @@ class Magazines(Ammo):
         self.loaded = 0
         self.restock()
 
-    def reload(self):
+    def noammo(self):
+        for count in self.container:
+            if count != 0:
+                return False
+        return True
+
+    def next(self):
         self.loaded += 1
         self.loaded %= self.magazines
+
+    def reload(self):
+        if self.noammo(): return False
+
+        self.next()
+        while self.container[self.loaded] == 0:
+            self.next()
+
         return False
 
     def full(self):
@@ -117,10 +131,13 @@ class Magazines(Ammo):
         return sum(self.container)
 
     def shoot(self, amount):
-        self.container[self.loaded] = amount
+        self.container[self.loaded] = max(amount, 0)
 
     def restock(self):
         self.container = [self.capacity] * self.magazines
+
+    def info(self):
+        return "{} magazines: {}".format(self.magazines, str(self.container))
 
 @dataclass
 class Heap(Ammo):
@@ -151,10 +168,13 @@ class Heap(Ammo):
         return self.remaining + self.loaded
 
     def shoot(self, amount):
-        self.loaded = amount
+        self.loaded = max(amount, 0)
 
     def restock(self):
         self.remaining = self.stock - self.loaded
+
+    def info(self):
+        return "{} round(s) in reserve".format(self.remaining)
 
 @dataclass
 class Gun:
@@ -273,6 +293,10 @@ def health(conn, *args):
 @command('position')
 def position(conn, *args):
     return str(conn.world_object.position)
+
+@command('weapon')
+def weapon(conn, *args):
+    return conn.weapon_object.ammo.info()
 
 @command('bandage', 'b')
 def bandage(conn, *args):
