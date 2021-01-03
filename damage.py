@@ -337,7 +337,9 @@ def apply_script(protocol, connection, config):
                     for _, part in player.body.items():
                         if part.bleeding:
                             part.hit(bleeding_curve(τ - player.last_hp_update))
-                    player.set_hp(player.display(), kill_type=MELEE_KILL)
+
+                    hp = player.display()
+                    if player.hp != hp: player.set_hp(hp, kill_type=MELEE_KILL)
                 player.last_hp_update = τ
 
             protocol.on_world_update(self)
