@@ -238,7 +238,8 @@ class Weapon:
             if self.ammo.full() or self.shoot:
                 return
 
-        self.send_chat(self.weapon_object.ammo.info())
+        if not self.ammo.continuous:
+            self.send_chat(self.weapon_object.ammo.info())
 
         self.reloading = True
         self.set_shoot(False)
