@@ -1,18 +1,20 @@
 from pyspades.constants import (
     TORSO, HEAD, ARMS, LEGS, MELEE,
-    RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON,
+    RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON, CLIP_TOLERANCE,
     WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
     FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL, GRENADE_DESTROY
 )
 from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
+from math import pi, exp, sqrt, e, floor, ceil
 from pyspades import contained as loaders
 from piqueserver.commands import command
-from math import pi, exp, sqrt, e, floor
+from twisted.internet import reactor
 from pyspades.common import Vertex3
 from dataclasses import dataclass
 from random import choice, random
 from itertools import product
+from typing import Callable
 from time import time
 
 ρ      = 1.225 # Air density
@@ -46,16 +48,17 @@ distr = sqrt
 limit = lambda m, M, f: lambda x: max(m, min(M, f(x)))
 scale = lambda x, y, f: lambda z: y * f(z / x)
 
-guaranteed_death_energy = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
-guaranteed_bleeding_energy = {TORSO: 250, HEAD: 100, ARMS: 200, LEGS: 300}
+guaranteed_death_energy    = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
+guaranteed_bleeding_energy = {TORSO:  250, HEAD: 100, ARMS:  200, LEGS:  300}
+guaranteed_fracture_energy = {TORSO: 2300, HEAD: 300, ARMS: 3400, LEGS: 3200}
 
-hit = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
-bleeding_prob = lambda part: limit(0, 1, scale(guaranteed_bleeding_energy[part], 1, distr))
+energy_to_damage = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
+weighted_prob = lambda tbl, part: limit(0, 1, scale(tbl[part], 1, distr))
 
 randbool = lambda prob: random() <= prob
 
 @dataclass
-class Bullet:
+class Round:
     velocity:  float
     mass:      float
     ballistic: float
@@ -66,22 +69,185 @@ class Bullet:
         self.A = (pi * (self.caliber ** 2)) / 4
         self.k = (ρ * self.drag * self.A) / (2 * self.mass)
 
-bullets = {
-    RIFLE_WEAPON:   Bullet(850, 10.00/1000, 146.9415,  7.62/1000),
-    SMG_WEAPON:     Bullet(400,  8.03/1000, 104.7573,  9.00/1000),
-    SHOTGUN_WEAPON: Bullet(457, 38.00/1000,   5.0817, 18.40/1000)
+    def energy(self, pos1, pos2):
+        dist = distance_3d_vector(pos1, pos2)
+        Δh = pos1.z - pos2.z
+        ΔW = -self.mass * g * Δh
+
+        t = (exp(self.k * dist) - 1)/(self.k * self.velocity)
+        v = self.velocity / (1 + self.k * t * self.velocity)
+
+        T = (self.mass / 2) * (v ** 2)
+        return T + ΔW
+
+    def damage(self, part, pos1, pos2):
+        E = self.energy(pos1, pos2)
+        if E <= 0: return 0
+        else:
+            bleeding = randbool(weighted_prob(guaranteed_bleeding_energy, part)(E))
+            fracture = randbool(weighted_prob(guaranteed_fracture_energy, part)(E))
+            return energy_to_damage(part)(E), bleeding, fracture
+
+class Ammo: pass
+
+@dataclass
+class Magazines(Ammo):
+    # Number of magazines
+    magazines : int
+    # Number of rounds that fit in the weapon at once
+    capacity : int
+
+    def __post_init__(self):
+        self.continuous = False
+        self.loaded = 0
+        self.restock()
+
+    def reload(self):
+        self.loaded += 1
+        self.loaded %= self.magazines
+        return False
+
+    def full(self):
+        return self.total() >= self.capacity * self.magazines
+
+    def current(self):
+        return self.container[self.loaded]
+
+    def total(self):
+        return sum(self.container)
+
+    def shoot(self, amount):
+        self.container[self.loaded] = amount
+
+    def restock(self):
+        self.container = [self.capacity] * self.magazines
+
+@dataclass
+class Heap(Ammo):
+    # Number of rounds that fit in the weapon at once
+    capacity : int
+    # Total number of rounds
+    stock : int
+
+    def __post_init__(self):
+        self.continuous = True
+        self.loaded = self.capacity
+        self.restock()
+
+    def reload(self):
+        if self.loaded < self.capacity:
+            self.loaded += 1
+            self.remaining -= 1
+            return True
+        return False
+
+    def full(self):
+        return self.total() >= self.stock
+
+    def current(self):
+        return self.loaded
+
+    def total(self):
+        return self.remaining + self.loaded
+
+    def shoot(self, amount):
+        self.loaded = amount
+
+    def restock(self):
+        self.remaining = self.stock - self.loaded
+
+@dataclass
+class Gun:
+    ammo : Callable[[], Ammo]
+    # Ammunition type used by weapon
+    round : Round
+    # Time between shots
+    delay : float
+    # Time between reloading and being able to shoot again
+    reload_time : float
+
+@dataclass
+class Weapon:
+    gun             : Gun
+    id              : int
+    reload_callback : Callable
+
+    def __post_init__(self):
+        self.shoot = False
+        self.reloading = False
+        self.shoot_time = None
+        self.next_shot = 0
+        self.start = None
+
+        self.reset()
+
+    def restock(self):
+        self.ammo.restock()
+
+    def reset(self):
+        self.shoot = False
+        if self.reloading:
+            self.reload_call.cancel()
+            self.reloading = False
+
+        self.ammo = self.gun.ammo()
+
+    def set_shoot(self, value: bool) -> None:
+        if value == self.shoot: return
+
+        current_time = reactor.seconds()
+        if value:
+            self.start = current_time
+            if self.ammo.current() <= 0: return
+            elif self.reloading and (not self.ammo.continuous): return
+            self.shoot_time = max(current_time, self.next_shot)
+            if self.reloading:
+                self.reloading = False
+                self.reload_call.cancel()
+        else:
+            ammo = self.ammo.current()
+            self.ammo.shoot(self.get_ammo(True))
+            self.next_shot = self.shoot_time + self.gun.delay * (ammo - self.ammo.current())
+        self.shoot = value
+
+    def reload(self):
+        if self.reloading: return
+
+        ammo = self.get_ammo()
+        if self.ammo.full(): return
+        elif self.ammo.continuous and self.shoot: return
+
+        self.reloading = True
+        self.set_shoot(False)
+        self.ammo.shoot(ammo)
+        self.reload_call = reactor.callLater(self.gun.reload_time, self.on_reload)
+
+    def on_reload(self):
+        self.reloading = False
+        res = self.ammo.reload()
+        self.reload_callback()
+        if res: self.reload()
+
+    def get_ammo(self, no_max: bool = False) -> int:
+        if self.shoot:
+            dt = reactor.seconds() - self.shoot_time
+            ammo = self.ammo.current() - max(0, int(ceil(dt / self.gun.delay)))
+        else:
+            ammo = self.ammo.current()
+        if no_max: return ammo
+        return max(0, ammo)
+
+    def is_empty(self, tolerance=CLIP_TOLERANCE) -> bool:
+        return self.get_ammo(True) < -tolerance or not self.shoot
+
+    def get_damage(self, value, pos1, pos2):
+        return self.gun.round.damage(value, pos1, pos2)
+
+guns = {
+    RIFLE_WEAPON:   Gun(lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000), 0.50, 2.5),
+    SMG_WEAPON:     Gun(lambda: Magazines(4, 30), Round(400,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
+    SHOTGUN_WEAPON: Gun(lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000), 1.00, 0.5)
 }
-
-def energy(bullet, pos1, pos2):
-    dist = distance_3d_vector(pos1, pos2)
-    Δh = pos1.z - pos2.z
-    ΔW = -bullet.mass * g * Δh
-
-    t = (exp(bullet.k * dist) - 1)/(bullet.k * bullet.velocity)
-    v = bullet.velocity / (1 + bullet.k * t * bullet.velocity)
-
-    T = (bullet.mass / 2) * (v ** 2)
-    return T + ΔW
 
 @dataclass
 class Part:
@@ -181,15 +347,14 @@ def apply_script(protocol, connection, config):
             pos2 = player.world_object.position
 
             if not melee:
-                E = energy(bullets[self.weapon], pos1, pos2)
-                if E <= 0: return
+                damage, bleeding, fracture = self.weapon_object.get_damage(contained.value, pos1, pos2)
+                if damage <= 0: return
 
                 val = contained.value
                 kill_type = (HEADSHOT_KILL if contained.value == HEAD else WEAPON_KILL)
                 player.hit(
-                    hit(val)(E), part=val, hit_by=self,
-                    bleeding=randbool(bleeding_prob(val)(E)),
-                    kill_type=kill_type
+                    damage, part=val, hit_by=self, bleeding=bleeding,
+                    fracture=fracture, kill_type=kill_type
                 )
             else:
                 player.hit(
@@ -220,6 +385,11 @@ def apply_script(protocol, connection, config):
                 if part.bleeding: return True
             return False
 
+        def fracture(self):
+            for _, part in self.body.items():
+                if part.fracture: return True
+            return False
+
         def can_walk(self):
             legs = self.body[LEGS]
             return (not legs.fracture) or (legs.fracture and legs.splint)
@@ -237,6 +407,8 @@ def apply_script(protocol, connection, config):
                     self.send_chat(shoot_warning[part])
                 if bleeding and not self.bleeding():
                     self.send_chat(bleeding_warning)
+                if fracture and not self.fracture():
+                    self.send_chat(fracture_warning[part])
 
                 self.set_hp(self.display(), hit_by=hit_by, kill_type=kill_type)
                 self.body[part].bleeding = bleeding
@@ -291,5 +463,30 @@ def apply_script(protocol, connection, config):
             block_action.player_id = self.player_id
             self.protocol.broadcast_contained(block_action, save=True)
             self.protocol.update_entities()
+
+        def set_weapon(self, weapon, local=False, no_kill=False):
+            self.weapon = weapon
+            if self.weapon_object is not None:
+                self.weapon_object.reset()
+            self.weapon_object = Weapon(guns[weapon], weapon, self._on_reload)
+
+            if not local:
+                change_weapon = loaders.ChangeWeapon()
+                self.protocol.broadcast_contained(change_weapon, save=True)
+                if not no_kill: self.kill(kill_type=CLASS_CHANGE_KILL)
+
+        def update_hud(self):
+            weapon_reload = loaders.WeaponReload()
+            weapon_reload.player_id = self.player_id
+            weapon_reload.clip_ammo = self.weapon_object.ammo.current()
+            weapon_reload.reserve_ammo = self.weapon_object.ammo.total()
+            self.send_contained(weapon_reload)
+
+        def _on_reload(self):
+            self.update_hud()
+
+        def on_shoot_set(self, fire):
+            self.update_hud()
+            connection.on_shoot_set(self, fire)
 
     return DamageProtocol, DamageConnection
