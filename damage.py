@@ -234,8 +234,11 @@ class Weapon:
         if self.reloading: return
 
         ammo = self.get_ammo()
-        if self.ammo.full(): return
-        elif self.ammo.continuous and self.shoot: return
+        if self.ammo.continuous:
+            if self.ammo.full() or self.shoot:
+                return
+
+        self.send_chat(self.weapon_object.ammo.info())
 
         self.reloading = True
         self.set_shoot(False)
