@@ -352,7 +352,7 @@ def apply_script(protocol, connection, config):
             return connection.on_spawn(self, pos)
 
         def on_kill(self, killer, kill_type, grenade):
-            self.reset_health()
+            self.body = healthy()
             self.send_chat(BANDAGE_WARNING)
             return connection.on_kill(self, killer, kill_type, grenade)
 
