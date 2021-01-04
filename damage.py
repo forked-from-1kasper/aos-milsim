@@ -482,9 +482,9 @@ def apply_script(protocol, connection, config):
                     hit_by=self, kill_type=GRENADE_KILL
                 )
 
+            if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
+                return
             for x, y, z in product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2)):
-                if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
-                    continue
                 count = self.protocol.map.destroy_point(x, y, z)
                 if count:
                     self.total_blocks_removed += count
