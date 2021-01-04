@@ -84,7 +84,7 @@ class Round:
 
     def damage(self, part, pos1, pos2):
         E = self.energy(pos1, pos2)
-        if E <= 0: return 0
+        if E <= 0: return 0, False, False
         else:
             bleeding = randbool(weighted_prob(guaranteed_bleeding_energy, part)(E))
             fracture = randbool(weighted_prob(guaranteed_fracture_energy, part)(E))
