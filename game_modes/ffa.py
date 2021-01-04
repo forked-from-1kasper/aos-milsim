@@ -32,8 +32,8 @@ WATER_SPAWNS = False
 HIDE_POS = (0, 0, 63)
 
 def show_score(item):
-    name, score = item
-    return "%s (%d kills, %d deaths)" % (name, score.kills, score.deaths)
+    idx, (name, score) = item
+    return "%d) %s (%d kills, %d deaths)" % (idx, name, score.kills, score.deaths)
 
 def game_top(protocol):
     nicknames = sorted(
@@ -41,10 +41,10 @@ def game_top(protocol):
         key = lambda item: snd(item).value(),
         reverse = True
     )
-    top = nicknames[:TOP_SIZE]
+    top = enumerate(nicknames[:TOP_SIZE], start=1)
 
-    if len(top) > 0:
-        return "Top players: " + ", ".join(map(show_score, top))
+    if len(nicknames) > 0:
+        return "Top players\n" + "\n".join(map(show_score, top))
     else:
         return "No players today."
 
@@ -101,7 +101,8 @@ def apply_script(protocol, connection, config):
 
         def send_top(self, init=False):
             if not init:
-                self.broadcast_chat(game_top(self))
+                for line in reversed(game_top(self).split('\n')):
+                    self.broadcast_chat(line)
             reactor.callLater(TOP_FREQUENCY, self.send_top)
 
     class FreeForAllConnection(connection):
