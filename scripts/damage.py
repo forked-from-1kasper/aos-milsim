@@ -472,7 +472,7 @@ def apply_script(protocol, connection, config):
                 return
 
             for _, player in self.protocol.players.items():
-                if not player.hp: continue
+                if not player or not player.hp or not player.world_object: continue
 
                 damage = grenade.get_damage(player.world_object.position)
                 if damage == 0: continue
