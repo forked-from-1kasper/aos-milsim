@@ -55,6 +55,16 @@ def mine(conn, *args):
         else:
             return "You do not have mines."
 
+@restrict("admin", "moderator")
+@command('givemine', 'gm')
+def givemine(conn, *args):
+    conn.mines += 1
+    return "You got a mine."
+
+@command()
+def checkmines(conn, *args):
+    return "You have %d mine(s)." % conn.mines
+
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
         def __init__(self, *arg, **kw):
