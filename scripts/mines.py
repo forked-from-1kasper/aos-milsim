@@ -61,7 +61,7 @@ def givemine(conn, *args):
     conn.mines += 1
     return "You got a mine."
 
-@command()
+@command('checkmines', 'cm')
 def checkmines(conn, *args):
     return "You have %d mine(s)." % conn.mines
 
