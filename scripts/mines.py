@@ -66,8 +66,6 @@ def apply_script(protocol, connection, config):
                 self.mines[pos].explode(self, pos)
                 del self.mines[pos]
 
-            print(self.mines)
-
     class MineConnection(connection):
         def on_spawn(self, pos):
             self.mines = 2
