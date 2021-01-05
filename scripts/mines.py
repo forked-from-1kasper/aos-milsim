@@ -55,8 +55,7 @@ def mine(conn, *args):
         else:
             return "You do not have mines."
 
-@restrict("admin", "moderator")
-@command('givemine', 'gm')
+@command('givemine', 'gm', admin_only=True)
 def givemine(conn, *args):
     conn.mines += 1
     return "You got a mine."
