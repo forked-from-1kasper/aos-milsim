@@ -1,8 +1,8 @@
 from pyspades.constants import (
-    TORSO, HEAD, ARMS, LEGS, MELEE,
+    TORSO, HEAD, ARMS, LEGS, MELEE, SPADE_TOOL,
     RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON, CLIP_TOLERANCE,
     WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
-    FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL, GRENADE_DESTROY
+    FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL, GRENADE_DESTROY,
 )
 from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
@@ -27,7 +27,10 @@ names = {TORSO: "torso", HEAD: "head", ARMS: "arms", LEGS: "legs", MELEE: "melee
 bounded_damage = lambda min: floor(min + (100 - min) * random())
 SHOVEL_GUARANTEED_DAMAGE = 50
 
-BANDAGE_WARNING = "Type /b or /bandage to stop bleeding."
+WARNING_ON_KILL = [
+    "Type /b or /bandage to stop bleeding.",
+    "Type /s or /splint to put a splint."
+]
 
 shoot_warning = {
     TORSO: "You got shot in the torso.",
@@ -269,7 +272,7 @@ class Weapon:
 
 guns = {
     RIFLE_WEAPON:   Gun(lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000), 0.50, 2.5),
-    SMG_WEAPON:     Gun(lambda: Magazines(4, 30), Round(400,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
+    SMG_WEAPON:     Gun(lambda: Magazines(4, 30), Round(500,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
     SHOTGUN_WEAPON: Gun(lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000), 1.00, 0.5)
 }
 
@@ -355,8 +358,26 @@ def apply_script(protocol, connection, config):
 
         def on_kill(self, killer, kill_type, grenade):
             self.body = healthy()
-            self.send_chat(BANDAGE_WARNING)
+            self.send_lines(WARNING_ON_KILL)
             return connection.on_kill(self, killer, kill_type, grenade)
+
+        def reset_tool(self):
+            act = loaders.SetTool()
+            act.player_id = self.player_id
+            act.value = SPADE_TOOL
+            self.send_contained(act)
+            self.protocol.broadcast_contained(act)
+
+        def on_tool_set_attempt(self, tool):
+            if self.body[ARMS].fracture:
+                self.reset_tool()
+                return False
+            else:
+                return connection.on_tool_set_attempt(self, tool)
+
+        def on_block_destroy(self, x, y, z, mode):
+            if self.cannot_work(): return False
+            else: return connection.on_block_destroy(self, x, y, z, mode)
 
         def reset_health(self):
             self.last_hp_update = None
@@ -429,11 +450,18 @@ def apply_script(protocol, connection, config):
             legs = self.body[LEGS]
             return (not legs.fracture) or (legs.fracture and legs.splint)
 
+        def cannot_work(self):
+            arms = self.body[ARMS]
+            return arms.fracture and (not arms.splint)
+
         def hit(self, value, hit_by=None, kill_type=WEAPON_KILL,
                 bleeding=False, fracture=False, part=TORSO):
-            if hit_by is not None and self.team is hit_by.team:
-                if kill_type == MELEE_KILL: return
-                elif (not self.protocol.friendly_fire) and (hit_by.name != self.name): return
+            if hit_by is not None:
+                if self.team is hit_by.team:
+                    if kill_type == MELEE_KILL: return
+                    if (not self.protocol.friendly_fire and
+                        hit_by.name != self.name): return
+                if hit_by.cannot_work(): return
 
             self.body[part].hit(value)
 
@@ -448,6 +476,9 @@ def apply_script(protocol, connection, config):
                 self.set_hp(self.display(), hit_by=hit_by, kill_type=kill_type)
                 self.body[part].bleeding = bleeding
                 self.body[part].fracture = fracture
+
+                if part == ARMS and fracture:
+                    self.reset_tool()
 
         def _on_fall(self, damage):
             if not self.hp: return
