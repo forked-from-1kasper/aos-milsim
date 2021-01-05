@@ -72,6 +72,8 @@ def apply_script(protocol, connection, config):
             return protocol.__init__(self, *arg, **kw)
 
         def on_map_change(self, map):
+            self.scores = {}
+
             extensions = self.map_info.extensions
             if ALWAYS_ENABLED:
                 self.free_for_all = True
