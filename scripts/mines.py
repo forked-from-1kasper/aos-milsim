@@ -72,7 +72,7 @@ def boom(conn, *args):
     if conn.boom_call: return
     def callback():
         if not conn: return
-        pos = conn.world_object.position + Vertex3(0, 1.5, 0)
+        pos = conn.world_object.position + Vertex3(0, 2, 0)
         Mine(conn.player_id).explode(conn.protocol, pos.get())
         conn.boom_call = None
 
