@@ -1,17 +1,12 @@
-from piqueserver.commands import command, restrict
 from pyspades.collision import distance_3d_vector
-from twisted.internet.error import AlreadyCalled
 from pyspades.contained import GrenadePacket
-from twisted.internet import reactor
+from piqueserver.commands import command
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
 from dataclasses import dataclass
-from itertools import product
-from typing import Callable
 
 MINE_ACTIVATE_DISTANCE = 3
 MINE_SET_DISTANCE = 7
-BOOM_DELAY = 5
 MINE = "mine"
 
 @dataclass
@@ -67,17 +62,6 @@ def givemine(conn, *args):
 def checkmines(conn, *args):
     return "You have %d mine(s)." % conn.mines
 
-@command()
-def boom(conn, *args):
-    if conn.boom_call: return
-    def callback():
-        if not conn: return
-        pos = conn.world_object.position + Vertex3(0, 2, 0)
-        Mine(conn.player_id).explode(conn.protocol, pos.get())
-        conn.boom_call = None
-
-    conn.boom_call = reactor.callLater(BOOM_DELAY, callback)
-
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
         def __init__(self, *arg, **kw):
@@ -90,10 +74,6 @@ def apply_script(protocol, connection, config):
                 del self.mines[pos]
 
     class MineConnection(connection):
-        def on_join(self):
-            self.boom_call = None
-            return connection.on_join(self)
-
         def on_spawn(self, pos):
             self.mines = 2
             return connection.on_spawn(self, pos)
@@ -126,14 +106,5 @@ def apply_script(protocol, connection, config):
         def on_block_removed(self, x, y, z):
             self.check_mine()
             return connection.on_block_removed(self, x, y, z)
-
-        def on_kill(self, killer, kill_type, grenade):
-            if self.boom_call:
-                try:
-                    self.boom_call.cancel()
-                except AlreadyCalled:
-                    pass
-                self.boom_call = None
-            return connection.on_kill(self, killer, kill_type, grenade)
 
     return MineProtocol, MineConnection

@@ -2,7 +2,8 @@ from pyspades.constants import (
     TORSO, HEAD, ARMS, LEGS, MELEE, SPADE_TOOL,
     RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON, CLIP_TOLERANCE,
     WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
-    FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL, GRENADE_DESTROY,
+    FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL,
+    GRENADE_DESTROY, DESTROY_BLOCK
 )
 from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
@@ -31,6 +32,7 @@ WARNING_ON_KILL = [
     "Type /b or /bandage to stop bleeding.",
     "Type /s or /splint to put a splint."
 ]
+NO_WARNING = [TEAM_CHANGE_KILL, CLASS_CHANGE_KILL]
 
 shoot_warning = {
     TORSO: "You got shot in the torso.",
@@ -358,7 +360,8 @@ def apply_script(protocol, connection, config):
 
         def on_kill(self, killer, kill_type, grenade):
             self.body = healthy()
-            self.send_lines(WARNING_ON_KILL)
+            if kill_type not in NO_WARNING:
+                self.send_lines(WARNING_ON_KILL)
             return connection.on_kill(self, killer, kill_type, grenade)
 
         def reset_tool(self):
@@ -493,6 +496,24 @@ def apply_script(protocol, connection, config):
 
             self.set_hp(self.display(), kill_type=FALL_KILL)
 
+        def grenade_destroy(self, x, y, z):
+            if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
+                return
+            for x0, y0, z0 in product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2)):
+                count = self.protocol.map.destroy_point(x0, y0, z0)
+                if count:
+                    self.total_blocks_removed += count
+                    self.on_block_removed(x0, y0, z0)
+
+            block_action = loaders.BlockAction()
+            block_action.x = x
+            block_action.y = y
+            block_action.z = z
+            block_action.value = GRENADE_DESTROY
+            block_action.player_id = self.player_id
+            self.protocol.broadcast_contained(block_action, save=True)
+            self.protocol.update_entities()
+
         def grenade_exploded(self, grenade):
             if self.name is None or self.team.spectator:
                 return
@@ -501,6 +522,8 @@ def apply_script(protocol, connection, config):
             x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
             if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
                 return
+
+            self.grenade_destroy(x, y, z)
 
             for _, player in self.protocol.players.items():
                 if not player or not player.hp or not player.world_object: continue
@@ -512,23 +535,6 @@ def apply_script(protocol, connection, config):
                     damage, part=choice(parts), bleeding=True,
                     hit_by=self, kill_type=GRENADE_KILL
                 )
-
-            if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
-                return
-            for x, y, z in product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2)):
-                count = self.protocol.map.destroy_point(x, y, z)
-                if count:
-                    self.total_blocks_removed += count
-                    self.on_block_removed(x, y, z)
-
-            block_action = loaders.BlockAction()
-            block_action.x = x
-            block_action.y = y
-            block_action.z = z
-            block_action.value = GRENADE_DESTROY
-            block_action.player_id = self.player_id
-            self.protocol.broadcast_contained(block_action, save=True)
-            self.protocol.update_entities()
 
         def set_weapon(self, weapon, local=False, no_kill=False):
             self.weapon = weapon
