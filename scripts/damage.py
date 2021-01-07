@@ -351,7 +351,6 @@ def apply_script(protocol, connection, config):
 
     class DamageConnection(connection):
         def on_connect(self):
-            self.fall_pack = None
             self.reset_health()
             return connection.on_connect(self)
 
@@ -485,9 +484,7 @@ def apply_script(protocol, connection, config):
                 if part == LEGS and fracture: self.break_legs()
 
         def break_legs(self):
-            pack = loaders.PositionData()
-            pack.x, pack.y, pack.z = self.world_object.position.get()
-            self.fall_pack = pack
+            pass
 
         def _on_fall(self, damage):
             if not self.hp: return
@@ -570,16 +567,5 @@ def apply_script(protocol, connection, config):
         def on_shoot_set(self, fire):
             self.update_hud()
             return connection.on_shoot_set(self, fire)
-
-        @register_packet_handler(loaders.PositionData)
-        def on_position_update_recieved(self, contained):
-            if not self.hp: return
-
-            if not self.can_walk() and self.fall_pack:
-                self.fall_pack.z = contained.z
-                self.protocol.broadcast_contained(self.fall_pack)
-                return
-
-            connection.on_position_update_recieved(self, contained)
 
     return DamageProtocol, DamageConnection
