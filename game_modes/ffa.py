@@ -70,6 +70,7 @@ def apply_script(protocol, connection, config):
             self.scores = {}
             self.send_top(True)
 
+            extensions = self.map_info.extensions
             self.spawn_borders_x = extensions.get('spawn_borders_x', (0, 511))
             self.spawn_borders_y = extensions.get('spawn_borders_y', (0, 511))
 
