@@ -118,8 +118,8 @@ def apply_script(protocol, connection, config):
         def on_spawn_location(self, pos):
             if not self.score_hack and self.protocol.free_for_all:
                 while True:
-                    x = randint(*self.spawn_borders_x)
-                    y = randint(*self.spawn_borders_y)
+                    x = randint(*self.protocol.spawn_borders_x)
+                    y = randint(*self.protocol.spawn_borders_y)
                     z = self.protocol.map.get_z(x, y)
                     if z != 63 or WATER_SPAWNS:
                         break
