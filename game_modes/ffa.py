@@ -89,6 +89,10 @@ def apply_script(protocol, connection, config):
                 if self.old_friendly_fire is not None:
                     self.friendly_fire = self.old_friendly_fire
                     self.old_friendly_fire = None
+
+            self.spawn_borders_x = extensions.get('spawn_borders_x', (0, 511))
+            self.spawn_borders_y = extensions.get('spawn_borders_y', (0, 511))
+
             return protocol.on_map_change(self, map)
 
         def on_base_spawn(self, x, y, z, base, entity_id):
@@ -113,8 +117,8 @@ def apply_script(protocol, connection, config):
         def on_spawn_location(self, pos):
             if not self.score_hack and self.protocol.free_for_all:
                 while True:
-                    x = randint(0, 511)
-                    y = randint(0, 511)
+                    x = randint(*self.spawn_borders_x)
+                    y = randint(*self.spawn_borders_y)
                     z = self.protocol.map.get_z(x, y)
                     if z != 63 or WATER_SPAWNS:
                         break
@@ -156,3 +160,6 @@ def apply_script(protocol, connection, config):
             return connection.on_kill(self, by, reason, grenade)
 
     return FreeForAllProtocol, FreeForAllConnection
+
+# x : from 238 to 270
+# y : from 99 to 424
