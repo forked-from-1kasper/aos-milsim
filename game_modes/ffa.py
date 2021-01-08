@@ -69,17 +69,16 @@ def apply_script(protocol, connection, config):
         def __init__(self, *arg, **kw):
             self.scores = {}
             self.send_top(True)
-
-            extensions = self.map_info.extensions
-            self.spawn_borders_x = extensions.get('spawn_borders_x', (0, 511))
-            self.spawn_borders_y = extensions.get('spawn_borders_y', (0, 511))
-
             return protocol.__init__(self, *arg, **kw)
 
         def on_map_change(self, map):
             self.scores = {}
 
             extensions = self.map_info.extensions
+
+            self.spawn_borders_x = extensions.get('spawn_borders_x', (0, 511))
+            self.spawn_borders_y = extensions.get('spawn_borders_y', (0, 511))
+
             if ALWAYS_ENABLED:
                 self.free_for_all = True
             else:
