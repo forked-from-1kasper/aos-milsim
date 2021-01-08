@@ -69,6 +69,10 @@ def apply_script(protocol, connection, config):
         def __init__(self, *arg, **kw):
             self.scores = {}
             self.send_top(True)
+
+            self.spawn_borders_x = extensions.get('spawn_borders_x', (0, 511))
+            self.spawn_borders_y = extensions.get('spawn_borders_y', (0, 511))
+
             return protocol.__init__(self, *arg, **kw)
 
         def on_map_change(self, map):
@@ -89,9 +93,6 @@ def apply_script(protocol, connection, config):
                 if self.old_friendly_fire is not None:
                     self.friendly_fire = self.old_friendly_fire
                     self.old_friendly_fire = None
-
-            self.spawn_borders_x = extensions.get('spawn_borders_x', (0, 511))
-            self.spawn_borders_y = extensions.get('spawn_borders_y', (0, 511))
 
             return protocol.on_map_change(self, map)
 
