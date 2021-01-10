@@ -274,7 +274,7 @@ class Weapon:
 
 guns = {
     RIFLE_WEAPON:   Gun(lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000), 0.50, 2.5),
-    SMG_WEAPON:     Gun(lambda: Magazines(4, 30), Round(500,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
+    SMG_WEAPON:     Gun(lambda: Magazines(4, 30), Round(600,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
     SHOTGUN_WEAPON: Gun(lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000), 1.00, 0.5)
 }
 
