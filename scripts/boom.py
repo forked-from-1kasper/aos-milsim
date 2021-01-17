@@ -11,8 +11,9 @@ from math import sqrt, floor
 from random import choice
 
 BOOM_GUARANTEED_KILL_RADIUS = 17
+BOOM_MESSAGE = "ALLAH AKBAR"
 BOOM_RADIUS = 40
-BOOM_DELAY = 5
+BOOM_LIMIT = 60
 
 parts = [TORSO, HEAD, ARMS, LEGS]
 
@@ -38,6 +39,18 @@ def calc_damage(conn, pos1, pos2):
 
 @command()
 def boom(conn, *args):
+    delay = 0
+    if len(args) > 0:
+        delay, *rest = args
+
+        if not delay.isdigit():
+            return "Usage: /boom [delay in seconds]"
+
+        delay = int(delay)
+
+    if delay < 0 or delay > BOOM_LIMIT:
+        return "Delay should be non-negative and less than %d" % BOOM_LIMIT
+
     if conn.boom_call: return
     def callback():
         if not conn: return
@@ -56,6 +69,8 @@ def boom(conn, *args):
             )
             if damage == 0: continue
 
+            player.send_chat(BOOM_MESSAGE, global_message=True)
+
             player.hit(
                 damage, part=choice(parts), bleeding=True,
                 hit_by=conn, kill_type=GRENADE_KILL
@@ -63,7 +78,7 @@ def boom(conn, *args):
 
         conn.boom_call = None
 
-    conn.boom_call = reactor.callLater(BOOM_DELAY, callback)
+    conn.boom_call = reactor.callLater(delay, callback)
 
 def apply_script(protocol, connection, config):
     class BoomConnection(connection):
