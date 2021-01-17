@@ -6,7 +6,7 @@ def elevate(conn, *args):
     if not conn.hp: return
 
     x, y, _ = conn.world_object.position.get()
-    z = conn.protocol.map.get_z(x, y)
+    z = conn.protocol.map.get_z(x, y) - 3
 
     do_move(conn, (x, y, z), silent=True)
 
