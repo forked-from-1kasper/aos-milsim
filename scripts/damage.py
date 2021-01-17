@@ -16,7 +16,6 @@ from dataclasses import dataclass
 from random import choice, random
 from itertools import product
 from typing import Callable
-from time import time
 
 ρ      = 1.225 # Air density
 factor = 0.5191
@@ -336,7 +335,7 @@ def splint(conn, *args):
 def apply_script(protocol, connection, config):
     class DamageProtocol(protocol):
         def on_world_update(self):
-            τ = time()
+            τ = reactor.seconds()
             for _, player in self.players.items():
                 if player.last_hp_update is not None and player.hp is not None and player.hp > 0:
                     for _, part in player.body.items():
@@ -356,6 +355,7 @@ def apply_script(protocol, connection, config):
 
         def on_spawn(self, pos):
             self.reset_health()
+            self.rapid_hack_detect = False
             return connection.on_spawn(self, pos)
 
         def on_kill(self, killer, kill_type, grenade):
