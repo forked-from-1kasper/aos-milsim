@@ -1,9 +1,10 @@
 from pyspades.constants import (
-    TORSO, HEAD, ARMS, LEGS, GRENADE_KILL
+    TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, CHAT_ALL
 )
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from pyspades.collision import distance_3d_vector
 from pyspades.contained import GrenadePacket
+from pyspades import contained as loaders
 from piqueserver.commands import command
 from twisted.internet import reactor
 from pyspades.common import Vertex3
@@ -69,7 +70,12 @@ def boom(conn, *args):
             )
             if damage == 0: continue
 
-            player.send_chat(BOOM_MESSAGE, global_message=True)
+            msg = loaders.ChatMessage()
+            msg.player_id = player.player_id
+            msg.chat_type = CHAT_ALL
+            msg.value = BOOM_MESSAGE
+
+            player.protocol.broadcast_contained(msg)
 
             player.hit(
                 damage, part=choice(parts), bleeding=True,
