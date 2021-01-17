@@ -9,3 +9,6 @@ def elevate(conn, *args):
 
     conn.world_object.set_position(x, y, z)
     conn.on_position_update()
+
+def apply_script(protocol, connection, config):
+    return protocol, connection
