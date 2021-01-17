@@ -355,7 +355,6 @@ def apply_script(protocol, connection, config):
 
         def on_spawn(self, pos):
             self.reset_health()
-            self.rapid_hack_detect = False
             return connection.on_spawn(self, pos)
 
         def on_kill(self, killer, kill_type, grenade):
