@@ -61,6 +61,13 @@ def boom(conn, *args):
         x, y, z = floor(pos.x), floor(pos.y), floor(pos.z) + 3
         conn.grenade_destroy(x, y, z)
 
+        msg = loaders.ChatMessage()
+        msg.player_id = conn.player_id
+        msg.chat_type = CHAT_ALL
+        msg.value = BOOM_MESSAGE
+
+        conn.protocol.broadcast_contained(msg)
+
         for _, player in conn.protocol.players.items():
             if not player or not player.hp or not player.world_object: return
 
@@ -69,13 +76,6 @@ def boom(conn, *args):
                 player.world_object.position
             )
             if damage == 0: continue
-
-            msg = loaders.ChatMessage()
-            msg.player_id = player.player_id
-            msg.chat_type = CHAT_ALL
-            msg.value = BOOM_MESSAGE
-
-            player.protocol.broadcast_contained(msg)
 
             player.hit(
                 damage, part=choice(parts), bleeding=True,
