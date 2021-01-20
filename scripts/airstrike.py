@@ -12,7 +12,8 @@ from functools import partial
 from math import floor, sqrt
 
 AIRBOMB = "airbomb"
-BOMBER_SPEED = 1
+BOMBS_COUNT = 7
+BOMBER_SPEED = 10
 BOMBING_DELAY = 2
 AIRBOMB_DELAY = 3
 AIRBOMB_RADIUS = 10
@@ -47,10 +48,9 @@ def calc_damage(conn, pos1, pos2):
     diff = AIRBOMB_SAFE_DISTANCE - AIRBOMB_GUARANTEED_KILL_RADIUS
     return sqrt(AIRBOMB_SAFE_DISTANCE - dist) * (100 / sqrt(diff))
 
-def airbomb_explode(conn, grenade):
+def airbomb_explode(conn, pos):
     if conn.player_id not in conn.protocol.players: return
 
-    pos = grenade.position
     x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
 
     for i in range(AIRSTRIKE_PASSES):
@@ -79,23 +79,8 @@ def airbomb_explode(conn, grenade):
 def drop_airbomb(conn, x, y, vx, vy):
     if conn.player_id not in conn.protocol.players: return
 
-    pos = Vertex3(x, y, 0)
-    vel = Vertex3(vx, vy, 0)
-
-    orientation = None
-
-    grenade = conn.protocol.world.create_object(
-        Grenade, AIRBOMB_DELAY, pos, orientation, vel,
-        partial(airbomb_explode, conn)
-    )
-    grenade.name = AIRBOMB
-
-    pack = GrenadePacket()
-    pack.value = AIRBOMB_DELAY
-    pack.player_id = conn.player_id
-    pack.position = pos.get()
-    pack.velocity = vel.get()
-    conn.protocol.broadcast_contained(pack)
+    pos = Vertex3(x, y, conn.protocol.map.get_z(x, y))
+    reactor.callLater(AIRBOMB_DELAY, lambda: airbomb_explode(conn, pos))
 
 def do_bombing(conn, x, y, vx, vy, bombs):
     if conn.player_id not in conn.protocol.players: return
@@ -117,11 +102,11 @@ def airbomb(conn, *args):
     if not loc: return
 
     x, y, _ = loc
-    vx, vy, _ = conn.world_object.orientation.get()
 
-    ux, uy = BOMBER_SPEED * vx, BOMBER_SPEED * vy
+    orientation = conn.world_object.orientation
+    v = Vertex3(orientation.x, orientation.y, 0).normal() * BOMBER_SPEED
 
-    do_bombing(conn, x - ux * AIRBOMB_DELAY, y - uy * AIRBOMB_DELAY, ux, uy, 7)
+    do_bombing(conn, x, y, v.x, v.y, BOMBS_COUNT)
 
 def apply_script(protocol, connection, config):
     return protocol, connection
