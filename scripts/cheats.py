@@ -13,8 +13,8 @@ def elevate(conn, *args):
 
 discord = config.section("discord")
 
-invite = discord.option("invite", "<no invite>")
-description = discord.option("description", "Discord")
+invite = discord.option("invite", "<no invite>").get()
+description = discord.option("description", "Discord").get()
 
 @command()
 def discord(conn, *args):
