@@ -73,6 +73,10 @@ def apply_script(protocol, connection, config):
                 self.mines[pos].explode(self, pos)
                 del self.mines[pos]
 
+        def on_map_change(self, map):
+            self.mines = {}
+            return protocol.on_map_change(self, map)
+
     class MineConnection(connection):
         def on_spawn(self, pos):
             self.mines = 2

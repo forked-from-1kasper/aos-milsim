@@ -132,10 +132,16 @@ class Bomber:
     protocol : BaseProtocol
 
     def __post_init__(self):
+        self.init()
+
+    def init(self, by_server=False):
         self.call = None
         self.ready = False
         self.player_id = None
-        reactor.callLater(AIRSTRIKE_INIT_DELAY, self.start)
+        self.preparation = None
+
+        if by_server:
+            self.preparation = reactor.callLater(AIRSTRIKE_INIT_DELAY, self.start)
 
     def point(self, conn):
         if not self.active() and self.ready:
@@ -148,7 +154,7 @@ class Bomber:
         return self.call and self.call.active()
 
     def stop(self, player_id=None):
-        if player_id and player_id != self.player_id:
+        if (player_id and player_id != self.player_id) or not player_id:
             return
 
         if self.call and self.call.active():
@@ -156,6 +162,8 @@ class Bomber:
         self.call = None
 
     def start(self):
+        if self.ready: return
+
         self.protocol.send_chat(
             "<%s> Air support is ready. Over." % self.name,
             global_message=False, team=self.team
@@ -175,6 +183,15 @@ def apply_script(protocol, connection, config):
                 self.team_1.id : Bomber("B-52",   self.team_1, self),
                 self.team_2.id : Bomber("Tu-22M", self.team_2, self)
             }
+
+        def on_map_change(self, map):
+            for bomber in self.bombers.values():
+                if bomber.preparation and bomber.preparation.active():
+                    bomber.preparation.cancel()
+                bomber.stop()
+                bomber.init(by_server=True)
+
+            return protocol.on_map_change(self, map)
 
     class AirstrikeConnection(connection):
         def get_bomber(self):
