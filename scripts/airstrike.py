@@ -34,7 +34,7 @@ AIRSTRIKE_CAST_DISTANCE = 300
 parts = [TORSO, HEAD, ARMS, LEGS]
 shift = lambda val: val + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
 
-def dummy(damage):
+def dummy(*args, **kwargs):
     pass
 
 def explosion_effect(conn, x, y, z):
