@@ -18,7 +18,7 @@ description = discord.option("description", "Discord").get()
 
 @command()
 def discord(conn, *args):
-    return "%s: %s" % (invite, description)
+    return "%s: %s" % (description, invite)
 
 def apply_script(protocol, connection, config):
     return protocol, connection
