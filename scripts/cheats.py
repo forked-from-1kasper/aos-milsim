@@ -1,3 +1,4 @@
+from piqueserver.config import config
 from piqueserver.commands import command
 from piqueserver.core_commands.movement import do_move
 
@@ -9,6 +10,15 @@ def elevate(conn, *args):
     z = conn.protocol.map.get_z(x, y) - 3
 
     do_move(conn, (x, y, z), silent=True)
+
+discord = config.section("discord")
+
+invite = discord.option("invite", "<no invite>")
+description = discord.option("description", "Discord")
+
+@command()
+def discord(conn, *args):
+    return "%s: %s" % (invite, description)
 
 def apply_script(protocol, connection, config):
     return protocol, connection
