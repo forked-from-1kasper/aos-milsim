@@ -123,7 +123,7 @@ def do_airstrike(name, conn, callback):
 
 @command(admin_only=True)
 def gift(conn, *args):
-    do_airstrike("Panavia Tornado ECR", conn)
+    do_airstrike("Panavia Tornado ECR", conn, dummy)
 
 @dataclass
 class Bomber:
