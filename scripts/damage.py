@@ -501,7 +501,7 @@ def apply_script(protocol, connection, config):
 
         def grenade_destroy(self, x, y, z):
             if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
-                return
+                return False
             for x0, y0, z0 in product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2)):
                 count = self.protocol.map.destroy_point(x0, y0, z0)
                 if count:
@@ -516,6 +516,8 @@ def apply_script(protocol, connection, config):
             block_action.player_id = self.player_id
             self.protocol.broadcast_contained(block_action, save=True)
             self.protocol.update_entities()
+
+            return True
 
         def grenade_exploded(self, grenade):
             if self.name is None or self.team.spectator:

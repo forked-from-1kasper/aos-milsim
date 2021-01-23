@@ -82,29 +82,45 @@ def apply_script(protocol, connection, config):
             self.mines = 2
             return connection.refill(self, local)
 
-        def check_mine(self):
+        def check_mine(self, pos0):
             try:
+                touched = []
                 for pos, mine in self.protocol.mines.items():
                     x, y, z = pos
                     dist = distance_3d_vector(
-                        self.world_object.position,
-                        Vertex3(x, y, z)
+                        pos0, Vertex3(x, y, z)
                     )
                     if dist <= MINE_ACTIVATE_DISTANCE:
-                        self.protocol.explode(pos)
+                        touched.append(pos)
+
+                for pos in touched:
+                    self.protocol.explode(pos)
             except RuntimeError:
                 pass
 
         def on_position_update(self):
-            self.check_mine()
+            self.check_mine(self.world_object.position)
             return connection.on_position_update(self)
 
         def on_block_destroy(self, x, y, z, mode):
-            self.check_mine()
+            for pos, mine in self.protocol.mines.items():
+                if pos == (x, y, z):
+                    self.protocol.explode(pos)
+                    break
             return connection.on_block_destroy(self, x, y, z, mode)
 
         def on_block_removed(self, x, y, z):
-            self.check_mine()
+            for pos, mine in self.protocol.mines.items():
+                if pos == (x, y, z):
+                    self.protocol.explode(pos)
+                    break
             return connection.on_block_removed(self, x, y, z)
+
+        def grenade_destroy(self, x, y, z):
+            if connection.grenade_destroy(self, x, y, z):
+                self.check_mine(Vertex3(x, y, z))
+                return True
+            else:
+                return False
 
     return MineProtocol, MineConnection
