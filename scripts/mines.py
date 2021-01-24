@@ -102,29 +102,44 @@ def apply_script(protocol, connection, config):
             except RuntimeError:
                 pass
 
+        def check_mine_by_pos(self, x, y, z):
+            for pos, mine in self.protocol.mines.items():
+                if pos == (x, y, z):
+                    self.protocol.explode(pos)
+                    break
+
         def on_position_update(self):
             self.check_mine(self.world_object.position)
             return connection.on_position_update(self)
 
         def on_block_destroy(self, x, y, z, mode):
-            for pos, mine in self.protocol.mines.items():
-                if pos == (x, y, z):
-                    self.protocol.explode(pos)
-                    break
-            return connection.on_block_destroy(self, x, y, z, mode)
+            if connection.on_block_destroy(self, x, y, z, mode) == False:
+                return False
+            else:
+                self.check_mine_by_pos(x, y, z)
+                return True
 
         def on_block_removed(self, x, y, z):
-            for pos, mine in self.protocol.mines.items():
-                if pos == (x, y, z):
-                    self.protocol.explode(pos)
-                    break
-            return connection.on_block_removed(self, x, y, z)
+            if connection.on_block_removed(self, x, y, z) == False:
+                return False
+            else:
+                self.check_mine_by_pos(x, y, z)
+                return True
 
         def grenade_destroy(self, x, y, z):
-            if connection.grenade_destroy(self, x, y, z):
+            if connection.grenade_destroy(self, x, y, z) == False:
+                return False
+            else:
                 self.check_mine(Vertex3(x, y, z))
                 return True
-            else:
-                return False
+
+        def on_block_build(self, x, y, z):
+            self.check_mine_by_pos(x, y, z + 1)
+            return connection.on_block_build(self, x, y, z)
+
+        def on_line_build(self, points):
+            for (x, y, z) in points:
+                self.check_mine_by_pos(x, y, z + 1)
+            return connection.on_line_build(self, points)
 
     return MineProtocol, MineConnection
