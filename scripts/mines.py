@@ -102,10 +102,10 @@ def apply_script(protocol, connection, config):
             except RuntimeError:
                 pass
 
-        def check_mine_by_pos(self, x, y, z):
+        def check_mine_by_pos(self, positions):
             affected = []
             for pos, mine in self.protocol.mines.items():
-                if pos == (x, y, z) or not self.protocol.map.get_solid(*pos):
+                if pos in positions or not self.protocol.map.get_solid(*pos):
                     affected.append(pos)
 
             for pos in affected:
@@ -119,30 +119,31 @@ def apply_script(protocol, connection, config):
             if connection.on_block_destroy(self, x, y, z, mode) == False:
                 return False
             else:
-                self.check_mine_by_pos(x, y, z)
+                self.check_mine_by_pos([x, y, z])
                 return True
 
         def on_block_removed(self, x, y, z):
             if connection.on_block_removed(self, x, y, z) == False:
                 return False
             else:
-                self.check_mine_by_pos(x, y, z)
+                self.check_mine_by_pos([x, y, z])
                 return True
 
         def grenade_destroy(self, x, y, z):
             if connection.grenade_destroy(self, x, y, z) == False:
                 return False
             else:
+                self.check_mine_by_pos(self.grenade_zone(x, y, z))
                 self.check_mine(Vertex3(x, y, z))
                 return True
 
         def on_block_build(self, x, y, z):
-            self.check_mine_by_pos(x, y, z + 1)
+            self.check_mine_by_pos([x, y, z + 1])
             return connection.on_block_build(self, x, y, z)
 
         def on_line_build(self, points):
             for (x, y, z) in points:
-                self.check_mine_by_pos(x, y, z + 1)
+                self.check_mine_by_pos([x, y, z + 1])
             return connection.on_line_build(self, points)
 
     return MineProtocol, MineConnection

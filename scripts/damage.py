@@ -499,10 +499,13 @@ def apply_script(protocol, connection, config):
             self.break_legs()
             self.set_hp(self.display(), kill_type=FALL_KILL)
 
+        def grenade_zone(self, x, y, z):
+            return product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
+
         def grenade_destroy(self, x, y, z):
             if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
                 return False
-            for x0, y0, z0 in product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2)):
+            for x0, y0, z0 in self.grenade_zone(x, y, z):
                 count = self.protocol.map.destroy_point(x0, y0, z0)
                 if count:
                     self.total_blocks_removed += count
