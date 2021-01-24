@@ -125,6 +125,31 @@ def do_airstrike(name, conn, callback):
 def gift(conn, *args):
     do_airstrike("Panavia Tornado ECR", conn, dummy)
 
+class Ghost:
+    def __init__(self):
+        self.call = None
+        self.ready = False
+        self.player_id = None
+        self.preparation = None
+
+    def init(self, by_server=False):
+        pass
+
+    def point(self, conn):
+        pass
+
+    def active(self):
+        pass
+
+    def stop(self, player_id=None):
+        pass
+
+    def start(self):
+        pass
+
+    def restart(self):
+        pass
+
 @dataclass
 class Bomber:
     name     : str
@@ -180,8 +205,9 @@ def apply_script(protocol, connection, config):
         def __init__(self, *arg, **kw):
             protocol.__init__(self, *arg, **kw)
             self.bombers = {
-                self.team_1.id : Bomber("B-52",   self.team_1, self),
-                self.team_2.id : Bomber("Tu-22M", self.team_2, self)
+                self.team_spectator.id : Ghost(),
+                self.team_1.id         : Bomber("B-52",   self.team_1, self),
+                self.team_2.id         : Bomber("Tu-22M", self.team_2, self)
             }
 
         def on_map_change(self, map):
