@@ -9,6 +9,10 @@ MINE_ACTIVATE_DISTANCE = 3
 MINE_SET_DISTANCE = 7
 MINE = "mine"
 
+def up(pos):
+    x, y, z = pos
+    return (x, y, z + 1)
+
 @dataclass
 class Mine:
     player_id : int
@@ -119,14 +123,14 @@ def apply_script(protocol, connection, config):
             if connection.on_block_destroy(self, x, y, z, mode) == False:
                 return False
             else:
-                self.check_mine_by_pos([x, y, z])
+                self.check_mine_by_pos([(x, y, z)])
                 return True
 
         def on_block_removed(self, x, y, z):
             if connection.on_block_removed(self, x, y, z) == False:
                 return False
             else:
-                self.check_mine_by_pos([x, y, z])
+                self.check_mine_by_pos([(x, y, z)])
                 return True
 
         def grenade_destroy(self, x, y, z):
@@ -138,12 +142,11 @@ def apply_script(protocol, connection, config):
                 return True
 
         def on_block_build(self, x, y, z):
-            self.check_mine_by_pos([x, y, z + 1])
+            self.check_mine_by_pos([(x, y, z + 1)])
             return connection.on_block_build(self, x, y, z)
 
         def on_line_build(self, points):
-            for (x, y, z) in points:
-                self.check_mine_by_pos([x, y, z + 1])
+            self.check_mine_by_pos(map(up, points))
             return connection.on_line_build(self, points)
 
     return MineProtocol, MineConnection
