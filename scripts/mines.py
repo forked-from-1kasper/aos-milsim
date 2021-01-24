@@ -88,25 +88,28 @@ def apply_script(protocol, connection, config):
 
         def check_mine(self, pos0):
             try:
-                touched = []
+                affected = []
                 for pos, mine in self.protocol.mines.items():
                     x, y, z = pos
                     dist = distance_3d_vector(
                         pos0, Vertex3(x, y, z)
                     )
                     if dist <= MINE_ACTIVATE_DISTANCE:
-                        touched.append(pos)
+                        affected.append(pos)
 
-                for pos in touched:
+                for pos in affected:
                     self.protocol.explode(pos)
             except RuntimeError:
                 pass
 
         def check_mine_by_pos(self, x, y, z):
+            affected = []
             for pos, mine in self.protocol.mines.items():
-                if pos == (x, y, z):
-                    self.protocol.explode(pos)
-                    break
+                if pos == (x, y, z) or not self.protocol.map.get_solid(*pos):
+                    affected.append(pos)
+
+            for pos in affected:
+                self.protocol.explode(pos)
 
         def on_position_update(self):
             self.check_mine(self.world_object.position)
