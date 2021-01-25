@@ -1,5 +1,5 @@
 from pyspades.constants import (
-    TORSO, HEAD, ARMS, LEGS, MELEE, SPADE_TOOL,
+    TORSO, HEAD, ARMS, LEGS, MELEE, WEAPON_TOOL, SPADE_TOOL,
     RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON, CLIP_TOLERANCE,
     WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
     FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL,
@@ -25,7 +25,9 @@ parts = [TORSO, HEAD, ARMS, LEGS]
 names = {TORSO: "torso", HEAD: "head", ARMS: "arms", LEGS: "legs", MELEE: "melee"}
 
 bounded_damage = lambda min: floor(min + (100 - min) * random())
+
 SHOVEL_GUARANTEED_DAMAGE = 50
+BLOCK_DESTROY_ENERGY = 2500
 
 WARNING_ON_KILL = [
     "Type /b or /bandage to stop bleeding.",
@@ -379,7 +381,15 @@ def apply_script(protocol, connection, config):
 
         def on_block_destroy(self, x, y, z, mode):
             if self.cannot_work(): return False
-            else: return connection.on_block_destroy(self, x, y, z, mode)
+
+            if mode == DESTROY_BLOCK and self.tool == WEAPON_TOOL:
+                energy = self.weapon_object.gun.round.energy(
+                    self.world_object.position, Vertex3(x, y, z)
+                )
+                if energy <= BLOCK_DESTROY_ENERGY:
+                    return False
+
+            return connection.on_block_destroy(self, x, y, z, mode)
 
         def reset_health(self):
             self.last_hp_update = None
