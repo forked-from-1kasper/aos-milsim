@@ -362,7 +362,7 @@ def apply_script(protocol, connection, config):
         def on_kill(self, killer, kill_type, grenade):
             self.body = healthy()
             if kill_type not in NO_WARNING:
-                self.send_lines(WARNING_ON_KILL)
+                self.send_lines(WARNING_ON_KILL, 'warning')
             return connection.on_kill(self, killer, kill_type, grenade)
 
         def reset_tool(self):
