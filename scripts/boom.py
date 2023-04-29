@@ -23,10 +23,11 @@ def effect(conn):
     pack.value = 0
     pack.player_id = conn.player_id
 
-    pos = conn.world_object.position - Vertex3(0, 0, 1.5)
-    pack.position = pos.get()
-    pack.velocity = (0, 0, 0)
-    conn.protocol.broadcast_contained(pack)
+    if conn.world_object:
+        pos = conn.world_object.position - Vertex3(0, 0, 1.5)
+        pack.position = pos.get()
+        pack.velocity = (0, 0, 0)
+        conn.protocol.broadcast_contained(pack)
 
 def calc_damage(conn, pos1, pos2):
     if not conn.world_object.can_see(pos2.x, pos2.y, pos2.z): return 0
