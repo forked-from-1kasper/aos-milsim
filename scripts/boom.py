@@ -39,7 +39,7 @@ def calc_damage(conn, pos1, pos2):
     diff = BOOM_RADIUS - BOOM_GUARANTEED_KILL_RADIUS
     return sqrt(BOOM_RADIUS - dist) * (100 / sqrt(diff))
 
-@command()
+@command('boom', 'a')
 def boom(conn, *args):
     delay = 0
     if len(args) > 0:
