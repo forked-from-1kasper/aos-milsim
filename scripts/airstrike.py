@@ -109,7 +109,7 @@ def do_airstrike(name, conn, callback):
     loc = conn.world_object.cast_ray(AIRSTRIKE_CAST_DISTANCE)
     if not loc: return
 
-    conn.protocol.send_chat(
+    conn.protocol.broadcast_chat(
         "<%s> Coordinates recieved. Over." % name,
         global_message=False, team=conn.team
     )
@@ -189,7 +189,7 @@ class Bomber:
     def start(self):
         if self.ready: return
 
-        self.protocol.send_chat(
+        self.protocol.broadcast_chat(
             "<%s> Air support is ready. Over." % self.name,
             global_message=False, team=self.team
         )
