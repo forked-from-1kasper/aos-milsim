@@ -125,6 +125,17 @@ def do_airstrike(name, conn, callback):
 def gift(conn, *args):
     do_airstrike("Panavia Tornado ECR", conn, dummy)
 
+@command('air')
+def air(conn, *args):
+    bomber = conn.get_bomber()
+    remaining = bomber.remaining()
+
+    if remaining:
+        approx = (remaining // 10 + 1) * 10
+        bomber.report("Will be ready in %d seconds" % approx)
+    else:
+        bomber.report("Awaiting for coordinates")
+
 class Ghost:
     def __init__(self):
         self.call = None
@@ -280,16 +291,5 @@ def apply_script(protocol, connection, config):
             if res and tool != WEAPON_TOOL:
                 self.revert_airstrike()
             return res
-
-    @command('air')
-    def air(conn, *args):
-        bomber = conn.get_bomber()
-        remaining = bomber.remaining()
-
-        if remaining:
-            approx = (remaining // 10 + 1) * 10
-            bomber.report("Will be ready in %d seconds" % approx)
-        else:
-            bomber.report("Awaiting for coordinates")
 
     return AirstrikeProtocol, AirstrikeConnection
