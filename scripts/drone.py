@@ -15,8 +15,8 @@ from pyspades.team import Team
 from piqueserver.commands import command, get_player, CommandError
 import scripts.blast as blast
 
-MIN_FUSE    = 2
-MAX_FUSE    = 3.4
+MIN_FUSE    = 1.2
+MAX_FUSE    = 3
 DROP_HEIGHT = 15
 
 class Status(Enum):
@@ -178,8 +178,8 @@ def drone(conn, *args):
         if len(args) > 0:
             player = get_player(conn.protocol, args[0], spectators=False)
 
-            if player.team.id == conn.team.id:
-                raise CommandError("Expected enemy's nickname")
+            #if player.team.id == conn.team.id:
+            #    raise CommandError("Expected enemy's nickname")
 
             drone.track(conn, player)
         else:
