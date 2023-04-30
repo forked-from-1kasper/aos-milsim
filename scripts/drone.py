@@ -24,7 +24,7 @@ class Status(Enum):
     awaiting = auto()
     inwork   = auto()
 
-DRONE_INIT_DELAY   = 120
+DRONE_INIT_DELAY   = 90
 DRONE_DELAY        = 240
 DRONE_POLL_DELAY   = 1
 DRONE_POLL_TIMEOUT = 60
