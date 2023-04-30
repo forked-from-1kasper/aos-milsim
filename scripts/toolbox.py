@@ -20,4 +20,9 @@ def discord(conn, *args):
     return "%s: %s" % (description, invite)
 
 def apply_script(protocol, connection, config):
-    return protocol, connection
+    class ToolboxConnection(connection):
+        def on_connect(self):
+            self.chat_limiter._seconds = 0
+            return connection.on_connect(self)
+
+    return protocol, ToolboxConnection

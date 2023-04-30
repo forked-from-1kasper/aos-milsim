@@ -11,7 +11,6 @@ from twisted.internet import reactor
 from pyspades.common import Vertex3
 from dataclasses import dataclass
 from pyspades.team import Team
-from functools import partial
 from math import floor, sqrt
 
 AIRBOMB = "airbomb"
@@ -48,7 +47,8 @@ def explosion_effect(conn, x, y, z):
     pack.velocity = (0, 0, 0)
     conn.protocol.broadcast_contained(pack)
 
-def calc_damage(conn, pos1, pos2):
+def calc_damage(obj, pos1, pos2):
+    if not obj.can_see(pos2.x, pos2.y, pos2.z): return 0
     dist = distance_3d_vector(pos1, pos2)
 
     if dist >= AIRBOMB_SAFE_DISTANCE: return 0
@@ -74,8 +74,7 @@ def airbomb_explode(conn, pos):
     for _, player in conn.protocol.players.items():
         if not player or not player.hp or not player.world_object: return
 
-        if not char.can_see(*player.world_object.position.get()): return
-        damage = calc_damage(conn, pos, player.world_object.position)
+        damage = calc_damage(char, pos, player.world_object.position)
         if damage == 0: continue
 
         player.hit(
@@ -177,10 +176,10 @@ class Bomber:
         self.init()
 
     def init(self, by_server=False):
-        self.call = None
-        self.ready = False
-        self.player_id = None
+        self.player_id   = None
         self.preparation = None
+        self.call        = None
+        self.ready       = False
 
         if by_server:
             self.preparation = reactor.callLater(AIRSTRIKE_INIT_DELAY, self.start)

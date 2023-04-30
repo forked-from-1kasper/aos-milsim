@@ -29,8 +29,8 @@ def effect(conn):
         pack.velocity = (0, 0, 0)
         conn.protocol.broadcast_contained(pack)
 
-def calc_damage(conn, pos1, pos2):
-    if not conn.world_object.can_see(pos2.x, pos2.y, pos2.z): return 0
+def calc_damage(obj, pos1, pos2):
+    if not obj.can_see(pos2.x, pos2.y, pos2.z): return 0
     dist = distance_3d_vector(pos1, pos2)
 
     if dist >= BOOM_RADIUS: return 0
@@ -73,7 +73,7 @@ def boom(conn, *args):
             if not player or not player.hp or not player.world_object: return
 
             damage = calc_damage(
-                conn, conn.world_object.position,
+                conn.world_object, conn.world_object.position,
                 player.world_object.position
             )
             if damage == 0: continue
