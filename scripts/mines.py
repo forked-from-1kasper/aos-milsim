@@ -43,7 +43,7 @@ class Mine:
 def mine(conn, *args):
     loc = conn.world_object.cast_ray(MINE_SET_DISTANCE)
     if not loc:
-        return "You can’t place a mine so far away from yourself."
+        return "You can't place a mine so far away from yourself."
     else:
         if loc in conn.protocol.mines:
             conn.protocol.explode(loc)

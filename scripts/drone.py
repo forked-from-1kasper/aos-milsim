@@ -15,8 +15,9 @@ from pyspades.team import Team
 from piqueserver.commands import command, get_player, CommandError
 import scripts.blast as blast
 
-MIN_FUSE = 3
-MAX_FUSE = 5
+MIN_FUSE    = 2
+MAX_FUSE    = 3.4
+DROP_HEIGHT = 15
 
 class Status(Enum):
     inflight = auto()
@@ -106,7 +107,7 @@ class Drone:
         self.passed += DRONE_POLL_DELAY
 
         if self.passed > DRONE_POLL_TIMEOUT:
-            self.report("Don’t see %s. Awaiting for further instructions" % self.target.name)
+            self.report("Don't see %s. Awaiting for further instructions" % self.target.name)
 
             self.status = Status.awaiting
             self.passed = 0
@@ -121,7 +122,7 @@ class Drone:
         if z <= H:
             fuse = rand(MIN_FUSE, MAX_FUSE)
 
-            position = Vertex3(x, y, 0)
+            position = Vertex3(x, y, DROP_HEIGHT)
             velocity = Vertex3(0, 0, 0)
 
             grenade = self.protocol.world.create_object(
@@ -178,7 +179,7 @@ def drone(conn, *args):
             player = get_player(conn.protocol, args[0], spectators=False)
 
             if player.team.id == conn.team.id:
-                raise CommandError("Expected enemy’s nickname")
+                raise CommandError("Expected enemy's nickname")
 
             drone.track(conn, player)
         else:

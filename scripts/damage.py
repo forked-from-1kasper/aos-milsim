@@ -44,7 +44,7 @@ GRENADE_SAFETY_RADIUS = 30
 
 shoot_warning = {
     TORSO: "You got shot in the torso.",
-    HEAD:  "You’ve been shot in the head.",
+    HEAD:  "You've been shot in the head.",
     ARMS:  "You got hit in the arm.",
     LEGS:  "You got shot in the leg."
 }
@@ -54,7 +54,7 @@ fracture_warning = {
     ARMS:  "You broke your arm.",
     LEGS:  "You broke your leg."
 }
-bleeding_warning = "You’re bleeding."
+bleeding_warning = "You're bleeding."
 
 #distr = lambda x: (exp(x) - 1) / (e - 1)
 #distr = lambda x: log(x + 1) / log(2)
