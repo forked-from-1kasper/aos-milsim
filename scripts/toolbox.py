@@ -1,5 +1,5 @@
-from piqueserver.config import config
 from piqueserver.commands import command
+from piqueserver.config import config
 
 @command(admin_only=True)
 def elevate(conn, *args):
