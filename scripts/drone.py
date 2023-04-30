@@ -178,8 +178,8 @@ def drone(conn, *args):
         if len(args) > 0:
             player = get_player(conn.protocol, args[0], spectators=False)
 
-            #if player.team.id == conn.team.id:
-            #    raise CommandError("Expected enemy's nickname")
+            if player.team.id == conn.team.id:
+                raise CommandError("Expected enemy's nickname")
 
             drone.track(conn, player)
         else:
