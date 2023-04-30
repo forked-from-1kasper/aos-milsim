@@ -150,6 +150,12 @@ class Ghost:
     def restart(self):
         pass
 
+    def report(self, msg):
+        pass
+
+    def remaining(self):
+        pass
+
 @dataclass
 class Bomber:
     name     : str
@@ -189,16 +195,26 @@ class Bomber:
     def start(self):
         if self.ready: return
 
-        self.protocol.broadcast_chat(
-            "<%s> Air support is ready. Over." % self.name,
-            global_message=False, team=self.team
-        )
+        self.report("Air support is ready")
+        self.preparation = None
         self.ready = True
 
     def restart(self):
         self.stop()
         self.ready = False
-        reactor.callLater(AIRSTRIKE_DELAY, self.start)
+        self.preparation = reactor.callLater(AIRSTRIKE_DELAY, self.start)
+
+    def report(self, msg):
+        self.protocol.broadcast_chat(
+            "<%s> %s. Over." % (self.name, msg),
+            global_message=False, team=self.team
+        )
+
+    def remaining(self):
+        if self.preparation:
+            return self.preparation.getTime() - reactor.seconds()
+        else:
+            return None
 
 def apply_script(protocol, connection, config):
     class AirstrikeProtocol(protocol):
@@ -264,5 +280,16 @@ def apply_script(protocol, connection, config):
             if res and tool != WEAPON_TOOL:
                 self.revert_airstrike()
             return res
+
+    @command('air')
+    def air(conn, *args):
+        bomber = conn.get_bomber()
+        remaining = bomber.remaining()
+
+        if remaining:
+            approx = (remaining // 10 + 1) * 10
+            bomber.report("Will be ready in %d seconds" % approx)
+        else:
+            bomber.report("Awaiting for coordinates")
 
     return AirstrikeProtocol, AirstrikeConnection
