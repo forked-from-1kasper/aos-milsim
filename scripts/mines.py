@@ -8,8 +8,8 @@ from pyspades.world import Grenade
 from piqueserver.commands import command
 import scripts.blast as blast
 
-MINE_ACTIVATE_DISTANCE = 3
-MINE_SET_DISTANCE = 7
+MINE_ACTIVATE_DISTANCE = 3.5
+MINE_SET_DISTANCE = 13
 MINE = "mine"
 
 def up(pos):
