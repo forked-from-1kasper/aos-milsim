@@ -1,43 +1,27 @@
-from pyspades.constants import (
-    TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, CHAT_ALL
-)
-from twisted.internet.error import AlreadyCalled, AlreadyCancelled
-from pyspades.collision import distance_3d_vector
-from pyspades.contained import GrenadePacket
-from pyspades import contained as loaders
-from piqueserver.commands import command
-from twisted.internet import reactor
-from pyspades.common import Vertex3
 from math import sqrt, floor
 from random import choice
 
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
+from twisted.internet import reactor
+
+from pyspades.constants import (
+    TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, CHAT_ALL
+)
+from pyspades.collision import distance_3d_vector
+from pyspades.contained import GrenadePacket
+from pyspades import contained as loaders
+from pyspades.common import Vertex3
+
+from piqueserver.commands import command
+import scripts.blast as blast
+
 BOOM_GUARANTEED_KILL_RADIUS = 17
-BOOM_MESSAGE = "ALLAH AKBAR"
 BOOM_RADIUS = 40
+
+BOOM_MESSAGE = "ALLAH AKBAR"
 BOOM_LIMIT = 60
 
 parts = [TORSO, HEAD, ARMS, LEGS]
-
-def effect(conn):
-    pack = GrenadePacket()
-    pack.value = 0
-    pack.player_id = conn.player_id
-
-    if conn.world_object:
-        pos = conn.world_object.position - Vertex3(0, 0, 1.5)
-        pack.position = pos.get()
-        pack.velocity = (0, 0, 0)
-        conn.protocol.broadcast_contained(pack)
-
-def calc_damage(obj, pos1, pos2):
-    if not obj.can_see(pos2.x, pos2.y, pos2.z): return 0
-    dist = distance_3d_vector(pos1, pos2)
-
-    if dist >= BOOM_RADIUS: return 0
-    if dist <= BOOM_GUARANTEED_KILL_RADIUS: return 100
-
-    diff = BOOM_RADIUS - BOOM_GUARANTEED_KILL_RADIUS
-    return sqrt(BOOM_RADIUS - dist) * (100 / sqrt(diff))
 
 @command('boom', 'a')
 def boom(conn, *args):
@@ -55,12 +39,7 @@ def boom(conn, *args):
 
     if conn.boom_call: return
     def callback():
-        if not conn: return
-        effect(conn)
-
-        pos = conn.world_object.position
-        x, y, z = floor(pos.x), floor(pos.y), floor(pos.z) + 3
-        conn.grenade_destroy(x, y, z)
+        if not conn or not conn.world_object: return
 
         msg = loaders.ChatMessage()
         msg.player_id = conn.player_id
@@ -69,19 +48,11 @@ def boom(conn, *args):
 
         conn.protocol.broadcast_contained(msg)
 
-        for _, player in conn.protocol.players.items():
-            if not player or not player.hp or not player.world_object: return
+        pos = conn.world_object.position
+        blast.effect(conn, pos - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0)
 
-            damage = calc_damage(
-                conn.world_object, conn.world_object.position,
-                player.world_object.position
-            )
-            if damage == 0: continue
-
-            player.hit(
-                damage, part=choice(parts), bleeding=True,
-                hit_by=conn, kill_type=GRENADE_KILL
-            )
+        blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, conn, pos)
+        conn.grenade_destroy(floor(pos.x), floor(pos.y), floor(pos.z + 3))
 
         conn.boom_call = None
 

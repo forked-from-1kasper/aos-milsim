@@ -1,17 +1,21 @@
+from random import randint, random, choice
+from dataclasses import dataclass
+from math import floor, sqrt
+
+from twisted.internet import reactor
+
 from pyspades.constants import (
     TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, WEAPON_TOOL
 )
 from pyspades.collision import distance_3d_vector
 from pyspades.world import Grenade, Character
 from pyspades.contained import GrenadePacket
-from random import randint, random, choice
 from pyspades.protocol import BaseProtocol
-from piqueserver.commands import command
-from twisted.internet import reactor
 from pyspades.common import Vertex3
-from dataclasses import dataclass
 from pyspades.team import Team
-from math import floor, sqrt
+
+from piqueserver.commands import command
+import scripts.blast as blast
 
 AIRBOMB = "airbomb"
 
@@ -25,64 +29,29 @@ AIRBOMB_SAFE_DISTANCE = 150
 AIRBOMB_GUARANTEED_KILL_RADIUS = 40
 
 ZOOMV_TIME = 2
-AIRSTRIKE_DELAY = 7 * 60
 AIRSTRIKE_PASSES = 50
+AIRSTRIKE_DELAY = 7 * 60
 AIRSTRIKE_INIT_DELAY = 120
 AIRSTRIKE_CAST_DISTANCE = 300
 
-parts = [TORSO, HEAD, ARMS, LEGS]
 shift = lambda val: val + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
 
 def dummy(*args, **kwargs):
     pass
-
-def explosion_effect(conn, x, y, z):
-    if conn.player_id not in conn.protocol.players: return
-
-    pack = GrenadePacket()
-    pack.value = 0
-    pack.player_id = conn.player_id
-
-    pack.position = (x, y, z)
-    pack.velocity = (0, 0, 0)
-    conn.protocol.broadcast_contained(pack)
-
-def calc_damage(obj, pos1, pos2):
-    if not obj.can_see(pos2.x, pos2.y, pos2.z): return 0
-    dist = distance_3d_vector(pos1, pos2)
-
-    if dist >= AIRBOMB_SAFE_DISTANCE: return 0
-    if dist <= AIRBOMB_GUARANTEED_KILL_RADIUS: return 100
-
-    diff = AIRBOMB_SAFE_DISTANCE - AIRBOMB_GUARANTEED_KILL_RADIUS
-    return sqrt(AIRBOMB_SAFE_DISTANCE - dist) * (100 / sqrt(diff))
 
 def airbomb_explode(conn, pos):
     if conn.player_id not in conn.protocol.players: return
 
     x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
 
+    blast.explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, conn, pos)
+
     for i in range(AIRSTRIKE_PASSES):
         x1, y1 = shift(x), shift(y)
         z1 = conn.protocol.map.get_z(x1, y1)
         conn.grenade_destroy(x1, y1, z1)
 
-        reactor.callLater(random(), explosion_effect, conn, x1, y1, z1)
-
-    # because grenade.hit_test is private
-    char = conn.protocol.world.create_object(Character, pos, None, dummy)
-    for _, player in conn.protocol.players.items():
-        if not player or not player.hp or not player.world_object: return
-
-        damage = calc_damage(char, pos, player.world_object.position)
-        if damage == 0: continue
-
-        player.hit(
-            damage, part=choice(parts), bleeding=True,
-            hit_by=conn, kill_type=GRENADE_KILL
-        )
-
-    char.delete()
+        reactor.callLater(random(), blast.effect, conn, Vertex3(x1, y1, z1), Vertex3(0, 0, 0), 0)
 
 def drop_airbomb(conn, x, y, vx, vy):
     if conn.player_id not in conn.protocol.players: return

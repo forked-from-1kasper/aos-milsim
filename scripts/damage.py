@@ -1,3 +1,11 @@
+from math import pi, exp, sqrt, e, floor, ceil
+from random import choice, random
+from dataclasses import dataclass
+from itertools import product
+from typing import Callable
+
+from twisted.internet import reactor
+
 from pyspades.constants import (
     TORSO, HEAD, ARMS, LEGS, MELEE, WEAPON_TOOL, SPADE_TOOL,
     RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON, CLIP_TOLERANCE,
@@ -7,15 +15,11 @@ from pyspades.constants import (
 )
 from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
-from math import pi, exp, sqrt, e, floor, ceil
 from pyspades import contained as loaders
-from piqueserver.commands import command
-from twisted.internet import reactor
 from pyspades.common import Vertex3
-from dataclasses import dataclass
-from random import choice, random
-from itertools import product
-from typing import Callable
+
+from piqueserver.commands import command
+import scripts.blast as blast
 
 ρ      = 1.225 # Air density
 factor = 0.5191
@@ -34,6 +38,9 @@ WARNING_ON_KILL = [
     "Type /s or /splint to put a splint."
 ]
 NO_WARNING = [TEAM_CHANGE_KILL, CLASS_CHANGE_KILL]
+
+GRENADE_LETHAL_RADIUS = 4
+GRENADE_SAFETY_RADIUS = 30
 
 shoot_warning = {
     TORSO: "You got shot in the torso.",
@@ -300,10 +307,6 @@ def health(conn, *args):
     except AttributeError:
         return "Body not initialized."
 
-@command('position')
-def position(conn, *args):
-    return str(conn.world_object.position)
-
 @command('weapon')
 def weapon(conn, *args):
     return conn.weapon_object.ammo.info()
@@ -513,13 +516,17 @@ def apply_script(protocol, connection, config):
             return product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 
         def grenade_destroy(self, x, y, z):
+            if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
+                return False
+
             if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
                 return False
-            for x0, y0, z0 in self.grenade_zone(x, y, z):
-                count = self.protocol.map.destroy_point(x0, y0, z0)
+
+            for x1, y1, z1 in self.grenade_zone(x, y, z):
+                count = self.protocol.map.destroy_point(x1, y1, z1)
                 if count:
                     self.total_blocks_removed += count
-                    self.on_block_removed(x0, y0, z0)
+                    self.on_block_removed(x1, y1, z1)
 
             block_action = loaders.BlockAction()
             block_action.x = x
@@ -536,23 +543,10 @@ def apply_script(protocol, connection, config):
             if self.name is None or self.team.spectator:
                 return
 
-            pos = grenade.position
-            x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
-            if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
-                return
+            blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, grenade.position)
 
+            x, y, z = floor(grenade.position.x), floor(grenade.position.y), floor(grenade.position.z)
             self.grenade_destroy(x, y, z)
-
-            for _, player in self.protocol.players.items():
-                if not player or not player.hp or not player.world_object: continue
-
-                damage = grenade.get_damage(player.world_object.position)
-                if damage == 0: continue
-
-                player.hit(
-                    damage, part=choice(parts), bleeding=True,
-                    hit_by=self, kill_type=GRENADE_KILL
-                )
 
         def set_weapon(self, weapon, local=False, no_kill=False):
             self.weapon = weapon

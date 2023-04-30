@@ -10,6 +10,10 @@ def elevate(conn, *args):
 
     conn.set_location_safe((x, y, z))
 
+@command('position')
+def position(conn, *args):
+    return str(conn.world_object.position)
+
 discord = config.section("discord")
 
 invite = discord.option("invite", "<no invite>").get()

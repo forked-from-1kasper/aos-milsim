@@ -1,9 +1,12 @@
+from dataclasses import dataclass
+
 from pyspades.collision import distance_3d_vector
 from pyspades.contained import GrenadePacket
-from piqueserver.commands import command
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
-from dataclasses import dataclass
+
+from piqueserver.commands import command
+import scripts.blast as blast
 
 MINE_ACTIVATE_DISTANCE = 3
 MINE_SET_DISTANCE = 7
@@ -34,12 +37,7 @@ class Mine:
         )
         grenade.name = MINE
 
-        pack = GrenadePacket()
-        pack.value = fuse
-        pack.player_id = self.player_id
-        pack.position = loc.get()
-        pack.velocity = vel.get()
-        protocol.broadcast_contained(pack)
+        blast.effect(player, loc, vel, fuse)
 
 @command('mine', 'm')
 def mine(conn, *args):
