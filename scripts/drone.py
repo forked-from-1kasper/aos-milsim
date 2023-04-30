@@ -26,7 +26,7 @@ class Status(Enum):
 
 DRONE_INIT_DELAY   = 120
 DRONE_DELAY        = 240
-DRONE_POLL_DELAY   = 2
+DRONE_POLL_DELAY   = 1
 DRONE_POLL_TIMEOUT = 60
 
 class Ghost:
