@@ -107,10 +107,8 @@ class Ammo: pass
 
 @dataclass
 class Magazines(Ammo):
-    # Number of magazines
-    magazines : int
-    # Number of rounds that fit in the weapon at once
-    capacity : int
+    magazines : int # Number of magazines
+    capacity  : int # Number of rounds that fit in the weapon at once
 
     def __post_init__(self):
         self.continuous = False
@@ -157,10 +155,8 @@ class Magazines(Ammo):
 
 @dataclass
 class Heap(Ammo):
-    # Number of rounds that fit in the weapon at once
-    capacity : int
-    # Total number of rounds
-    stock : int
+    capacity : int # Number of rounds that fit in the weapon at once
+    stock    : int # Total number of rounds
 
     def __post_init__(self):
         self.continuous = True
@@ -382,6 +378,13 @@ def apply_script(protocol, connection, config):
             else:
                 return connection.on_tool_set_attempt(self, tool)
 
+        def on_grenade(self, fuse):
+            if self.cannot_work():
+                self.send_chat("How did you do that??")
+                return False
+
+            return connection.on_grenade(self, fuse)
+
         def on_block_destroy(self, x, y, z, mode):
             if self.cannot_work(): return False
 
@@ -396,8 +399,8 @@ def apply_script(protocol, connection, config):
 
         def reset_health(self):
             self.last_hp_update = None
-            self.body = healthy()
-            self.hp = 100
+            self.body           = healthy()
+            self.hp             = 100
 
             self.bandage = 2
             self.splint  = 1
@@ -476,7 +479,13 @@ def apply_script(protocol, connection, config):
                     if kill_type == MELEE_KILL: return
                     if (not self.protocol.friendly_fire and
                         hit_by.name != self.name): return
-                if hit_by.cannot_work(): return
+
+                # So that if a player threw a greande, and then his arm
+                # was broken, this grenade will still deal damage.
+                if hit_by.cannot_work() and (kill_type == WEAPON_KILL or
+                                             kill_type == HEADSHOT_KILL or
+                                             kill_type == MELEE_KILL):
+                    return
 
             self.body[part].hit(value)
 

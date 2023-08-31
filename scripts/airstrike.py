@@ -176,11 +176,12 @@ class Bomber:
 
         self.report("Air support is ready")
         self.preparation = None
-        self.ready = True
+        self.ready       = True
 
     def restart(self):
         self.stop()
-        self.ready = False
+
+        self.ready       = False
         self.preparation = reactor.callLater(AIRSTRIKE_DELAY, self.start)
 
     def report(self, msg):

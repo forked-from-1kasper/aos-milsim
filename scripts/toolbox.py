@@ -14,9 +14,8 @@ def elevate(conn, *args):
 def position(conn, *args):
     return str(conn.world_object.position)
 
-discord = config.section("discord")
-
-invite = discord.option("invite", "<no invite>").get()
+discord     = config.section("discord")
+invite      = discord.option("invite", "<no invite>").get()
 description = discord.option("description", "Discord").get()
 
 @command()
