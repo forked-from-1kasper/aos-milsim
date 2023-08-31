@@ -60,15 +60,15 @@ bleeding_warning = "You're bleeding."
 #distr = lambda x: log(x + 1) / log(2)
 distr = sqrt
 
-limit = lambda m, M, f: lambda x: max(m, min(M, f(x)))
+clamp = lambda m, M, f: lambda x: max(m, min(M, f(x)))
 scale = lambda x, y, f: lambda z: y * f(z / x)
 
 guaranteed_death_energy    = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
 guaranteed_bleeding_energy = {TORSO:  250, HEAD: 100, ARMS:  200, LEGS:  300}
 guaranteed_fracture_energy = {TORSO: 2700, HEAD: 500, ARMS: 4000, LEGS: 4500}
 
-energy_to_damage = lambda part: limit(0, 100, scale(guaranteed_death_energy[part], 100, distr))
-weighted_prob = lambda tbl, part: limit(0, 1, scale(tbl[part], 1, distr))
+energy_to_damage = lambda part: clamp(0, 100, scale(guaranteed_death_energy[part], 100, distr))
+weighted_prob = lambda tbl, part: clamp(0, 1, scale(tbl[part], 1, distr))
 
 randbool = lambda prob: random() <= prob
 
@@ -205,11 +205,11 @@ class Weapon:
     reload_callback : Callable
 
     def __post_init__(self):
-        self.shoot = False
-        self.reloading = False
+        self.shoot      = False
+        self.reloading  = False
         self.shoot_time = None
-        self.next_shot = 0
-        self.start = None
+        self.next_shot  = 0
+        self.start      = None
 
         self.reset()
 
@@ -299,7 +299,7 @@ bleeding_curve = lambda Δt: Δt
 @command('health')
 def health(conn, *args):
     try:
-        return " ".join(map(lambda part: f"{names[part]}: {conn.body[part].hp}", parts))
+        return " ".join(map(lambda part: f"{names[part]}: {conn.body[part].hp:.2f}", parts))
     except AttributeError:
         return "Body not initialized."
 
@@ -310,7 +310,9 @@ def weapon(conn, *args):
 @command('bandage', 'b')
 def bandage(conn, *args):
     if not conn.hp: return
-    if conn.bandage == 0: return "You do not have a bandage."
+
+    if conn.bandage == 0:
+        return "You do not have a bandage."
 
     for idx, part in conn.body.items():
         if part.bleeding:
@@ -323,12 +325,14 @@ def bandage(conn, *args):
 @command('splint', 's')
 def splint(conn, *args):
     if not conn.hp: return
-    if conn.splint == 0: return "You do not have a split."
+
+    if conn.splint == 0:
+        return "You do not have a split."
 
     for idx, part in conn.body.items():
         if part.fracture:
-            part.splint = True
-            conn.splint -= 0
+            part.splint  = True
+            conn.splint -= 1
             return f"You put a splint on your {names[idx]}."
 
     return "You have no fractures."
@@ -344,7 +348,9 @@ def apply_script(protocol, connection, config):
                             part.hit(bleeding_curve(τ - player.last_hp_update))
 
                     hp = player.display()
-                    if player.hp != hp: player.set_hp(hp, kill_type=MELEE_KILL)
+                    if player.hp != hp:
+                        player.set_hp(hp, kill_type=MELEE_KILL)
+
                 player.last_hp_update = τ
 
             protocol.on_world_update(self)
