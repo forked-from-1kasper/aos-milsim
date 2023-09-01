@@ -421,10 +421,8 @@ def apply_script(protocol, connection, config):
             except KeyError:
                 return
 
-            # Shoot position
-            pos1 = self.world_object.position
-            # Hit position
-            pos2 = player.world_object.position
+            pos1 = self.world_object.position   # Shoot position
+            pos2 = player.world_object.position # Hit position
 
             if not melee:
                 damage, bleeding, fracture = self.weapon_object.get_damage(contained.value, pos1, pos2)
@@ -483,8 +481,7 @@ def apply_script(protocol, connection, config):
             if hit_by is not None:
                 if self.team is hit_by.team:
                     if kill_type == MELEE_KILL: return
-                    if (not self.protocol.friendly_fire and
-                        hit_by.name != self.name): return
+                    if not self.protocol.friendly_fire: return
 
                 # So that if a player threw a greande, and then his arm
                 # was broken, this grenade will still deal damage.
