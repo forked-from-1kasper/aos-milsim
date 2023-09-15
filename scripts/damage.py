@@ -1,9 +1,10 @@
-from math import pi, exp, sqrt, e, floor, ceil
+from math import pi, exp, sqrt, e, floor, ceil, inf
 from random import choice, random
 from dataclasses import dataclass
 from itertools import product
 from typing import Callable
 
+from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.internet import reactor
 
 from pyspades.constants import (
@@ -15,6 +16,7 @@ from pyspades.constants import (
 )
 from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
+from pyspades.protocol import BaseConnection
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 
@@ -103,7 +105,15 @@ class Round:
             fracture = randbool(weighted_prob(guaranteed_fracture_energy, part)(E))
             return energy_to_damage(part)(E), bleeding, fracture
 
-class Ammo: pass
+class Ammo:
+    def total(self):
+        return 0
+
+    def current(self):
+        return 0
+
+    def reserved(self):
+        return self.total() - self.current()
 
 @dataclass
 class Magazines(Ammo):
@@ -112,24 +122,22 @@ class Magazines(Ammo):
 
     def __post_init__(self):
         self.continuous = False
-        self.loaded = 0
+        self.loaded     = 0
         self.restock()
 
     def noammo(self):
-        for count in self.container:
-            if count != 0:
-                return False
-        return True
+        return all(map(lambda c: c <= 0, self.container))
 
     def next(self):
         self.loaded += 1
         self.loaded %= self.magazines
 
     def reload(self):
-        if self.noammo(): return False
+        if self.noammo():
+            return False
 
         self.next()
-        while self.container[self.loaded] == 0:
+        while self.container[self.loaded] <= 0:
             self.next()
 
         return False
@@ -144,7 +152,8 @@ class Magazines(Ammo):
         return sum(self.container)
 
     def shoot(self, amount):
-        self.container[self.loaded] = max(amount, 0)
+        avail = self.container[self.loaded]
+        self.container[self.loaded] = max(avail - amount, 0)
 
     def restock(self):
         self.container = [self.capacity] * self.magazines
@@ -160,14 +169,15 @@ class Heap(Ammo):
 
     def __post_init__(self):
         self.continuous = True
-        self.loaded = self.capacity
+        self.loaded     = self.capacity
         self.restock()
 
     def reload(self):
-        if self.loaded < self.capacity:
-            self.loaded += 1
+        if self.loaded < self.capacity and self.remaining > 0:
+            self.loaded    += 1
             self.remaining -= 1
             return True
+
         return False
 
     def full(self):
@@ -180,7 +190,7 @@ class Heap(Ammo):
         return self.remaining + self.loaded
 
     def shoot(self, amount):
-        self.loaded = max(amount, 0)
+        self.loaded = max(self.loaded - amount, 0)
 
     def restock(self):
         self.remaining = self.stock - self.loaded
@@ -190,26 +200,28 @@ class Heap(Ammo):
 
 @dataclass
 class Gun:
-    ammo : Callable[[], Ammo]
-    # Ammunition type used by weapon
-    round : Round
-    # Time between shots
-    delay : float
-    # Time between reloading and being able to shoot again
-    reload_time : float
+    name        : str                # Name
+    ammo        : Callable[[], Ammo] # Ammunition container constructor
+    round       : Round              # Ammunition type used by weapon
+    delay       : float              # Time between shots
+    reload_time : float              # Time between reloading and being able to shoot again
 
 @dataclass
 class Weapon:
+    conn            : BaseConnection
     gun             : Gun
     id              : int
     reload_callback : Callable
 
     def __post_init__(self):
-        self.shoot      = False
-        self.reloading  = False
-        self.shoot_time = None
-        self.next_shot  = 0
-        self.start      = None
+        self.reloading   = False
+        self.reload_call = None
+
+        self.shooting    = False
+        self.defer       = None
+
+        self.ammo        = None
+        self.last_shot   = -inf
 
         self.reset()
 
@@ -217,69 +229,87 @@ class Weapon:
         self.ammo.restock()
 
     def reset(self):
-        self.shoot = False
-        if self.reloading:
-            self.reload_call.cancel()
-            self.reloading = False
+        self.cease()
+        self.ready()
 
-        self.ammo = self.gun.ammo()
+        self.shooting  = False
+        self.ammo      = self.gun.ammo()
+        self.last_shot = -inf
 
-    def set_shoot(self, value: bool) -> None:
-        if value == self.shoot: return
+    def set_shoot(self, value : bool) -> None:
+        if self.shooting != value:
+            if value:
+                if self.ammo.continuous:
+                    self.ready()
 
-        current_time = reactor.seconds()
-        if value:
-            self.start = current_time
-            if self.ammo.current() <= 0: return
-            elif self.reloading and (not self.ammo.continuous): return
-            self.shoot_time = max(current_time, self.next_shot)
-            if self.reloading:
-                self.reloading = False
+                if self.defer is None:
+                    self.fire()
+            else:
+                self.cease()
+
+        self.shooting = value
+
+    def ready(self):
+        if self.reload_call is not None:
+            try:
                 self.reload_call.cancel()
-        else:
-            ammo = self.ammo.current()
-            self.ammo.shoot(self.get_ammo(True))
-            self.next_shot = self.shoot_time + self.gun.delay * (ammo - self.ammo.current())
-        self.shoot = value
+            except (AlreadyCalled, AlreadyCancelled):
+                pass
+
+        self.reloading = False
+
+    def cease(self):
+        if self.defer is not None:
+            try:
+                self.defer.cancel()
+            except (AlreadyCalled, AlreadyCancelled):
+                pass
+
+            self.defer = None
+
+    def fire(self):
+        timestamp = reactor.seconds()
+
+        P = self.ammo.current() > 0
+        Q = self.reloading and not self.ammo.continuous
+        R = timestamp - self.last_shot >= self.gun.delay
+        S = self.conn.world_object.sprint or timestamp - self.conn.last_sprint < 0.5
+
+        if P and not Q and R and not S:
+            self.last_shot = timestamp
+            self.ammo.shoot(1)
+
+        self.defer = reactor.callLater(self.gun.delay, self.fire)
 
     def reload(self):
-        if self.reloading: return
+        if self.reloading:
+            return
 
-        ammo = self.get_ammo()
-        if self.ammo.continuous:
-            if self.ammo.full() or self.shoot:
-                return
-
-        self.reloading = True
-        self.set_shoot(False)
-        self.ammo.shoot(ammo)
+        self.reloading   = True
         self.reload_call = reactor.callLater(self.gun.reload_time, self.on_reload)
 
     def on_reload(self):
         self.reloading = False
-        res = self.ammo.reload()
-        self.reload_callback()
-        if res: self.reload()
 
-    def get_ammo(self, no_max: bool = False) -> int:
-        if self.shoot:
-            dt = reactor.seconds() - self.shoot_time
-            ammo = self.ammo.current() - max(0, int(ceil(dt / self.gun.delay)))
-        else:
-            ammo = self.ammo.current()
-        if no_max: return ammo
-        return max(0, ammo)
+        if self.ammo.continuous:
+            if self.ammo.full() or self.shooting:
+                return
+
+        again = self.ammo.reload()
+        self.reload_callback()
+
+        if again: self.reload()
 
     def is_empty(self, tolerance=CLIP_TOLERANCE) -> bool:
-        return self.get_ammo(True) < -tolerance or not self.shoot
+        return self.ammo.current() <= 0
 
     def get_damage(self, value, pos1, pos2):
         return self.gun.round.damage(value, pos1, pos2)
 
 guns = {
-    RIFLE_WEAPON:   Gun(lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000), 0.50, 2.5),
-    SMG_WEAPON:     Gun(lambda: Magazines(4, 30), Round(600,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
-    SHOTGUN_WEAPON: Gun(lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000), 1.00, 0.5)
+    RIFLE_WEAPON:   Gun("Rifle",   lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000), 0.50, 2.5),
+    SMG_WEAPON:     Gun("SMG",     lambda: Magazines(4, 30), Round(600,  8.03/1000, 104.7573,  9.00/1000), 0.11, 2.5),
+    SHOTGUN_WEAPON: Gun("Shotgun", lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000), 1.00, 0.5)
 }
 
 @dataclass
@@ -358,6 +388,7 @@ def apply_script(protocol, connection, config):
     class DamageConnection(connection):
         def on_connect(self):
             self.reset_health()
+            self.last_sprint = -inf
             return connection.on_connect(self)
 
         def on_spawn(self, pos):
@@ -369,6 +400,12 @@ def apply_script(protocol, connection, config):
             if kill_type not in NO_WARNING:
                 self.send_lines(WARNING_ON_KILL, 'warning')
             return connection.on_kill(self, killer, kill_type, grenade)
+
+        def on_animation_update(self, jump, crouch, sneak, sprint):
+            if self.world_object.sprint and not sprint:
+                self.last_sprint = reactor.seconds()
+
+            return connection.on_animation_update(self, jump, crouch, sneak, sprint)
 
         def reset_tool(self):
             act = loaders.SetTool()
@@ -540,11 +577,11 @@ def apply_script(protocol, connection, config):
                     self.total_blocks_removed += count
                     self.on_block_removed(x1, y1, z1)
 
-            block_action = loaders.BlockAction()
-            block_action.x = x
-            block_action.y = y
-            block_action.z = z
-            block_action.value = GRENADE_DESTROY
+            block_action           = loaders.BlockAction()
+            block_action.x         = x
+            block_action.y         = y
+            block_action.z         = z
+            block_action.value     = GRENADE_DESTROY
             block_action.player_id = self.player_id
             self.protocol.broadcast_contained(block_action, save=True)
             self.protocol.update_entities()
@@ -564,7 +601,7 @@ def apply_script(protocol, connection, config):
             self.weapon = weapon
             if self.weapon_object is not None:
                 self.weapon_object.reset()
-            self.weapon_object = Weapon(guns[weapon], weapon, self._on_reload)
+            self.weapon_object = Weapon(self, guns[weapon], weapon, self._on_reload)
 
             if not local:
                 change_weapon = loaders.ChangeWeapon()
@@ -572,10 +609,10 @@ def apply_script(protocol, connection, config):
                 if not no_kill: self.kill(kill_type=CLASS_CHANGE_KILL)
 
         def update_hud(self):
-            weapon_reload = loaders.WeaponReload()
-            weapon_reload.player_id = self.player_id
-            weapon_reload.clip_ammo = self.weapon_object.ammo.current()
-            weapon_reload.reserve_ammo = self.weapon_object.ammo.total()
+            weapon_reload              = loaders.WeaponReload()
+            weapon_reload.player_id    = self.player_id
+            weapon_reload.clip_ammo    = self.weapon_object.ammo.current()
+            weapon_reload.reserve_ammo = self.weapon_object.ammo.reserved()
             self.send_contained(weapon_reload)
 
         def _on_reload(self):
