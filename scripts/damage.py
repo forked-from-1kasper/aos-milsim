@@ -1,7 +1,8 @@
 from math import pi, exp, sqrt, e, floor, ceil, inf
+from itertools import product, chain
+
 from random import choice, random
 from dataclasses import dataclass
-from itertools import product
 from typing import Callable
 
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
@@ -159,8 +160,8 @@ class Magazines(Ammo):
         self.container = [self.capacity] * self.magazines
 
     def info(self):
-        containers = ", ".join(map(str, self.container))
-        return "{} magazines: {}".format(self.magazines, containers)
+        buff = ", ".join(map(str, self.container))
+        return f"{self.magazines} magazines: {buff}"
 
 @dataclass
 class Heap(Ammo):
@@ -196,7 +197,8 @@ class Heap(Ammo):
         self.remaining = self.stock - self.loaded
 
     def info(self):
-        return "{} round(s) in reserve".format(self.remaining)
+        noun = "rounds" if self.remaining != 1 else "round"
+        return f"{self.remaining} {noun} in reserve"
 
 @dataclass
 class Gun:
@@ -210,7 +212,6 @@ class Gun:
 class Weapon:
     conn            : BaseConnection
     gun             : Gun
-    id              : int
     reload_callback : Callable
 
     def __post_init__(self):
@@ -326,16 +327,17 @@ class Part:
 healthy = lambda: {TORSO: Part(), HEAD: Part(), ARMS: Part(), LEGS: Part()}
 bleeding_curve = lambda Δt: Δt
 
-@command('health')
+@command()
 def health(conn, *args):
     try:
         return " ".join(map(lambda part: f"{names[part]}: {conn.body[part].hp:.2f}", parts))
     except AttributeError:
         return "Body not initialized."
 
-@command('weapon')
+@command()
 def weapon(conn, *args):
-    return conn.weapon_object.ammo.info()
+    if conn.weapon_object is not None:
+        return conn.weapon_object.ammo.info()
 
 @command('bandage', 'b')
 def bandage(conn, *args):
@@ -601,7 +603,7 @@ def apply_script(protocol, connection, config):
             self.weapon = weapon
             if self.weapon_object is not None:
                 self.weapon_object.reset()
-            self.weapon_object = Weapon(self, guns[weapon], weapon, self._on_reload)
+            self.weapon_object = Weapon(self, guns[weapon], self._on_reload)
 
             if not local:
                 change_weapon = loaders.ChangeWeapon()
