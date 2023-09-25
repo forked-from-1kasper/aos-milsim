@@ -48,6 +48,10 @@ def mine(conn, *args):
         if loc in conn.protocol.mines:
             conn.protocol.explode(loc)
 
+        _, _, z = loc
+        if z == 63:
+            return "You can't place a mine on water"
+
         if conn.mines > 0:
             conn.protocol.mines[loc] = Mine(conn.player_id)
             conn.mines -= 1
