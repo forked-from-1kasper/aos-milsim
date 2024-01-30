@@ -1,9 +1,80 @@
 from piqueserver.commands import command, join_arguments
 from piqueserver.config import config
 
+from pyspades import contained as loaders
+from pyspades.constants import *
+
+from itertools import product
 from random import randint
 from time import time
 from math import inf
+
+def edge(a, b):
+    return range(min(a, b), max(a, b) + 1)
+
+def cube(u, v):
+    x1, y1, z1 = u
+    x2, y2, z2 = v
+
+    return product(edge(x1, x2), edge(y1, y2), edge(z1, z2))
+
+def cast_ray(conn):
+    if not conn.world_object: return
+    return conn.world_object.cast_ray(128)
+
+@command('/pos1', admin_only=True)
+def pos1(conn, *args):
+    if loc := cast_ray(conn):
+        conn.pos1 = loc
+        return "First position set to {}".format(loc)
+
+@command('/pos2', admin_only=True)
+def pos2(conn, *args):
+    if loc := cast_ray(conn):
+        conn.pos2 = loc
+        return "Second position set to {}".format(loc)
+
+@command('/sel', admin_only=True)
+def sel(conn, *args):
+    if conn.pos1 and conn.pos2:
+        return "{} -> {}".format(conn.pos1, conn.pos2)
+    else:
+        return "No active selection."
+
+def blockAction(conn, value, pos1, pos2):
+    contained           = loaders.BlockAction()
+    contained.player_id = conn.player_id
+    contained.value     = value
+
+    N = 0
+
+    for (x, y, z) in cube(pos1, pos2):
+        contained.x = x
+        contained.y = y
+        contained.z = z
+
+        if value == DESTROY_BLOCK:
+            if conn.protocol.map.destroy_point(x, y, z):
+                conn.protocol.broadcast_contained(contained)
+                conn.on_block_removed(x, y, z)
+
+                N += 1
+
+        if value == BUILD_BLOCK:
+            conn.protocol.map.set_point(x, y, z, conn.color)
+            conn.protocol.broadcast_contained(contained)
+            conn.on_block_build(x, y, z)
+
+            N += 1
+
+    return "Set {} blocks.".format(N)
+
+@command('/set', admin_only=True)
+def set(conn, *args):
+    if not (conn.pos1 and conn.pos2): return
+
+    value = DESTROY_BLOCK if len(args) >= 1 and args[0] == "0" else BUILD_BLOCK
+    return blockAction(conn, value, conn.pos1, conn.pos2)
 
 @command(admin_only=True)
 def elevate(conn, *args):
@@ -89,6 +160,9 @@ def mail(conn, *args):
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
+            self.pos1 = None
+            self.pos2 = None
+
             self.lastmail = -inf
 
             self.chat_limiter._seconds = 0
