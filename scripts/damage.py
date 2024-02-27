@@ -17,7 +17,7 @@ from pyspades.common import Vertex3
 from pyspades.constants import *
 
 from piqueserver.commands import command
-import scripts.blast as blast
+import milsim.blast as blast
 
 from milsim.simulator import Simulator, cone
 from milsim.common import *

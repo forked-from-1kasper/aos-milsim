@@ -13,7 +13,7 @@ from pyspades.world import Grenade
 from pyspades.team import Team
 
 from piqueserver.commands import command, get_player, CommandError
-import scripts.blast as blast
+import milsim.blast as blast
 
 MIN_FUSE    = 1.2
 MAX_FUSE    = 3

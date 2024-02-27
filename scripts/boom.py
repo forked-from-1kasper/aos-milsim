@@ -15,7 +15,7 @@ from pyspades.common import Vertex3
 from piqueserver.commands import command
 from piqueserver.config import config
 
-import scripts.blast as blast
+import milsim.blast as blast
 
 BOOM_GUARANTEED_KILL_RADIUS = 17
 BOOM_RADIUS = 40

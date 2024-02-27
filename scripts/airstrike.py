@@ -15,7 +15,7 @@ from pyspades.common import Vertex3
 from pyspades.team import Team
 
 from piqueserver.commands import command
-import scripts.blast as blast
+import milsim.blast as blast
 
 AIRBOMB = "airbomb"
 
