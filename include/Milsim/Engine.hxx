@@ -43,7 +43,9 @@ public:
 
     ~Object() {}
 
-    static uint64_t total() { return gidx; }
+    inline static void flush() { gidx = 0; }
+
+    inline static uint64_t total() { return gidx; }
 
     constexpr inline uint64_t index() const { return _index; }
 
@@ -111,6 +113,9 @@ public:
     }
 
     void uploadMap(MapData * ptr) {
+        objects.clear();
+        Object<T>::flush();
+
         map = ptr;
 
         for (auto [index, color] : map->colors) {
