@@ -121,19 +121,9 @@ def apply_script(protocol, connection, config):
             self.check_mine(self.world_object.position)
             return connection.on_position_update(self)
 
-        def on_block_destroy(self, x, y, z, mode):
-            if connection.on_block_destroy(self, x, y, z, mode) == False:
-                return False
-            else:
-                self.check_mine_by_pos([(x, y, z)])
-                return True
-
         def on_block_removed(self, x, y, z):
-            if connection.on_block_removed(self, x, y, z) == False:
-                return False
-            else:
-                self.check_mine_by_pos([(x, y, z)])
-                return True
+            self.check_mine_by_pos([(x, y, z)])
+            connection.on_block_removed(self, x, y, z)
 
         def grenade_destroy(self, x, y, z):
             if connection.grenade_destroy(self, x, y, z) == False:
