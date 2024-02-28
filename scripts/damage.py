@@ -576,6 +576,10 @@ def apply_script(protocol, connection, config):
             self.splint  = 1
 
         def refill(self, local=False):
+            for part in self.body.values():
+                part.fracture = False
+                part.bleeding = False
+
             self.grenades = 3
             self.blocks   = 50
             self.bandage  = 2
@@ -584,8 +588,10 @@ def apply_script(protocol, connection, config):
             self.weapon_object.restock()
 
             if not local:
-                restock = loaders.Restock()
-                self.send_contained(restock)
+                self.send_contained(loaders.Restock())
+
+                self.update_hud()
+                self.set_hp(self.display(), kill_type=MELEE_KILL)
 
         def update_hud(self):
             weapon_reload              = loaders.WeaponReload()
