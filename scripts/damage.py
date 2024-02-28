@@ -3,7 +3,6 @@ from itertools import product, chain
 
 from random import choice, random, gauss, uniform, randint
 from dataclasses import dataclass
-from typing import Callable
 
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.internet import reactor
@@ -19,12 +18,9 @@ from pyspades.constants import *
 from piqueserver.commands import command
 import milsim.blast as blast
 
-from milsim.simulator import Simulator, cone
+from milsim.simulator import Simulator
+from milsim.weapon import Weapon
 from milsim.common import *
-
-ρ      = 1.225 # Air density
-factor = 0.5191
-g      = 9.81
 
 parts = [TORSO, HEAD, ARMS, LEGS]
 names = {TORSO: "torso", HEAD: "head", ARMS: "arms", LEGS: "legs", MELEE: "melee"}
@@ -62,250 +58,6 @@ energy_to_damage = lambda part: clamp(0, 100, scale(guaranteed_death_energy[part
 weighted_prob = lambda tbl, part: clamp(0, 1, scale(tbl[part], 1, distr))
 
 randbool = lambda prob: random() <= prob
-
-@dataclass
-class Round:
-    speed     : float
-    mass      : float
-    ballistic : float
-    caliber   : float
-    pellets   : int
-
-    def __post_init__(self):
-        self.grenade = False
-        self.drag    = (factor * self.mass) / (self.ballistic * (self.caliber ** 2))
-        self.area    = (pi / 4) * (self.caliber ** 2)
-        self.k       = (ρ * self.drag * self.area) / (2 * self.mass)
-
-class Ammo:
-    def total(self):
-        return 0
-
-    def current(self):
-        return 0
-
-    def reserved(self):
-        return self.total() - self.current()
-
-@dataclass
-class Magazines(Ammo):
-    magazines : int # Number of magazines
-    capacity  : int # Number of rounds that fit in the weapon at once
-
-    def __post_init__(self):
-        self.continuous = False
-        self.loaded     = 0
-        self.restock()
-
-    def empty(self):
-        return all(map(lambda c: c <= 0, self.container))
-
-    def next(self):
-        self.loaded += 1
-        self.loaded %= self.magazines
-
-    def reload(self):
-        if self.empty():
-            return False
-
-        self.next()
-        while self.container[self.loaded] <= 0:
-            self.next()
-
-        return False
-
-    def full(self):
-        return self.total() >= self.capacity * self.magazines
-
-    def current(self):
-        return self.container[self.loaded]
-
-    def total(self):
-        return sum(self.container)
-
-    def shoot(self, amount):
-        avail = self.container[self.loaded]
-        self.container[self.loaded] = max(avail - amount, 0)
-
-    def restock(self):
-        self.container = [self.capacity] * self.magazines
-
-    def info(self):
-        buff = ", ".join(map(str, self.container))
-        return f"{self.magazines} magazines: {buff}"
-
-@dataclass
-class Heap(Ammo):
-    capacity : int # Number of rounds that fit in the weapon at once
-    stock    : int # Total number of rounds
-
-    def __post_init__(self):
-        self.continuous = True
-        self.loaded     = self.capacity
-        self.restock()
-
-    def reload(self):
-        if self.loaded < self.capacity and self.remaining > 0:
-            self.loaded    += 1
-            self.remaining -= 1
-            return True
-
-        return False
-
-    def full(self):
-        return self.total() >= self.stock
-
-    def current(self):
-        return self.loaded
-
-    def total(self):
-        return self.remaining + self.loaded
-
-    def shoot(self, amount):
-        self.loaded = max(self.loaded - amount, 0)
-
-    def restock(self):
-        self.remaining = self.stock - self.loaded
-
-    def info(self):
-        noun = "rounds" if self.remaining != 1 else "round"
-        return f"{self.remaining} {noun} in reserve"
-
-@dataclass
-class Gun:
-    name               : str                # Name
-    ammo               : Callable[[], Ammo] # Ammunition container constructor
-    round              : Round              # Ammunition type used by weapon
-    delay              : float              # Time between shots
-    reload_time        : float              # Time between reloading and being able to shoot again
-    spread             : float
-    velocity_deviation : float
-
-@dataclass
-class Weapon:
-    conn            : BaseConnection
-    gun             : Gun
-    reload_callback : Callable
-
-    def __post_init__(self):
-        self.reloading   = False
-        self.reload_call = None
-
-        self.shooting    = False
-        self.defer       = None
-
-        self.ammo        = None
-        self.last_shot   = -inf
-
-        self.reset()
-
-    def restock(self):
-        self.ammo.restock()
-
-    def reset(self):
-        self.cease()
-        self.ready()
-
-        self.shooting  = False
-        self.ammo      = self.gun.ammo()
-        self.last_shot = -inf
-
-    def set_shoot(self, value : bool) -> None:
-        if self.shooting != value:
-            if value:
-                if self.ammo.continuous:
-                    self.ready()
-
-                if self.defer is None:
-                    self.fire()
-            else:
-                self.cease()
-
-        self.shooting = value
-
-    def ready(self):
-        if self.reload_call is not None:
-            try:
-                self.reload_call.cancel()
-            except (AlreadyCalled, AlreadyCancelled):
-                pass
-
-        self.reloading = False
-
-    def cease(self):
-        if self.defer is not None:
-            try:
-                self.defer.cancel()
-            except (AlreadyCalled, AlreadyCancelled):
-                pass
-
-            self.defer = None
-
-    def fire(self):
-        if not self.conn.world_object:
-            return
-
-        if self.conn.cannot_work():
-            return
-
-        timestamp = reactor.seconds()
-
-        P = self.ammo.current() > 0
-        Q = self.reloading and not self.ammo.continuous
-        R = timestamp - self.last_shot >= self.gun.delay
-        S = self.conn.world_object.sprint or timestamp - self.conn.last_sprint < 0.5
-        T = timestamp - self.conn.last_tool_update < 0.5
-
-        if P and not Q and R and not S and not T:
-            self.last_shot = timestamp
-            self.ammo.shoot(1)
-
-            n = self.conn.world_object.orientation.normal()
-            r = self.conn.eye() + n * 1.2
-
-            for i in range(0, self.gun.round.pellets):
-                v = n * gauss(mu = self.gun.round.speed, sigma = self.gun.round.speed * self.gun.velocity_deviation)
-                self.conn.protocol.sim.add(self.conn, r, cone(v, self.gun.spread), timestamp, self.gun.round)
-
-        self.defer = reactor.callLater(self.gun.delay, self.fire)
-
-    def reload(self):
-        if self.reloading: return
-
-        self.reloading   = True
-        self.reload_call = reactor.callLater(self.gun.reload_time, self.on_reload)
-
-    def on_reload(self):
-        self.reloading = False
-
-        if self.ammo.continuous:
-            if self.ammo.full() or self.shooting:
-                return
-
-        again = self.ammo.reload()
-        self.reload_callback()
-
-        if again: self.reload()
-
-    def is_empty(self, tolerance=CLIP_TOLERANCE) -> bool:
-        return self.ammo.current() <= 0
-
-guns = {
-    RIFLE_WEAPON:   Gun("Rifle",   lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000,  1), 0.50, 2.5,               0, 0.05),
-    SMG_WEAPON:     Gun("SMG",     lambda: Magazines(4, 30), Round(600,  8.03/1000, 104.7573,  9.00/1000,  1), 0.11, 2.5,               0, 0.05),
-    SHOTGUN_WEAPON: Gun("Shotgun", lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000, 15), 1.00, 0.5, (2 * pi) * 1e-2, 0.10)
-}
-
-@dataclass
-class Part:
-    hp       : int  = 100
-    bleeding : bool = False
-    fracture : bool = False
-    splint   : bool = False
-
-    def hit(self, value):
-        if value <= 0: return
-        self.hp = max(0, self.hp - value)
 
 healthy = lambda: {TORSO: Part(), HEAD: Part(), ARMS: Part(), LEGS: Part()}
 bleeding_curve = lambda Δt: Δt
@@ -591,7 +343,9 @@ def apply_script(protocol, connection, config):
                 self.send_contained(loaders.Restock())
 
                 self.update_hud()
-                self.set_hp(self.display(), kill_type=MELEE_KILL)
+
+                if self.display() != 100: # loaders.Restock() reverts hp to 100
+                    self.set_hp(self.display(), kill_type=MELEE_KILL)
 
         def update_hud(self):
             weapon_reload              = loaders.WeaponReload()

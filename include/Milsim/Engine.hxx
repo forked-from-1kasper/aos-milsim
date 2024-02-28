@@ -276,6 +276,7 @@ private:
             if (state == Terminal::ricochet) v *= 0.6;
 
             if (state == Terminal::penetration) {
+                // http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php
                 auto depth = dr.abs() * b2m<T>;
                 auto E₀    = 0.5 * o.mass * v.norm();
                 auto drag  = 1;
