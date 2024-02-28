@@ -164,14 +164,15 @@ def apply_script(protocol, connection, config):
 
         def on_map_change(self, M):
             self.sim.resetMaterials()
-            materials = self.map_info.extensions.get('materials', {})
 
-            for color, material in materials.items():
-                if isinstance(color, int):
+            E = self.map_info.extensions.get('environment', {})
+
+            if isinstance(E, Environment):
+                for color, material in E.color.items():
                     self.sim.registerMaterial(color, material)
 
-            self.sim.setDefaultMaterial(materials.get(default))
-            self.sim.setBuildMaterial(materials.get(build))
+            self.sim.setDefaultMaterial(E.default)
+            self.sim.setBuildMaterial(E.build)
 
             self.sim.uploadMap()
 
