@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Callable
-from math import pi
+from math import pi, atan
 
 from pyspades.constants import RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON
 
@@ -69,113 +69,160 @@ class Round:
 
 class Ammo:
     def total(self):
-        return 0
+        raise NotImplementedError
 
     def current(self):
-        return 0
+        raise NotImplementedError
 
     def reserved(self):
         return self.total() - self.current()
 
-@dataclass
-class Magazines(Ammo):
-    magazines : int # Number of magazines
-    capacity  : int # Number of rounds that fit in the weapon at once
+def Magazines(magazines : int, capacity : int) -> type:
+    """
+    magazines: Number of magazines
+    capacity:  Number of rounds that fit in the weapon at once
+    """
 
-    def __post_init__(self):
-        self.continuous = False
-        self.loaded     = 0
-        self.restock()
+    class Implementation(Ammo):
+        continuous = False
 
-    def empty(self):
-        return all(map(lambda c: c <= 0, self.container))
+        def __init__(self):
+            self.loaded = 0
+            self.restock()
 
-    def next(self):
-        self.loaded += 1
-        self.loaded %= self.magazines
+        def empty(self):
+            return all(map(lambda c: c <= 0, self.container))
 
-    def reload(self):
-        if self.empty():
+        def next(self):
+            self.loaded += 1
+            self.loaded %= magazines
+
+        def reload(self):
+            if self.empty():
+                return False
+
+            self.next()
+            while self.container[self.loaded] <= 0:
+                self.next()
+
             return False
 
-        self.next()
-        while self.container[self.loaded] <= 0:
-            self.next()
+        def full(self):
+            return self.total() >= capacity * magazines
 
-        return False
+        def current(self):
+            return self.container[self.loaded]
 
-    def full(self):
-        return self.total() >= self.capacity * self.magazines
+        def total(self):
+            return sum(self.container)
 
-    def current(self):
-        return self.container[self.loaded]
+        def shoot(self, amount):
+            avail = self.container[self.loaded]
+            self.container[self.loaded] = max(avail - amount, 0)
 
-    def total(self):
-        return sum(self.container)
+        def restock(self):
+            self.container = [capacity] * magazines
 
-    def shoot(self, amount):
-        avail = self.container[self.loaded]
-        self.container[self.loaded] = max(avail - amount, 0)
+        def info(self):
+            buff = ", ".join(map(str, self.container))
+            return f"{magazines} magazines: {buff}"
 
-    def restock(self):
-        self.container = [self.capacity] * self.magazines
+    return Implementation
 
-    def info(self):
-        buff = ", ".join(map(str, self.container))
-        return f"{self.magazines} magazines: {buff}"
+def Heap(capacity : int, stock : int) -> type:
+    """
+    capacity: Number of rounds that fit in the weapon at once
+    stock:    Total number of rounds
+    """
 
-@dataclass
-class Heap(Ammo):
-    capacity : int # Number of rounds that fit in the weapon at once
-    stock    : int # Total number of rounds
+    class Implementation(Ammo):
+        continuous = True
 
-    def __post_init__(self):
-        self.continuous = True
-        self.loaded     = self.capacity
-        self.restock()
+        def __init__(self):
+            self.loaded = capacity
+            self.restock()
 
-    def reload(self):
-        if self.loaded < self.capacity and self.remaining > 0:
-            self.loaded    += 1
-            self.remaining -= 1
-            return True
+        def reload(self):
+            if self.loaded < capacity and self.remaining > 0:
+                self.loaded    += 1
+                self.remaining -= 1
+                return True
 
-        return False
+            return False
 
-    def full(self):
-        return self.total() >= self.stock
+        def full(self):
+            return self.total() >= stock
 
-    def current(self):
-        return self.loaded
+        def current(self):
+            return self.loaded
 
-    def total(self):
-        return self.remaining + self.loaded
+        def total(self):
+            return self.remaining + self.loaded
 
-    def shoot(self, amount):
-        self.loaded = max(self.loaded - amount, 0)
+        def shoot(self, amount):
+            self.loaded = max(self.loaded - amount, 0)
 
-    def restock(self):
-        self.remaining = self.stock - self.loaded
+        def restock(self):
+            self.remaining = stock - self.loaded
 
-    def info(self):
-        noun = "rounds" if self.remaining != 1 else "round"
-        return f"{self.remaining} {noun} in reserve"
+        def info(self):
+            noun = "rounds" if self.remaining != 1 else "round"
+            return f"{self.remaining} {noun} in reserve"
+
+    return Implementation
 
 @dataclass
 class Gun:
-    name               : str                # Name
-    ammo               : Callable[[], Ammo] # Ammunition container constructor
-    round              : Round              # Ammunition type used by weapon
-    delay              : float              # Time between shots
-    reload_time        : float              # Time between reloading and being able to shoot again
+    name               : str   # Name
+    ammo               : type  # Ammunition container constructor
+    round              : Round # Ammunition type used by weapon
+    delay              : float # Time between shots
+    reload_time        : float # Time between reloading and being able to shoot again
     spread             : float
     velocity_deviation : float
 
-guns = {
-    RIFLE_WEAPON:   Gun("Rifle",   lambda: Magazines(5, 10), Round(850, 10.00/1000, 146.9415,  7.62/1000,  1), 0.50, 2.5,               0, 0.05),
-    SMG_WEAPON:     Gun("SMG",     lambda: Magazines(4, 30), Round(600,  8.03/1000, 104.7573,  9.00/1000,  1), 0.11, 2.5,               0, 0.05),
-    SHOTGUN_WEAPON: Gun("Shotgun", lambda: Heap(6, 48),      Round(457, 38.00/1000,   5.0817, 18.40/1000, 15), 1.00, 0.5, (2 * pi) * 1e-2, 0.10)
-}
+mm   = lambda s: s / 1000
+gram = lambda m: m / 1000
+yard = lambda s: s * 0.9144
+inch = lambda s: s * 0.0254
+Cone = lambda H, d: atan(0.5 * d / H)
+
+R127x108mm = Round(900, gram(50.00), 150.0000, mm(12.70),  1)
+R762x54mm  = Round(850, gram(10.00), 146.9415, mm(07.62),  1)
+Parabellum = Round(600, gram(08.03), 104.7573, mm(09.00),  1)
+Shot       = Round(457, gram(38.00),   5.0817, mm(18.40), 15)
+
+Rifle = Gun(
+    name               = "Rifle",
+    ammo               = Magazines(5, 10),
+    round              = R762x54mm,
+    delay              = 0.50,
+    reload_time        = 2.5,
+    spread             = 0,
+    velocity_deviation = 0.05
+)
+
+SMG = Gun(
+    name               = "SMG",
+    ammo               = Magazines(4, 30),
+    round              = Parabellum,
+    delay              = 0.11,
+    reload_time        = 2.5,
+    spread             = 0,
+    velocity_deviation = 0.05
+)
+
+Shotgun = Gun(
+    name               = "Shotgun",
+    ammo               = Heap(6, 48),
+    round              = Shot,
+    delay              = 1.00,
+    reload_time        = 0.5,
+    spread             = Cone(yard(25), inch(40)),
+    velocity_deviation = 0.10
+)
+
+guns = {RIFLE_WEAPON: Rifle, SMG_WEAPON: SMG, SHOTGUN_WEAPON: Shotgun}
 
 @dataclass
 class Part:

@@ -482,6 +482,7 @@ def apply_script(protocol, connection, config):
             self.last_tool_update = -inf
 
             self.reset_health()
+            self.update_hud()
 
             return connection.on_spawn(self, pos)
 
