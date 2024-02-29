@@ -12,6 +12,9 @@ template<typename T, typename... Ts> inline auto max(T t, Ts... ts)
 template<typename T> T random()
 { return static_cast<T>(rand()) / static_cast<T>(RAND_MAX); }
 
+template<typename T> inline bool randbool(T probability)
+{ return random<T>() < probability; }
+
 template<typename T> T uniform(T m, T M)
 { return m + random<T>() * (M - m); }
 

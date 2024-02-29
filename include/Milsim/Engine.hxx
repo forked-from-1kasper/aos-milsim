@@ -16,9 +16,13 @@
 #include "vxl_c.h"
 
 template<typename T> struct Material {
-    T durability, absorption;
-    T density,    strength;
-    T ricochet,   deflecting;
+    T    durability;
+    T    absorption;
+    T    density;
+    T    strength;
+    T    ricochet;
+    T    deflecting;
+    bool crumbly;
 
     Material() {}
 };
@@ -76,6 +80,9 @@ template<typename T> struct Voxel {
     Voxel(Material<T> & material) : material(&material), durability(1.0) {}
 };
 
+template<typename T> inline bool crumbly(const Voxel<T> & voxel)
+{ return voxel.material->crumbly; }
+
 template<typename T> struct Engine {
 private:
     std::map<int, Voxel<T>> voxels;
@@ -127,6 +134,18 @@ public:
     inline bool indestructible(int x, int y, int z)
     { return z >= 62 || !get_solid(x, y, z, map); }
 
+    inline bool unstable(int x₀, int y₀, int z₀) {
+        for (int z = z₀ + 1; z < 62; z++) {
+            if (!get_solid(x₀, y₀, z, map))
+                return true;
+
+            if (!crumbly(get(x₀, y₀, z)))
+                return false;
+        }
+
+        return false;
+    }
+
     inline bool weaken(Voxel<T> & voxel, T amount)
     { voxel.durability -= amount; return voxel.durability <= 0; }
 
@@ -141,6 +160,12 @@ public:
         if (indestructible(x, y, z)) return false;
 
         auto & voxel = get(x, y, z); auto & M = voxel.material;
+
+        if (M->crumbly) {
+            if (randbool<T>(0.5) && unstable(x, y, z))
+                return true;
+        }
+
         return weaken(voxel, ΔE * (M->durability / M->absorption));
     }
 

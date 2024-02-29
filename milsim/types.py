@@ -34,6 +34,7 @@ class Material:
     strength   : float # Material cavity strength (Pa).
     density    : float # Density of material (kg/m³).
     absorption : float # Amount of energy that material can absorb before breaking.
+    crumbly    : bool  # Whether material can crumble.
 
 ρ      = 1.225 # Air density
 factor = 0.5191

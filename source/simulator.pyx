@@ -43,12 +43,13 @@ cdef extern from "Milsim/Engine.hxx":
         void set(int, T x, T y, T z, T ox, T oy, T oz, bool_t)
 
     cdef cppclass Material[T]:
-        T ricochet
-        T density
-        T strength
-        T deflecting
-        T durability
-        T absorption
+        T      ricochet
+        T      density
+        T      strength
+        T      deflecting
+        T      durability
+        T      absorption
+        bool_t crumbly
 
     cdef cppclass Engine[T]:
         vector[Player[T]] players
@@ -110,6 +111,7 @@ cdef void unpackMaterial(object o, Material[double] * M):
         M.deflecting = (o.deflecting / 180) * pi
         M.durability = o.durability
         M.absorption = o.absorption
+        M.crumbly    = o.crumbly
 
 cdef class Simulator:
     cdef Engine[double] engine
