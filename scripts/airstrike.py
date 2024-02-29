@@ -47,16 +47,16 @@ def airbomb_explode(conn, pos):
     blast.explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, conn, pos)
 
     for i in range(AIRSTRIKE_PASSES):
-        x1, y1 = shift(x), shift(y)
-        z1 = conn.protocol.map.get_z(x1, y1)
-        conn.grenade_destroy(x1, y1, z1)
+        X, Y = shift(x), shift(y)
+        Z = conn.protocol.map.get_z(X, Y)
 
-        reactor.callLater(random(), blast.effect, conn, Vertex3(x1, y1, z1), Vertex3(0, 0, 0), 0)
+        conn.grenade_destroy(X, Y, Z)
+        reactor.callLater(random(), blast.effect, conn, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
 
 def drop_airbomb(conn, x, y, vx, vy):
     if conn.player_id not in conn.protocol.players: return
 
-    pos = Vertex3(x, y, conn.protocol.map.get_z(x, y))
+    pos = Vertex3(x, y, conn.protocol.map.get_z(x, y) - 2)
     reactor.callLater(AIRBOMB_DELAY, airbomb_explode, conn, pos)
 
 def do_bombing(conn, x, y, vx, vy, bombs):
