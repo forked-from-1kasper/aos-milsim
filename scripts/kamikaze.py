@@ -20,7 +20,7 @@ import milsim.blast as blast
 BOOM_GUARANTEED_KILL_RADIUS = 17
 BOOM_RADIUS = 40
 
-section = config.section("boom")
+section = config.section("kamikaze")
 
 class Config:
     message  = section.option("message", None).get()
@@ -110,7 +110,7 @@ def boom(conn, *args):
     return conn.boom.start(fuse)
 
 def apply_script(protocol, connection, config):
-    class BoomConnection(connection):
+    class KamikazeConnection(connection):
         def on_join(self):
             self.boom = Boom(self)
             return connection.on_join(self)
@@ -123,4 +123,4 @@ def apply_script(protocol, connection, config):
             self.boom.stop() # Just to be sure
             return connection.on_team_changed(self, old_team)
 
-    return protocol, BoomConnection
+    return protocol, KamikazeConnection
