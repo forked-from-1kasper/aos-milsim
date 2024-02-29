@@ -124,13 +124,24 @@ public:
         }
     }
 
+    inline bool indestructible(int x, int y, int z)
+    { return z >= 62 || !get_solid(x, y, z, map); }
+
+    inline bool weaken(Voxel<T> & voxel, T amount)
+    { voxel.durability -= amount; return voxel.durability <= 0; }
+
     inline bool dig(int x, int y, int z, T value) {
-        if (z >= 62 || !get_solid(x, y, z, map)) return false;
+        if (indestructible(x, y, z)) return false;
 
-        auto & voxel = get(x, y, z);
+        auto & voxel = get(x, y, z); auto & M = voxel.material;
+        return weaken(voxel, value / M->durability);
+    }
 
-        voxel.durability -= value / voxel.material->durability;
-        return voxel.durability <= 0;
+    inline bool smash(int x, int y, int z, T ΔE) {
+        if (indestructible(x, y, z)) return false;
+
+        auto & voxel = get(x, y, z); auto & M = voxel.material;
+        return weaken(voxel, ΔE * (M->durability / M->absorption));
     }
 
     inline void build(int x, int y, int z) {

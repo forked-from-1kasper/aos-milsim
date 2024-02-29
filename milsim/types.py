@@ -28,12 +28,12 @@ def hasTraceExtension(conn):
 
 @dataclass
 class Material:
-    ricochet   : float
-    density    : float
-    strength   : float
-    deflecting : float
-    durability : float
-    absorption : float
+    ricochet   : float # Conditional probability of ricochet.
+    deflecting : float # Minimum angle required for a ricochet to occur (degree).
+    durability : float # Average number of seconds to break material with a shovel.
+    strength   : float # Material cavity strength (Pa).
+    density    : float # Density of material (kg/m³).
+    absorption : float # Amount of energy that material can absorb before breaking.
 
 ρ      = 1.225 # Air density
 factor = 0.5191

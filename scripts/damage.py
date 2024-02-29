@@ -105,6 +105,7 @@ def splint(conn, *args):
     return "You have no fractures."
 
 class Engine:
+    @staticmethod
     def debug(protocol, *argv):
         usage = "Usage: /engine debug (on|off)"
 
@@ -122,6 +123,7 @@ class Engine:
         else:
             return usage
 
+    @staticmethod
     def stats(protocol, *argv):
         return "Total: %d, alive: %d, lag: %.2f us" % (
             protocol.sim.total(),
@@ -129,6 +131,7 @@ class Engine:
             protocol.sim.lag(),
         )
 
+    @staticmethod
     def flush(protocol, *argv):
         alive = protocol.sim.alive()
         protocol.sim.flush()
@@ -394,20 +397,9 @@ def apply_script(protocol, connection, config):
             if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
                 return False
 
-            for x1, y1, z1 in self.grenade_zone(x, y, z):
-                count = self.protocol.map.destroy_point(x1, y1, z1)
-                if count:
-                    self.total_blocks_removed += count
-                    self.on_block_removed(x1, y1, z1)
-
-            block_action           = loaders.BlockAction()
-            block_action.x         = x
-            block_action.y         = y
-            block_action.z         = z
-            block_action.value     = GRENADE_DESTROY
-            block_action.player_id = self.player_id
-            self.protocol.broadcast_contained(block_action, save=True)
-            self.protocol.update_entities()
+            for X, Y, Z in self.grenade_zone(x, y, z):
+                if self.protocol.sim.smash(X, Y, Z, TNT(gram(60))):
+                    self.protocol.onDestroy(self.player_id, X, Y, Z)
 
             return True
 

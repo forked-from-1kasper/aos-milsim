@@ -69,6 +69,7 @@ cdef extern from "Milsim/Engine.hxx":
         void resetMaterials()
 
         bool_t dig(int, int, int, T)
+        bool_t smash(int, int, int, T)
 
         void build(int, int, int)
         void destroy(int, int, int)
@@ -143,6 +144,9 @@ cdef class Simulator:
 
     def dig(self, x, y, z, value):
         return self.engine.dig(x, y, z, value)
+
+    def smash(self, x, y, z, value):
+        return self.engine.smash(x, y, z, value)
 
     def uploadMap(self):
         cdef VXLData data = <VXLData> self.protocol.map
