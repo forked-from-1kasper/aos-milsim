@@ -17,8 +17,6 @@ from pyspades.team import Team
 from piqueserver.commands import command
 import milsim.blast as blast
 
-AIRBOMB = "airbomb"
-
 BOMBS_COUNT = 7
 BOMBER_SPEED = 10
 BOMBING_DELAY = 2
@@ -220,20 +218,21 @@ def apply_script(protocol, connection, config):
             return self.protocol.bombers[self.team.id]
 
         def send_airstrike(self):
-            obj = self.world_object
+            obj     = self.world_object
             walking = obj.up or obj.down or obj.left or obj.right
+
             if not walking: self.get_bomber().point(self)
 
-        def revert_airstrike(self):
+        def cancel_airstrike(self):
             self.get_bomber().stop(player_id=self.player_id)
 
         def on_kill(self, killer, kill_type, grenade):
-            self.revert_airstrike()
+            self.cancel_airstrike()
             return connection.on_kill(self, killer, kill_type, grenade)
 
         def on_walk_update(self, up, down, left, right):
             if self.get_bomber().active() and (up or down or left or right):
-                self.revert_airstrike()
+                self.cancel_airstrike()
             return connection.on_walk_update(self, up, down, left, right)
 
         def on_secondary_fire_set(self, secondary):
@@ -242,7 +241,7 @@ def apply_script(protocol, connection, config):
                     if self.world_object.sneak:
                         self.send_airstrike()
                 else:
-                    self.revert_airstrike()
+                    self.cancel_airstrike()
 
             return connection.on_secondary_fire_set(self, secondary)
 
@@ -251,14 +250,13 @@ def apply_script(protocol, connection, config):
                 if sneak and not self.get_bomber().active():
                     self.send_airstrike()
                 elif not sneak and self.get_bomber().active():
-                    self.revert_airstrike()
+                    self.cancel_airstrike()
 
             return connection.on_animation_update(self, jump, crouch, sneak, sprint)
 
-        def on_tool_set_attempt(self, tool):
-            res = connection.on_tool_set_attempt(self, tool)
-            if res and tool != WEAPON_TOOL:
-                self.revert_airstrike()
-            return res
+        def on_tool_changed(self, tool):
+            if tool != WEAPON_TOOL: self.cancel_airstrike()
+
+            return connection.on_tool_changed(self, tool)
 
     return AirstrikeProtocol, AirstrikeConnection

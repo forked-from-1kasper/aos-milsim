@@ -178,8 +178,8 @@ def apply_script(protocol, connection, config):
                 for color, material in E.color.items():
                     self.sim.registerMaterial(color, material)
 
-            self.sim.setDefaultMaterial(E.default)
-            self.sim.setBuildMaterial(E.build)
+                self.sim.setDefaultMaterial(E.default)
+                self.sim.setBuildMaterial(E.build)
 
             self.sim.uploadMap()
 
@@ -413,14 +413,17 @@ def apply_script(protocol, connection, config):
 
             return True
 
+        def grenade_explode(self, r):
+            blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
+
+            x, y, z = floor(r.x), floor(r.y), floor(r.z)
+            self.grenade_destroy(x, y, z)
+
         def grenade_exploded(self, grenade):
             if self.name is None or self.team.spectator:
                 return
 
-            blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, grenade.position)
-
-            x, y, z = floor(grenade.position.x), floor(grenade.position.y), floor(grenade.position.z)
-            self.grenade_destroy(x, y, z)
+            self.grenade_explode(grenade.position)
 
         def set_weapon(self, weapon, local=False, no_kill=False):
             if weapon not in guns:
@@ -531,6 +534,17 @@ def apply_script(protocol, connection, config):
             self.update_hud()
             return connection.on_shoot_set(self, fire)
 
+        def on_flag_take(self):
+            flag = self.team.other.flag
+
+            if self.world_object.position.z >= flag.z:
+                return False
+
+            if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
+                return False
+
+            return connection.on_flag_take(self)
+
         @register_packet_handler(loaders.SetTool)
         def on_tool_change_recieved(self, contained):
             if not self.hp: return
@@ -547,8 +561,7 @@ def apply_script(protocol, connection, config):
 
             if self.tool == WEAPON_TOOL:
                 self.on_shoot_set(self.world_object.primary_fire)
-                self.weapon_object.set_shoot(
-                    self.world_object.primary_fire)
+                self.weapon_object.set_shoot(self.world_object.primary_fire)
 
             self.world_object.set_weapon(self.tool == WEAPON_TOOL)
             self.on_tool_changed(self.tool)

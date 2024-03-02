@@ -168,15 +168,4 @@ def apply_script(protocol, connection, config):
             self.chat_limiter._seconds = 0
             return connection.on_connect(self)
 
-        def on_flag_take(self):
-            flag = self.team.other.flag
-
-            if self.world_object.position.z >= flag.z:
-                return False
-
-            if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
-                return False
-
-            return connection.on_flag_take(self)
-
     return protocol, ToolboxConnection
