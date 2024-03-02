@@ -15,6 +15,16 @@
 #include "Python.h"
 #include "vxl_c.h"
 
+inline void retain(PyObject * & member, PyObject * const obj) {
+    if (member != Py_None)
+        Py_DECREF(member);
+
+    if (obj != Py_None)
+        Py_INCREF(obj);
+
+    member = obj;
+}
+
 template<typename T> struct Material {
     T    durability;
     T    absorption;
@@ -90,7 +100,7 @@ private:
 
     std::map<uint32_t, Material<T>> materials;
 
-    MapData * map; PyObject * onTrace, * onHit, * onDestroy;
+    MapData * map; PyObject * onTrace, * onHitEffect, * onHit, * onDestroy;
 
     double _lag;
 
@@ -98,7 +108,7 @@ public:
     std::vector<Player<T>> players;
     Material<T> defaultMaterial, buildMaterial;
 
-    Engine() : onTrace(Py_None), onHit(Py_None), onDestroy(Py_None)
+    Engine() : onTrace(Py_None), onHitEffect(Py_None), onHit(Py_None), onDestroy(Py_None)
     { srand(time(NULL)); players.reserve(32); _lag = 0.0; }
 
     ~Engine() { Py_XDECREF(onTrace); }
@@ -177,35 +187,10 @@ public:
         voxels.erase(get_pos(x, y, z));
     }
 
-    void invokeOnHit(PyObject * obj) {
-        if (onHit != Py_None)
-            Py_DECREF(onHit);
-
-        if (obj != Py_None)
-            Py_INCREF(obj);
-
-        onHit = obj;
-    }
-
-    void invokeOnTrace(PyObject * obj) {
-        if (onTrace != Py_None)
-            Py_DECREF(onTrace);
-
-        if (obj != Py_None)
-            Py_INCREF(obj);
-
-        onTrace = obj;
-    }
-
-    void invokeOnDestroy(PyObject * obj) {
-        if (onDestroy != Py_None)
-            Py_DECREF(onDestroy);
-
-        if (obj != Py_None)
-            Py_INCREF(obj);
-
-        onDestroy = obj;
-    }
+    inline void invokeOnHit(PyObject * obj)       { retain(onHit, obj); }
+    inline void invokeOnHitEffect(PyObject * obj) { retain(onHitEffect, obj); }
+    inline void invokeOnTrace(PyObject * obj)     { retain(onTrace, obj); }
+    inline void invokeOnDestroy(PyObject * obj)   { retain(onDestroy, obj); }
 
     void step(const T t1, const T t2) {
         using namespace std::chrono;
@@ -280,7 +265,16 @@ private:
                 state = M->deflecting <= θ && random<T>() < M->ricochet ? Terminal::ricochet
                                                                         : Terminal::penetration;
 
-                if (state != Terminal::flying) trace(o.index(), r, v.abs() / o.v0, false);
+                if (state != Terminal::flying) {
+                    trace(o.index(), r, v.abs() / o.v0, false);
+
+                    if (onHitEffect != Py_None) {
+                        PyObject_CallFunction(
+                            onHitEffect, "fffiiii", r.x, r.y, r.z, X, Y, Z,
+                            static_cast<uint8_t>(HitEffectTarget::ground)
+                        );
+                    }
+                }
 
                 if (state == Terminal::ricochet) v -= n * (2 * (v, n));
 
@@ -407,16 +401,27 @@ private:
 
             if (target >= 0) {
                 if (onHit != Py_None) {
-                    PyObject_CallFunction(onHit, "iiidO",
-                        o.thrower, target, hit, o.energy(),
+                    PyObject_CallFunction(onHit, "iiiddO",
+                        o.thrower, target, hit, o.energy(), o.area,
                         o.grenade ? Py_True : Py_False
+                    );
+                }
+
+                if (onHitEffect != Py_None) {
+                    Vector3<T> w = r + dr * mindist;
+
+                    PyObject_CallFunction(
+                        onHitEffect, "fffiiii", w.x, w.y, w.z, X, Y, Z,
+                        static_cast<uint8_t>(targetOfHitType(hit))
                     );
                 }
 
                 stuck = true;
             }
 
-            auto F = g<T> * m - v * (0.5 * densityOfAir<T> * v.abs() * o.drag * o.area);
+            auto wind = Vector3<T>(0, 0, 0), u = wind - v;
+
+            auto F = g<T> * m + u * (0.5 * densityOfAir<T> * u.abs() * o.drag * o.area);
             auto dv = F * (dt / m);
 
             t1 += dt; r += dr; v += dv;

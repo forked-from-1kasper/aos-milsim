@@ -20,6 +20,24 @@ template<typename T> T uniform(T m, T M)
 
 enum HitType { TORSO = 0, HEAD = 1, ARMS = 2, LEGS = 3, SPADE = 4 };
 
+enum class HitEffectTarget : uint8_t {
+    ground = 0,
+    head   = 1,
+    torso  = 2,
+    arms   = 3,
+    legs   = 4,
+};
+
+constexpr inline HitEffectTarget targetOfHitType(const HitType hit) {
+    switch (hit) {
+        case TORSO: return HitEffectTarget::torso;
+        case HEAD:  return HitEffectTarget::head;
+        case ARMS:  return HitEffectTarget::arms;
+        case LEGS:  return HitEffectTarget::legs;
+        default:    return HitEffectTarget::ground;
+    }
+}
+
 namespace Fundamentals {
     template<typename T> constexpr T playerHeightInMeters = 1.8;
     template<typename T> constexpr T playerHeightInBlocks = 2.5;

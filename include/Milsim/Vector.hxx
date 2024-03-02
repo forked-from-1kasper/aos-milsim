@@ -96,7 +96,7 @@ template<typename T> Vector3<T> cone(const Vector3<T> & v, const T σ) {
     std::uniform_real_distribution uniform(-std::numbers::pi_v<T>, std::numbers::pi_v<T>);
 
     auto n = v.normal(); auto left = Vector3<T>(n.y, -n.x, 0).normal();
-    auto α = gauss(randgen), β = uniform(randgen);
+    auto α = std::fabs(gauss(randgen)), β = uniform(randgen);
 
     return v.rot(left, α).rot(n, β);
 }

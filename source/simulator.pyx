@@ -61,6 +61,7 @@ cdef extern from "Milsim/Engine.hxx":
         void uploadMap(MapData *)
 
         void invokeOnTrace(object)
+        void invokeOnHitEffect(object)
         void invokeOnHit(object)
         void invokeOnDestroy(object)
 
@@ -119,6 +120,8 @@ cdef class Simulator:
 
     def __init__(self, protocol):
         self.protocol = protocol
+
+        self.engine.invokeOnHitEffect(protocol.onHitEffect)
 
         self.engine.invokeOnHit(protocol.onHit)
         self.engine.invokeOnDestroy(protocol.onDestroy)

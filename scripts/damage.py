@@ -23,9 +23,7 @@ from milsim.weapon import Weapon
 from milsim.common import *
 
 parts = [TORSO, HEAD, ARMS, LEGS]
-names = {TORSO: "torso", HEAD: "head", ARMS: "arms", LEGS: "legs", MELEE: "melee"}
-
-bounded_damage = lambda min: floor(min + (100 - min) * random())
+bounded_damage = lambda m: floor(uniform(m, 100))
 
 SHOVEL_GUARANTEED_DAMAGE = 50
 BLOCK_DESTROY_ENERGY = 2500
@@ -59,13 +57,13 @@ weighted_prob = lambda tbl, part: clamp(0, 1, scale(tbl[part], 1, distr))
 
 randbool = lambda prob: random() <= prob
 
-healthy = lambda: {TORSO: Part(), HEAD: Part(), ARMS: Part(), LEGS: Part()}
+healthy = lambda: {TORSO: Part("torso"), HEAD: Part("head"), ARMS: Part("arms"), LEGS: Part("legs")}
 bleeding_curve = lambda Δt: Δt
 
 @command()
 def health(conn, *args):
     try:
-        return " ".join(map(lambda part: f"{names[part]}: {conn.body[part].hp:.2f}", parts))
+        return " ".join(map(lambda P: f"{P.name}: {P.hp:.2f}", conn.body.values()))
     except AttributeError:
         return "Body not initialized."
 
@@ -78,31 +76,33 @@ def weapon(conn, *args):
 def bandage(conn, *args):
     if not conn.hp: return
 
+    if not conn.bleeding():
+        return "You are not bleeding."
+
     if conn.bandage == 0:
         return "You do not have a bandage."
 
-    for idx, part in conn.body.items():
-        if part.bleeding:
-            part.bleeding = False
+    for P in conn.body.values():
+        if P.bleeding:
+            P.bleeding = False
             conn.bandage -= 1
-            return f"You have bandaged your {names[idx]}."
-
-    return "You are not bleeding."
+            return f"You have bandaged your {P.name}."
 
 @command('splint', 's')
 def splint(conn, *args):
     if not conn.hp: return
 
+    if not conn.fracture():
+        return "You have no fractures."
+
     if conn.splint == 0:
         return "You do not have a split."
 
-    for idx, part in conn.body.items():
-        if part.fracture:
-            part.splint  = True
+    for P in conn.body.values():
+        if P.fracture:
+            P.splint  = True
             conn.splint -= 1
-            return f"You put a splint on your {names[idx]}."
-
-    return "You have no fractures."
+            return f"You put a splint on your {P.name}."
 
 class Engine:
     @staticmethod
@@ -159,11 +159,15 @@ def shoot(conn, what):
         return "Usage: /shoot (torso|head|arm|leg)"
 
 def apply_script(protocol, connection, config):
+    extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
+
     class DamageProtocol(protocol):
         def __init__(self, *arg, **kw):
             protocol.__init__(self, *arg, **kw)
             self.time = reactor.seconds()
             self.sim  = Simulator(self)
+
+            self.available_proto_extensions.extend(extensions)
 
         def on_map_change(self, M):
             self.sim.resetMaterials()
@@ -223,6 +227,12 @@ def apply_script(protocol, connection, config):
                 rule = hasTraceExtension
             )
 
+        def onHitEffect(self, x, y, z, X, Y, Z, target):
+            self.broadcast_contained(
+                HitEffectPacket(Vertex3(x, y, z), X, Y, Z, target),
+                rule = hasHitEffects
+            )
+
         def onDestroy(self, pid, x, y, z):
             if pid not in self.players:
                 return
@@ -245,7 +255,7 @@ def apply_script(protocol, connection, config):
                 player.on_block_removed(x, y, z)
                 player.total_blocks_removed += count
 
-        def onHit(self, thrower, target, part, E, grenade):
+        def onHit(self, thrower, target, part, E, A, grenade):
             if target not in self.players:
                 return
 

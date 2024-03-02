@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from functools import partial
 from enum import Enum, auto
-from random import random
+from random import uniform
 from math import floor
 
 from twisted.internet import reactor
@@ -120,7 +120,7 @@ class Drone:
         H = self.protocol.map.get_z(floor(x), floor(y))
 
         if z <= H:
-            fuse = rand(MIN_FUSE, MAX_FUSE)
+            fuse = uniform(MIN_FUSE, MAX_FUSE)
 
             position = Vertex3(x, y, DROP_HEIGHT)
             velocity = Vertex3(0, 0, 0)
@@ -155,9 +155,6 @@ class Drone:
             return self.callback.getTime() - reactor.seconds()
         else:
             return None
-
-def rand(a, b):
-    return a + random() * (b - a)
 
 @command('drone', 'd')
 def drone(conn, *args):
