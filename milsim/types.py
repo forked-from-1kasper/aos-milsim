@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 from math import pi
 
 EXTENSION_BASE          = 0x40
@@ -55,6 +55,7 @@ def hasHitEffects(conn):
 
 @dataclass
 class Material:
+    name       : str   # Material name.
     ricochet   : float # Conditional probability of ricochet.
     deflecting : float # Minimum angle required for a ricochet to occur (degree).
     durability : float # Average number of seconds to break material with a shovel.
@@ -62,6 +63,18 @@ class Material:
     density    : float # Density of material (kg/m³).
     absorption : float # Amount of energy that material can absorb before breaking.
     crumbly    : bool  # Whether material can crumble.
+
+@dataclass
+class Voxel:
+    material   : Material
+    durability : float
+
+@dataclass
+class Environment:
+    registry : List[Material]
+    default  : Material
+    build    : Material
+    palette  : Dict[int, Material]
 
 ρ      = 1.225 # Air density
 factor = 0.5191
@@ -111,12 +124,6 @@ class Part:
     def hit(self, value):
         if value <= 0: return
         self.hp = max(0, self.hp - value)
-
-@dataclass
-class Environment:
-    color   : Dict[int, Material]
-    default : Material
-    build   : Material
 
 def Magazines(magazines : int, capacity : int) -> type:
     """

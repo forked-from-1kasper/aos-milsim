@@ -148,6 +148,17 @@ def engine(conn, subcmd, *argv):
         return "Unknown command: %s" % str(subcmd)
 
 @command()
+def lookat(conn):
+    if not conn.world_object: return
+    loc = conn.world_object.cast_ray(7.0)
+
+    if loc is not None:
+        block = conn.protocol.sim.get(*loc)
+        return f"Material: {block.material.name}, durability: {block.durability:.2f}."
+    else:
+        return "Block is too far."
+
+@command()
 def shoot(conn, what):
     if not conn.hp: return
 
@@ -170,18 +181,20 @@ def apply_script(protocol, connection, config):
             self.available_proto_extensions.extend(extensions)
 
         def on_map_change(self, M):
-            self.sim.resetMaterials()
+            self.sim.wipe()
 
             E = self.map_info.extensions.get('environment', {})
 
             if isinstance(E, Environment):
-                for color, material in E.color.items():
-                    self.sim.registerMaterial(color, material)
+                for material in E.registry:
+                    self.sim.register(material)
 
                 self.sim.setDefaultMaterial(E.default)
                 self.sim.setBuildMaterial(E.build)
 
-            self.sim.uploadMap()
+                self.sim.applyPalette(E.palette)
+            else:
+                raise TypeError
 
             return protocol.on_map_change(self, M)
 

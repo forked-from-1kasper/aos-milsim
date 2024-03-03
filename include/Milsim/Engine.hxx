@@ -5,6 +5,7 @@
 
 #include <Milsim/Fundamentals.hxx>
 
+#include <unordered_map>
 #include <utility>
 #include <cstdint>
 #include <vector>
@@ -25,13 +26,16 @@ inline void retain(PyObject * & member, PyObject * const obj) {
     member = obj;
 }
 
+inline std::unordered_map<int, int> * getColorsOf(MapData * data)
+{ return &data->colors; }
+
 template<typename T> struct Material {
-    T    durability;
-    T    absorption;
-    T    density;
-    T    strength;
-    T    ricochet;
-    T    deflecting;
+    T durability;
+    T absorption;
+    T density;
+    T strength;
+    T ricochet;
+    T deflecting;
     bool crumbly;
 
     Material() {}
@@ -85,61 +89,27 @@ enum class Terminal { flying, ricochet, penetration };
 template<typename T> using Iterator = std::list<Object<T>>::iterator;
 
 template<typename T> struct Voxel {
-    Material<T> * material; T durability;
+    size_t id; T durability;
 
-    Voxel(Material<T> & material) : material(&material), durability(1.0) {}
+    Voxel(const size_t id, const T value) : id(id), durability(value) {}
 };
-
-template<typename T> inline bool crumbly(const Voxel<T> & voxel)
-{ return voxel.material->crumbly; }
 
 template<typename T> struct Engine {
 private:
+    std::vector<Material<T>> materials;
     std::map<int, Voxel<T>> voxels;
     std::list<Object<T>> objects;
-
-    std::map<uint32_t, Material<T>> materials;
 
     MapData * map; PyObject * onTrace, * onHitEffect, * onHit, * onDestroy;
 
     double _lag;
 
-public:
-    std::vector<Player<T>> players;
-    Material<T> defaultMaterial, buildMaterial;
+private:
+    inline Material<T> & material(const Voxel<T> & voxel)
+    { return materials[voxel.id]; }
 
-    Engine() : onTrace(Py_None), onHitEffect(Py_None), onHit(Py_None), onDestroy(Py_None)
-    { srand(time(NULL)); players.reserve(32); _lag = 0.0; }
-
-    ~Engine() { Py_XDECREF(onTrace); }
-
-    template<typename... Args> inline uint64_t add(Args &&... args) {
-        auto & obj = objects.emplace_back(args...);
-        trace(obj.index(), obj.position, 1.0, true);
-        return obj.index();
-    }
-
-    template<typename... Args> inline Material<T> & allocMaterial(const uint32_t color)
-    { auto [it, _] = materials.try_emplace(color); return it->second; }
-
-    inline void resetMaterials() { materials.clear(); }
-
-    Material<T> & getMaterial(const uint32_t color) {
-        auto iter = materials.find(color & 0xFFFFFF);
-        return iter == materials.end() ? defaultMaterial : iter->second;
-    }
-
-    void uploadMap(MapData * ptr) {
-        objects.clear();
-        Object<T>::flush();
-
-        map = ptr;
-
-        for (auto [index, color] : map->colors) {
-            if (map->geometry[index])
-                voxels.insert_or_assign(index, Voxel<T>(getMaterial(color)));
-        }
-    }
+    inline bool crumbly(const Voxel<T> & voxel)
+    { return material(voxel).crumbly; }
 
     inline bool indestructible(int x, int y, int z)
     { return z >= 62 || !get_solid(x, y, z, map); }
@@ -159,33 +129,75 @@ public:
     inline bool weaken(Voxel<T> & voxel, T amount)
     { voxel.durability -= amount; return voxel.durability <= 0; }
 
+public:
+    std::vector<Player<T>> players;
+    size_t defaultMaterial, buildMaterial;
+
+    Engine() : onTrace(Py_None), onHitEffect(Py_None), onHit(Py_None), onDestroy(Py_None)
+    { srand(time(NULL)); players.reserve(32); _lag = 0.0; }
+
+    ~Engine() { Py_XDECREF(onTrace); }
+
+    Voxel<T> & get(int x, int y, int z) {
+        auto pos = get_pos(x, y, z);
+        auto iter = voxels.find(pos);
+
+        if (iter == voxels.end()) {
+            std::tie(iter, std::ignore) = voxels.insert_or_assign(
+                pos, Voxel<T>(defaultMaterial, 1.0)
+            );
+        }
+
+        return iter->second;
+    }
+
+    void set(const int index, const uint32_t i, const T value)
+    { voxels.insert_or_assign(index, Voxel<T>(i, value)); }
+
+    template<typename... Args> inline uint64_t add(Args &&... args) {
+        auto & obj = objects.emplace_back(args...);
+        trace(obj.index(), obj.position, 1.0, true);
+        return obj.index();
+    }
+
+    inline Material<T> & alloc(size_t * id)
+    { *id = materials.size(); return materials.emplace_back(); }
+
+    void wipe(MapData * ptr) {
+        objects.clear();
+        Object<T>::flush();
+
+        voxels.clear();
+        materials.clear();
+
+        map = ptr;
+    }
+
     inline bool dig(int x, int y, int z, T value) {
         if (indestructible(x, y, z)) return false;
 
-        auto & voxel = get(x, y, z); auto & M = voxel.material;
-        return weaken(voxel, value / M->durability);
+        auto & voxel = get(x, y, z); auto & M = material(voxel);
+        return weaken(voxel, value / M.durability);
     }
 
     inline bool smash(int x, int y, int z, T ΔE) {
         if (indestructible(x, y, z)) return false;
 
-        auto & voxel = get(x, y, z); auto & M = voxel.material;
+        auto & voxel = get(x, y, z); auto & M = material(voxel);
 
-        if (M->crumbly) {
+        if (M.crumbly) {
             if (randbool<T>(0.5) && unstable(x, y, z))
                 return true;
         }
 
-        return weaken(voxel, ΔE * (M->durability / M->absorption));
+        return weaken(voxel, ΔE * (M.durability / M.absorption));
     }
 
-    inline void build(int x, int y, int z) {
-        voxels.insert_or_assign(get_pos(x, y, z), Voxel<T>(buildMaterial));
-    }
+    inline void build(int x, int y, int z)
+    { voxels.insert_or_assign(get_pos(x, y, z), Voxel<T>(buildMaterial, 1.0)); }
 
-    inline void destroy(int x, int y, int z) {
-        voxels.erase(get_pos(x, y, z));
-    }
+    inline void destroy(int x, int y, int z)
+    { voxels.erase(get_pos(x, y, z)); }
 
     inline void invokeOnHit(PyObject * obj)       { retain(onHit, obj); }
     inline void invokeOnHitEffect(PyObject * obj) { retain(onHitEffect, obj); }
@@ -221,19 +233,6 @@ private:
         }
     }
 
-    Voxel<T> & get(int x, int y, int z) {
-        auto pos = get_pos(x, y, z);
-        auto iter = voxels.find(pos);
-
-        if (iter == voxels.end()) {
-            std::tie(iter, std::ignore) = voxels.insert_or_assign(
-                pos, Voxel<T>(defaultMaterial)
-            );
-        }
-
-        return iter->second;
-    }
-
     void next(T t1, const T t2, Iterator<T> & it) {
         using namespace Fundamentals;
 
@@ -258,7 +257,7 @@ private:
             Terminal state = Terminal::flying;
 
             if (is_valid_position(X, Y, Z) && get_solid(X, Y, Z, map)) {
-                voxel = &get(X, Y, Z); M = voxel->material;
+                voxel = &get(X, Y, Z); M = &material(*voxel);
 
                 auto θ = acos(-(v, n) / v.abs());
 
