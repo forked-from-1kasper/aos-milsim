@@ -13,7 +13,7 @@ Asphalt  = Material(name = "asphalt",  ricochet = 0.6,  deflecting = 78, durabil
 Steel    = Material(name = "steel",    ricochet = 0.80, deflecting = 77, durability = 10.0, strength = 500e+6, density = 7850, absorption = 150e+3, crumbly = False)
 Glass    = Material(name = "glass",    ricochet = 0.0,  deflecting = 0,  durability = 0.15, strength = 7e+6,   density = 2500, absorption = 500,    crumbly = False)
 Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durability = 0.5,  strength = 1e+5,   density = 300,  absorption = 50e+3,  crumbly = True)
-Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+15,  crumbly = True)
+Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 
 mm   = lambda s: s / 1000
 gram = lambda m: m / 1000

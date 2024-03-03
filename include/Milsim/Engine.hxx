@@ -325,7 +325,7 @@ private:
                     v.x = v.y = v.z = 0.0;
                 }
 
-                voxel->durability -= ΔE * (M->durability / M->absorption);
+                if (Z < 62) voxel->durability -= ΔE * (M->durability / M->absorption);
 
                 if (voxel->durability <= 0.0) {
                     if (onDestroy != Py_None)
