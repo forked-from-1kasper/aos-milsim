@@ -37,9 +37,19 @@ NO_WARNING = [TEAM_CHANGE_KILL, CLASS_CHANGE_KILL]
 GRENADE_LETHAL_RADIUS = 4
 GRENADE_SAFETY_RADIUS = 30
 
-legs_fracture_warning = "You broke your leg."
-arms_fracture_warning = "You broke your arm."
-bleeding_warning      = "You're bleeding."
+ACTION_DAMAGE_RATE = 0.25
+SPRINT_DAMAGE_RATE = 10.0
+LEGS_DAMAGE_RATE   = 5.0
+ROTATION_DAMAGE    = 0.1
+
+fracture_warning = {
+    TORSO: "You broke your spine.",
+    HEAD:  "You broke your neck.",
+    ARMS:  "You broke your arm.",
+    LEGS:  "You broke your leg."
+}
+
+bleeding_warning = "You're bleeding."
 
 #distr = lambda x: (exp(x) - 1) / (e - 1)
 #distr = lambda x: log(x + 1) / log(2)
@@ -57,13 +67,19 @@ weighted_prob = lambda tbl, part: clamp(0, 1, scale(tbl[part], 1, distr))
 
 randbool = lambda prob: random() <= prob
 
-healthy = lambda: {TORSO: Part("torso"), HEAD: Part("head"), ARMS: Part("arms"), LEGS: Part("legs")}
-bleeding_curve = lambda Δt: Δt
+healthy = lambda: {TORSO: Part("torso", 1.0), HEAD: Part("head", 1.7), ARMS: Part("arms", 0.7), LEGS: Part("legs", 0.85)}
+
+ite = lambda b, v1, v2: v1 if b else v2
+
+def ppBodyPart(P):
+    suffix = ite(P.fracture and not P.splint, "!", "") + ite(P.bleeding, "*", "")
+    return f"{P.name}{suffix}: {P.hp:.2f}"
 
 @command()
 def health(conn, *args):
     try:
-        return " ".join(map(lambda P: f"{P.name}: {P.hp:.2f}", conn.body.values()))
+        if conn.world_object is not None and not conn.world_object.dead:
+            return " ".join(map(ppBodyPart, conn.body.values()))
     except AttributeError:
         return "Body not initialized."
 
@@ -205,9 +221,28 @@ def apply_script(protocol, connection, config):
 
             for _, player in self.players.items():
                 if player.last_hp_update is not None and player.hp is not None and player.hp > 0:
+                    dt = t - player.last_hp_update
+
                     for _, part in player.body.items():
                         if part.bleeding:
-                            part.hit(bleeding_curve(t - player.last_hp_update))
+                            part.hit(part.bleeding_rate * dt)
+
+                    if player.world_object:
+                        legs = player.body[LEGS]
+
+                        moving = player.world_object.up or player.world_object.down or \
+                                 player.world_object.left or player.world_object.right
+
+                        if moving and legs.fracture:
+                            if player.world_object.sprint:
+                                legs.hit(SPRINT_DAMAGE_RATE * dt)
+                            elif not legs.splint:
+                                legs.hit(LEGS_DAMAGE_RATE * dt)
+
+                        arms = player.body[ARMS]
+
+                        if player.world_object.primary_fire and arms.fracture:
+                            arms.hit(ACTION_DAMAGE_RATE * dt)
 
                     if player.tool == SPADE_TOOL and player.world_object and not player.cannot_work():
                         if player.world_object.primary_fire:
@@ -343,9 +378,6 @@ def apply_script(protocol, connection, config):
             self.send_contained(contained)
             self.protocol.broadcast_contained(contained)
 
-        def break_legs(self):
-            pass
-
         def reset_health(self):
             self.last_hp_update = None
             self.body           = healthy()
@@ -398,8 +430,8 @@ def apply_script(protocol, connection, config):
             self.body[part].hit(value)
 
             if self.hp is not None and self.hp > 0:
-                if fracture and part == ARMS and not self.body[ARMS].fracture:
-                    self.send_chat_status(arms_fracture_warning)
+                if fracture and not self.body[part].fracture:
+                    self.send_chat_status(fracture_warning[part])
                 elif bleeding and not self.bleeding():
                     self.send_chat_status(bleeding_warning)
 
@@ -407,8 +439,8 @@ def apply_script(protocol, connection, config):
                 self.body[part].bleeding = bleeding
                 self.body[part].fracture = fracture
 
-                if part == ARMS and fracture: self.set_tool(SPADE_TOOL)
-                if part == LEGS and fracture: self.break_legs()
+                if part == ARMS and fracture:
+                    self.set_tool(SPADE_TOOL)
 
         def grenade_zone(self, x, y, z):
             return product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
@@ -470,9 +502,8 @@ def apply_script(protocol, connection, config):
             self.body[LEGS].hit(damage)
             if randbool(damage / 100):
                 self.body[LEGS].fracture = True
-                self.send_chat_status(legs_fracture_warning)
+                self.send_chat_status(fracture_warning[LEGS])
 
-            self.break_legs()
             self.set_hp(self.display(), kill_type=FALL_KILL)
 
         def on_connect(self):
@@ -516,6 +547,19 @@ def apply_script(protocol, connection, config):
                 self.last_sprint = reactor.seconds()
 
             return connection.on_animation_update(self, jump, crouch, sneak, sprint)
+
+        def on_orientation_update(self, x, y, z):
+            retval = connection.on_orientation_update(self, x, y, z)
+
+            if retval == False:
+                return False
+
+            torso = self.body[TORSO]
+
+            if torso.fracture and not torso.splint:
+                torso.hit(ROTATION_DAMAGE)
+
+            return connection.on_orientation_update(self, x, y, z)
 
         def on_tool_set_attempt(self, tool):
             if self.body[ARMS].fracture:

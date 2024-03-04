@@ -115,11 +115,12 @@ class Gun:
 
 @dataclass
 class Part:
-    name     : str
-    hp       : int  = 100
-    bleeding : bool = False
-    fracture : bool = False
-    splint   : bool = False
+    name          : str
+    bleeding_rate : float
+    hp            : int  = 100
+    bleeding      : bool = False
+    fracture      : bool = False
+    splint        : bool = False
 
     def hit(self, value):
         if value <= 0: return
