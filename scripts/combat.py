@@ -1,4 +1,4 @@
-from math import pi, exp, sqrt, e, floor, ceil, inf, sin, cos, atan2, asin, prod
+from math import pi, exp, log, sqrt, e, floor, ceil, inf, sin, cos, atan2, asin, prod
 from itertools import product, chain
 
 from random import choice, random, gauss, uniform, randint
@@ -22,25 +22,13 @@ from milsim.simulator import Simulator
 from milsim.weapon import Weapon
 from milsim.common import *
 
-parts = [TORSO, HEAD, ARMS, LEGS]
-bounded_damage = lambda m: floor(uniform(m, 100))
-
 SHOVEL_GUARANTEED_DAMAGE = 50
-BLOCK_DESTROY_ENERGY = 2500
 
-WARNING_ON_KILL = [
-    "Type /b or /bandage to stop bleeding.",
-    "Type /s or /splint to put a splint."
-]
+WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"
 NO_WARNING = [TEAM_CHANGE_KILL, CLASS_CHANGE_KILL]
 
 GRENADE_LETHAL_RADIUS = 4
 GRENADE_SAFETY_RADIUS = 30
-
-ACTION_DAMAGE_RATE = 0.25
-SPRINT_DAMAGE_RATE = 10.0
-LEGS_DAMAGE_RATE   = 5.0
-ROTATION_DAMAGE    = 0.1
 
 fracture_warning = {
     TORSO: "You broke your spine.",
@@ -51,29 +39,12 @@ fracture_warning = {
 
 bleeding_warning = "You're bleeding."
 
-#distr = lambda x: (exp(x) - 1) / (e - 1)
-#distr = lambda x: log(x + 1) / log(2)
-distr = sqrt
-
-clamp = lambda m, M, f: lambda x: max(m, min(M, f(x)))
-scale = lambda x, y, f: lambda z: y * f(z / x)
-
-guaranteed_death_energy    = {TORSO: 2500, HEAD: 400, ARMS: 3700, LEGS: 4200}
-guaranteed_bleeding_energy = {TORSO:  250, HEAD: 100, ARMS:  200, LEGS:  300}
-guaranteed_fracture_energy = {TORSO: 2700, HEAD: 500, ARMS: 4000, LEGS: 4500}
-
-energy_to_damage = lambda part: clamp(0, 100, scale(guaranteed_death_energy[part], 100, distr))
-weighted_prob = lambda tbl, part: clamp(0, 1, scale(tbl[part], 1, distr))
-
 randbool = lambda prob: random() <= prob
 
-healthy = lambda: {TORSO: Part("torso", 1.0), HEAD: Part("head", 1.7), ARMS: Part("arms", 0.7), LEGS: Part("legs", 0.85)}
-
-ite = lambda b, v1, v2: v1 if b else v2
-
 def ppBodyPart(P):
-    suffix = ite(P.fracture and not P.splint, "!", "") + ite(P.bleeding, "*", "")
-    return f"{P.name}{suffix}: {P.hp:.2f}"
+    label = P.name.upper() if P.fractured else P.name
+    suffix = ite(P.venous, "*", "") + ite(P.arterial, "**", "")
+    return f"{label}{suffix}: {P.hp:.2f}"
 
 @command()
 def health(conn, *args):
@@ -95,28 +66,44 @@ def bandage(conn, *args):
     if not conn.bleeding():
         return "You are not bleeding."
 
-    if conn.bandage == 0:
+    if conn.bandage <= 0:
         return "You do not have a bandage."
 
     for P in conn.body.values():
-        if P.bleeding:
-            P.bleeding = False
+        if P.arterial or P.venous:
+            P.venous = False
             conn.bandage -= 1
             return f"You have bandaged your {P.name}."
+
+@command('tourniquet', 't')
+def tourniquet(conn, *args):
+    if not conn.hp: return
+
+    if not conn.bleeding():
+        return "You are not bleeding."
+
+    if conn.tourniquet <= 0:
+        return "You do not have a tourniquet."
+
+    for P in conn.body.values():
+        if P.arterial:
+            P.arterial = False
+            conn.tourniquet -= 1
+            return f"You put a tourniquet on your {P.name}."
 
 @command('splint', 's')
 def splint(conn, *args):
     if not conn.hp: return
 
-    if not conn.fracture():
+    if not conn.fractured():
         return "You have no fractures."
 
-    if conn.splint == 0:
+    if conn.splint <= 0:
         return "You do not have a split."
 
     for P in conn.body.values():
-        if P.fracture:
-            P.splint  = True
+        if P.fractured:
+            P.splint = True
             conn.splint -= 1
             return f"You put a splint on your {P.name}."
 
@@ -181,7 +168,7 @@ def shoot(conn, what):
     where = {"torso": TORSO, "head": HEAD, "arm": ARMS, "leg": LEGS}.get(what)
 
     if where is not None:
-        conn.hit(20, kill_type=MELEE_KILL, fracture=True, part=where)
+        conn.hit(5, kill_type = MELEE_KILL, fractured = True, part = where)
     else:
         return "Usage: /shoot (torso|head|arm|leg)"
 
@@ -220,12 +207,15 @@ def apply_script(protocol, connection, config):
             dt = t - self.time
 
             for _, player in self.players.items():
-                if player.last_hp_update is not None and player.hp is not None and player.hp > 0:
+                P = player.team is not None and not player.team.spectator
+                Q = player.world_object is not None and not player.world_object.dead
+
+                if P and Q and player.last_hp_update is not None:
                     dt = t - player.last_hp_update
 
-                    for _, part in player.body.items():
-                        if part.bleeding:
-                            part.hit(part.bleeding_rate * dt)
+                    for P in player.body.values():
+                        if P.arterial: P.hit(player.body.arterial_rate * dt)
+                        if P.venous: P.hit(P.bleeding_rate * dt)
 
                     if player.world_object:
                         legs = player.body[LEGS]
@@ -233,16 +223,16 @@ def apply_script(protocol, connection, config):
                         moving = player.world_object.up or player.world_object.down or \
                                  player.world_object.left or player.world_object.right
 
-                        if moving and legs.fracture:
+                        if moving and legs.fractured:
                             if player.world_object.sprint:
-                                legs.hit(SPRINT_DAMAGE_RATE * dt)
+                                legs.hit(legs.sprint_damage_rate * dt)
                             elif not legs.splint:
-                                legs.hit(LEGS_DAMAGE_RATE * dt)
+                                legs.hit(legs.walk_damage_rate * dt)
 
                         arms = player.body[ARMS]
 
-                        if player.world_object.primary_fire and arms.fracture:
-                            arms.hit(ACTION_DAMAGE_RATE * dt)
+                        if player.world_object.primary_fire and arms.fractured:
+                            arms.hit(arms.action_damage_rate * dt)
 
                     if player.tool == SPADE_TOOL and player.world_object and not player.cannot_work():
                         if player.world_object.primary_fire:
@@ -311,23 +301,37 @@ def apply_script(protocol, connection, config):
             hit_by    = self.players.get(thrower, player)
             kill_type = GRENADE_KILL if grenade else HEADSHOT_KILL if part == HEAD else WEAPON_KILL
 
-            damage, bleeding, fracture = 0, False, False
+            damage, venous, arterial, fractured = 0, False, False, False
 
             if E <= 0:
                 return
             else:
-                bleeding = randbool(weighted_prob(guaranteed_bleeding_energy, part)(E))
-                fracture = randbool(weighted_prob(guaranteed_fracture_energy, part)(E))
-                damage   = energy_to_damage(part)(E)
+                e = (E / A) / (100 * 100) # energy per area, J/cm²
+
+                P = player.body[part]
+
+                if randbool(logistic(P.bleeding(e))):
+                    if randbool(P.arterial_density):
+                        arterial = True
+                    else:
+                        venous = True
+
+                fractured = randbool(logistic(P.fracture(E)))
+                damage    = 100 * logistic(P.damage(E))
 
             if damage > 0:
                 player.hit(
-                    damage, part=part, hit_by=hit_by,
-                    bleeding=bleeding, fracture=fracture,
-                    kill_type=kill_type
+                    damage, part=part, hit_by=hit_by, kill_type=kill_type,
+                    venous=venous, arterial=arterial, fractured=fractured,
                 )
 
     class DamageConnection(connection):
+        def __init__(self, *argv, **kw):
+            self.last_hp_update = None
+            self.body = Body()
+
+            connection.__init__(self, *argv, **kw)
+
         def height(self):
             if self.world_object:
                 return 1.05 if self.world_object.crouch else 1.1
@@ -347,18 +351,14 @@ def apply_script(protocol, connection, config):
             return floor(100 * avg)
 
         def bleeding(self):
-            return any(map(lambda P: P.bleeding, self.body.values()))
+            return any(map(lambda P: P.venous or P.arterial, self.body.values()))
 
-        def fracture(self):
-            return any(map(lambda P: P.fracture, self.body.values()))
-
-        def can_walk(self):
-            legs = self.body[LEGS]
-            return (not legs.fracture) or (legs.fracture and legs.splint)
+        def fractured(self):
+            return any(map(lambda P: P.fractured, self.body.values()))
 
         def cannot_work(self):
-            arms = self.body[ARMS]
-            return arms.fracture and (not arms.splint)
+            arms = self.body.arms
+            return arms.fractured and not arms.splint
 
         def dig(self, mu, dt, x, y, z):
             if not self.world_object: return
@@ -379,22 +379,25 @@ def apply_script(protocol, connection, config):
             self.protocol.broadcast_contained(contained)
 
         def reset_health(self):
-            self.last_hp_update = None
-            self.body           = healthy()
-            self.hp             = 100
+            self.last_hp_update = reactor.seconds()
 
-            self.bandage = 2
-            self.splint  = 1
+            for P in self.body.values():
+                P.reset()
+
+            self.hp = 100
 
         def refill(self, local=False):
-            for part in self.body.values():
-                part.fracture = False
-                part.bleeding = False
+            for P in self.body.values():
+                if P.fractured: P.splint = True
 
-            self.grenades = 3
-            self.blocks   = 50
-            self.bandage  = 2
-            self.splint   = 1
+                P.arterial = False
+                P.venous   = False
+
+            self.grenades   = 3
+            self.blocks     = 50
+            self.bandage    = 3
+            self.tourniquet = 2
+            self.splint     = 1
 
             self.weapon_object.restock()
 
@@ -413,8 +416,8 @@ def apply_script(protocol, connection, config):
             weapon_reload.reserve_ammo = self.weapon_object.ammo.reserved()
             self.send_contained(weapon_reload)
 
-        def hit(self, value, hit_by=None, kill_type=WEAPON_KILL,
-                bleeding=False, fracture=False, part=TORSO):
+        def hit(self, value, hit_by = None, kill_type = WEAPON_KILL, part = TORSO,
+                venous = False, arterial = False, fractured = False):
             if hit_by is not None:
                 if self.team is hit_by.team:
                     if kill_type == MELEE_KILL: return
@@ -427,19 +430,25 @@ def apply_script(protocol, connection, config):
                                              kill_type == MELEE_KILL):
                     return
 
-            self.body[part].hit(value)
+            P = self.body[part]
+
+            P.hit(value)
 
             if self.hp is not None and self.hp > 0:
-                if fracture and not self.body[part].fracture:
-                    self.send_chat_status(fracture_warning[part])
-                elif bleeding and not self.bleeding():
-                    self.send_chat_status(bleeding_warning)
+                hp = self.display()
 
-                self.set_hp(self.display(), hit_by=hit_by, kill_type=kill_type)
-                self.body[part].bleeding = bleeding
-                self.body[part].fracture = fracture
+                if hp > 0:
+                    if fractured and not P.fractured:
+                        self.send_chat_status(fracture_warning[part])
+                    elif (venous or arterial) and not self.bleeding():
+                        self.send_chat_status(bleeding_warning)
 
-                if part == ARMS and fracture:
+                self.set_hp(hp, hit_by=hit_by, kill_type=kill_type)
+                P.venous    = P.venous or venous
+                P.arterial  = P.arterial or arterial
+                P.fractured = fractured
+
+                if part == ARMS and fractured:
                     self.set_tool(SPADE_TOOL)
 
         def grenade_zone(self, x, y, z):
@@ -494,21 +503,25 @@ def apply_script(protocol, connection, config):
         def _on_fall(self, damage):
             if not self.hp: return
 
-            returned = self.on_fall(damage)
+            retval = self.on_fall(damage)
 
-            if returned is False: return
-            if returned is not None: damage = returned
+            if retval is False: return
 
-            self.body[LEGS].hit(damage)
-            if randbool(damage / 100):
-                self.body[LEGS].fracture = True
-                self.send_chat_status(fracture_warning[LEGS])
+            if retval is not None:
+                damage = retval
 
-            self.set_hp(self.display(), kill_type=FALL_KILL)
+            if damage > 0:
+                legs = self.body.legs
+
+                legs.hit(damage)
+
+                if randbool(logistic(legs.fall(damage))):
+                    legs.fractured = True
+                    self.send_chat_status(fracture_warning[LEGS])
+
+                self.set_hp(self.display(), kill_type=FALL_KILL)
 
         def on_connect(self):
-            self.reset_health()
-
             return connection.on_connect(self)
 
         def on_block_build(self, x, y, z):
@@ -537,9 +550,9 @@ def apply_script(protocol, connection, config):
             return connection.on_spawn(self, pos)
 
         def on_kill(self, killer, kill_type, grenade):
-            self.body = healthy()
             if kill_type not in NO_WARNING:
-                self.send_lines(WARNING_ON_KILL, 'warning')
+                self.send_chat(WARNING_ON_KILL)
+
             return connection.on_kill(self, killer, kill_type, grenade)
 
         def on_animation_update(self, jump, crouch, sneak, sprint):
@@ -554,15 +567,15 @@ def apply_script(protocol, connection, config):
             if retval == False:
                 return False
 
-            torso = self.body[TORSO]
+            torso = self.body.torso
 
-            if torso.fracture and not torso.splint:
-                torso.hit(ROTATION_DAMAGE)
+            if torso.fractured and not torso.splint:
+                torso.hit(torso.rotation_damage)
 
             return connection.on_orientation_update(self, x, y, z)
 
         def on_tool_set_attempt(self, tool):
-            if self.body[ARMS].fracture:
+            if self.body.arms.fractured:
                 self.set_tool(SPADE_TOOL)
                 return False
             else:
@@ -653,9 +666,11 @@ def apply_script(protocol, connection, config):
             if contained.value == MELEE:
                 player = self.protocol.players.get(contained.player_id)
                 if player is not None:
+                    damage = floor(uniform(SHOVEL_GUARANTEED_DAMAGE, 100))
+
                     player.hit(
-                        bounded_damage(SHOVEL_GUARANTEED_DAMAGE), part=choice(parts),
-                        bleeding=True, hit_by=self, kill_type=MELEE_KILL
+                        damage, part=choice(player.body.keys()),
+                        venous=True, hit_by=self, kill_type=MELEE_KILL
                     )
 
     return DamageProtocol, DamageConnection

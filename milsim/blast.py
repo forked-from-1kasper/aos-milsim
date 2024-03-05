@@ -68,6 +68,6 @@ def explode(inner, outer, conn, pos):
         if D <= 0: continue
 
         player.hit(
-            D, part=choice(parts), bleeding=True,
+            D, part=choice(parts), venous=True,
             hit_by=conn, kill_type=GRENADE_KILL
         )

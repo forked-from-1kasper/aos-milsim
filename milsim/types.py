@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from typing import Dict, List
-from math import pi
+from math import pi, exp, log
+
+from pyspades.constants import TORSO, HEAD, ARMS, LEGS
+
+ite = lambda b, v1, v2: v1 if b else v2
 
 EXTENSION_BASE          = 0x40
 EXTENSION_TRACE_BULLETS = 0x10
@@ -113,18 +117,97 @@ class Gun:
     spread             : float
     velocity_deviation : float
 
+logit    = lambda t: -log(1 / t - 1)
+logistic = lambda t: 1 / (1 + exp(-t))
+
+class Linear:
+    def __init__(self, x1, x2, y1 = logit(0.01), y2 = logit(0.99)):
+        self.v1 = min(x1, x2)
+        self.v2 = max(x1, x2)
+
+        self.w1 = min(y1, y2)
+        self.w2 = max(y1, y2)
+
+    def __call__(self, v):
+        t = (v - self.v1) / (self.v2 - self.v1)
+        return self.w1 + t * (self.w2 - self.w1)
+
 @dataclass
 class Part:
-    name          : str
-    bleeding_rate : float
-    hp            : int  = 100
-    bleeding      : bool = False
-    fracture      : bool = False
-    splint        : bool = False
+    hp        : int  = 100
+    venous    : bool = False
+    arterial  : bool = False
+    fractured : bool = False
+    splint    : bool = False
 
     def hit(self, value):
         if value <= 0: return
         self.hp = max(0, self.hp - value)
+
+    def reset(self):
+        self.hp        = 100
+        self.venous    = False
+        self.arterial  = False
+        self.fractured = False
+        self.splint    = False
+
+class Torso(Part):
+    name             = "torso"
+    bleeding_rate    = 0.7
+    arterial_density = 0.4
+    bleeding         = Linear(15, 70)
+    fracture         = Linear(500, 1000)
+    damage           = Linear(0, 1500)
+
+class Head(Part):
+    name             = "head"
+    bleeding_rate    = 1.0
+    arterial_density = 0.65
+    bleeding         = Linear(10, 50)
+    fracture         = Linear(40, 70)
+    damage           = Linear(0, 500)
+    rotation_damage  = 0.1
+
+class Arms(Part):
+    name               = "arms"
+    bleeding_rate      = 0.35
+    arterial_density   = 0.7
+    bleeding           = Linear(15, 55)
+    fracture           = Linear(450, 600)
+    damage             = Linear(0, 3000)
+    action_damage_rate = 0.25
+
+class Legs(Part):
+    name               = "legs"
+    bleeding_rate      = 0.55
+    arterial_density   = 0.75
+    bleeding           = Linear(15, 60)
+    fracture           = Linear(500, 650)
+    damage             = Linear(0, 4000)
+    fall               = Linear(1, 10)
+    sprint_damage_rate = 10.0
+    walk_damage_rate   = 5.0
+
+class Body:
+    arterial_rate = 2.0
+
+    def __init__(self):
+        self.torso = Torso()
+        self.head  = Head()
+        self.arms  = Arms()
+        self.legs  = Legs()
+
+    def __getitem__(self, k):
+        if k == HEAD:  return self.head
+        if k == TORSO: return self.torso
+        if k == ARMS:  return self.arms
+        if k == LEGS:  return self.legs
+
+    def keys(self):
+        return [TORSO, HEAD, ARMS, LEGS]
+
+    def values(self):
+        return [self.torso, self.head, self.arms, self.legs]
 
 def Magazines(magazines : int, capacity : int) -> type:
     """
@@ -173,7 +256,9 @@ def Magazines(magazines : int, capacity : int) -> type:
             self.container = [capacity] * magazines
 
         def info(self):
-            buff = ", ".join(map(str, self.container))
+            show = lambda w: str(w[1]) + ite(self.loaded == w[0], "*", "")
+
+            buff = ", ".join(map(show, enumerate(self.container)))
             return f"{magazines} magazines: {buff}"
 
     return Implementation
