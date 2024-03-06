@@ -158,6 +158,7 @@ class Torso(Part):
     bleeding         = Linear(15, 70)
     fracture         = Linear(500, 1000)
     damage           = Linear(0, 1500)
+    rotation_damage  = 0.1
 
 class Head(Part):
     name             = "head"
@@ -166,7 +167,6 @@ class Head(Part):
     bleeding         = Linear(10, 50)
     fracture         = Linear(40, 70)
     damage           = Linear(0, 500)
-    rotation_damage  = 0.1
 
 class Arms(Part):
     name               = "arms"
