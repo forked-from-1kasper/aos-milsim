@@ -1,3 +1,4 @@
+from itertools import product
 from typing import Callable
 from math import atan
 
@@ -28,34 +29,4 @@ R762x54mm  = Round(850, gram(10.00), 146.9415, mm(07.62),  1)
 Parabellum = Round(600, gram(08.03), 104.7573, mm(09.00),  1)
 Shot       = Round(457, gram(38.00),  15.0817, mm(18.40), 15)
 
-Rifle = Gun(
-    name               = "Rifle",
-    ammo               = Magazines(6, 10),
-    round              = R762x54mm,
-    delay              = 0.50,
-    reload_time        = 2.5,
-    spread             = 0,
-    velocity_deviation = 0.05
-)
-
-SMG = Gun(
-    name               = "SMG",
-    ammo               = Magazines(5, 30),
-    round              = Parabellum,
-    delay              = 0.11,
-    reload_time        = 2.5,
-    spread             = 0,
-    velocity_deviation = 0.05
-)
-
-Shotgun = Gun(
-    name               = "Shotgun",
-    ammo               = Heap(6, 48),
-    round              = Shot,
-    delay              = 1.00,
-    reload_time        = 0.5,
-    spread             = isosceles(yard(25), inch(40)),
-    velocity_deviation = 0.10
-)
-
-guns = {RIFLE_WEAPON: Rifle, SMG_WEAPON: SMG, SHOTGUN_WEAPON: Shotgun}
+grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))

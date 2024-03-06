@@ -8,6 +8,7 @@ from pyspades.world import Grenade
 from piqueserver.commands import command
 from piqueserver.config import config
 
+from milsim.common import grenade_zone
 import milsim.blast as blast
 
 section = config.section("mines")
@@ -127,7 +128,7 @@ def apply_script(protocol, connection, config):
             if connection.grenade_destroy(self, x, y, z) == False:
                 return False
             else:
-                self.check_mine_by_pos(self.grenade_zone(x, y, z))
+                self.check_mine_by_pos(grenade_zone(x, y, z))
                 self.check_mine(Vertex3(x, y, z))
                 return True
 

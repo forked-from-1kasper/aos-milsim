@@ -1,5 +1,4 @@
 from math import pi, exp, log, sqrt, e, floor, ceil, inf, sin, cos, atan2, asin, prod
-from itertools import product, chain
 
 from random import choice, random, gauss, uniform, randint
 from dataclasses import dataclass
@@ -19,7 +18,7 @@ from piqueserver.commands import command
 import milsim.blast as blast
 
 from milsim.simulator import Simulator, cone
-from milsim.weapon import Weapon
+from milsim.weapon import weapons
 from milsim.common import *
 
 SHOVEL_GUARANTEED_DAMAGE = 50
@@ -373,6 +372,12 @@ def apply_script(protocol, connection, config):
             arms = self.body.arms
             return arms.fractured and not arms.splint
 
+        def item_shown(self, t):
+            P = not self.world_object.sprint
+            Q = t - self.last_sprint >= 0.5
+            R = t - self.last_tool_update >= 0.5
+            return P and Q and R
+
         def dig1(self, dt):
             loc = self.world_object.cast_ray(4.0)
             if loc: dig(self, dt, 1.0, *loc)
@@ -385,29 +390,23 @@ def apply_script(protocol, connection, config):
                 dig(self, dt, 0.7, x, y, z)
                 dig(self, dt, 0.7, x, y, z + 1)
 
-        def item_shown(self, t):
-            P = not self.world_object.sprint
-            Q = t - self.last_sprint >= 0.5
-            R = t - self.last_tool_update >= 0.5
-            return P and Q and R
-
         def shoot(self, t):
-            g = self.weapon_object.gun
+            w = self.weapon_object
 
-            P = self.weapon_object.ammo.current() > 0
-            Q = not self.weapon_object.reloading
-            R = t - self.weapon_last_shot >= g.delay
+            P = w.ammo.current() > 0
+            Q = not w.reloading
+            R = t - self.weapon_last_shot >= w.delay
 
             if P and Q and R and self.item_shown(t):
                 self.weapon_last_shot = t
-                self.weapon_object.ammo.shoot(1)
+                w.ammo.shoot(1)
 
                 n = self.world_object.orientation.normal()
                 r = self.eye() + n * 1.2
 
-                for i in range(0, g.round.pellets):
-                    v = n * gauss(mu = g.round.speed, sigma = g.round.speed * g.velocity_deviation)
-                    self.protocol.sim.add(self, r, cone(v, g.spread), t, g.round)
+                for i in range(0, w.round.pellets):
+                    v = n * gauss(mu = w.round.speed, sigma = w.round.speed * w.velocity_deviation)
+                    self.protocol.sim.add(self, r, cone(v, w.spread), t, w.round)
 
         def set_tool(self, tool):
             self.tool           = tool
@@ -463,13 +462,6 @@ def apply_script(protocol, connection, config):
                     if kill_type == MELEE_KILL: return
                     if not self.protocol.friendly_fire: return
 
-                # So that if a player threw a grenade, and then his arm
-                # was broken, this grenade will still deal damage.
-                if hit_by.cannot_work() and (kill_type == WEAPON_KILL or
-                                             kill_type == HEADSHOT_KILL or
-                                             kill_type == MELEE_KILL):
-                    return
-
             P = self.body[part]
 
             P.hit(value)
@@ -491,9 +483,6 @@ def apply_script(protocol, connection, config):
                 if part == ARMS and fractured:
                     self.set_tool(SPADE_TOOL)
 
-        def grenade_zone(self, x, y, z):
-            return product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
-
         def grenade_destroy(self, x, y, z):
             if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
                 return False
@@ -501,7 +490,7 @@ def apply_script(protocol, connection, config):
             if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
                 return False
 
-            for X, Y, Z in self.grenade_zone(x, y, z):
+            for X, Y, Z in grenade_zone(x, y, z):
                 if self.protocol.sim.smash(X, Y, Z, TNT(gram(60))):
                     self.protocol.onDestroy(self.player_id, X, Y, Z)
 
@@ -520,11 +509,10 @@ def apply_script(protocol, connection, config):
             self.grenade_explode(grenade.position)
 
         def set_weapon(self, weapon, local = False, no_kill = False):
-            if weapon not in guns:
-                return
+            if weapon not in weapons: return
 
             self.weapon = weapon
-            self.weapon_object = Weapon(self, guns[weapon], self._on_reload)
+            self.weapon_object = weapons[weapon](self._on_reload)
 
             if not local:
                 contained           = loaders.ChangeWeapon()
@@ -632,8 +620,9 @@ def apply_script(protocol, connection, config):
             if self.cannot_work():
                 return False
 
-            if mode == DESTROY_BLOCK and (self.tool == WEAPON_TOOL or self.tool == SPADE_TOOL):
-                return False
+            if self.tool == WEAPON_TOOL or self.tool == SPADE_TOOL:
+                if mode == DESTROY_BLOCK:
+                    return False
 
             if mode == SPADE_DESTROY:
                 return False
@@ -703,8 +692,9 @@ def apply_script(protocol, connection, config):
         def on_hit_recieved(self, contained):
             if not self.hp: return
 
-            if contained.value == MELEE:
+            if contained.value == MELEE and not self.cannot_work():
                 player = self.protocol.players.get(contained.player_id)
+
                 if player is not None:
                     damage = floor(uniform(SHOVEL_GUARANTEED_DAMAGE, 100))
 
