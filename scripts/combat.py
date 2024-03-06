@@ -267,6 +267,8 @@ def apply_script(protocol, connection, config):
                 self.weapon_last_shot = t
                 w.ammo.shoot(1)
 
+                self.update_hud()
+
                 n = self.world_object.orientation.normal()
                 r = self.eye() + n * 1.2
 
@@ -308,7 +310,6 @@ def apply_script(protocol, connection, config):
 
             if not local:
                 self.send_contained(loaders.Restock())
-
                 self.update_hud()
 
                 if self.display() != 100: # loaders.Restock() reverts hp to 100
@@ -498,7 +499,6 @@ def apply_script(protocol, connection, config):
             return connection.on_block_destroy(self, x, y, z, mode)
 
         def on_shoot_set(self, fire):
-            self.update_hud()
             return connection.on_shoot_set(self, fire)
 
         def on_flag_take(self):
