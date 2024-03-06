@@ -1,11 +1,11 @@
-from random import choice, uniform, gauss
 from math import sqrt, pi, sin, cos
+from random import choice, uniform
 
 from twisted.internet import reactor
 
-from pyspades.constants import (TORSO, HEAD, ARMS, LEGS, GRENADE_KILL)
+from pyspades.constants import TORSO, HEAD, ARMS, LEGS, GRENADE_KILL
 from pyspades.collision import distance_3d_vector
-from pyspades.world import Grenade, Character
+
 from pyspades.contained import GrenadePacket
 from pyspades.common import Vertex3
 
@@ -53,12 +53,7 @@ def explode(inner, outer, conn, pos):
         α = uniform(0, pi)
         β = uniform(0, 2 * pi)
 
-        v = Vertex3(
-            sin(α) * cos(β),
-            sin(α) * sin(β),
-            cos(α)
-        ) * speed
-
+        v = Vertex3(sin(α) * cos(β), sin(α) * sin(β), cos(α)) * speed
         conn.protocol.sim.add(conn, pos, v, timestamp, Fragment())
 
     for _, player in conn.protocol.players.items():

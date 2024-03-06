@@ -1,8 +1,5 @@
 from itertools import product
-from typing import Callable
 from math import atan
-
-from pyspades.constants import RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON
 
 from milsim.types import *
 

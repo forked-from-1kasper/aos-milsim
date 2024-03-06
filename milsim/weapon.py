@@ -1,14 +1,9 @@
 from dataclasses import dataclass
 from typing import Callable
-from random import gauss
-from math import inf
 
-from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.internet import reactor
 
-from pyspades.protocol import BaseConnection
 from pyspades.constants import *
-
 from milsim.common import *
 
 @dataclass

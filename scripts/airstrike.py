@@ -1,16 +1,11 @@
-from random import randint, random, choice
+from random import randint, random
 from dataclasses import dataclass
-from math import floor, sqrt
+from math import floor
 
 from twisted.internet import reactor
 
-from pyspades.constants import (
-    TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, WEAPON_TOOL
-)
-from pyspades.collision import distance_3d_vector
-from pyspades.world import Grenade, Character
-from pyspades.contained import GrenadePacket
 from pyspades.protocol import BaseProtocol
+from pyspades.constants import WEAPON_TOOL
 from pyspades.common import Vertex3
 from pyspades.team import Team
 

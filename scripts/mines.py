@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
 from pyspades.collision import distance_3d_vector
-from pyspades.contained import GrenadePacket
 from pyspades.common import Vertex3
-from pyspades.world import Grenade
 
 from piqueserver.commands import command
 from piqueserver.config import config

@@ -1,16 +1,11 @@
-from math import pi, exp, log, sqrt, e, floor, ceil, inf, sin, cos, atan2, asin, prod
+from math import floor, inf, prod
 
-from random import choice, random, gauss, uniform, randint
-from dataclasses import dataclass
+from random import choice, random, gauss, uniform
 
-from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.internet import reactor
 
-from pyspades.collision import distance_3d_vector, vector_collision
 from pyspades.packet import register_packet_handler
-from pyspades.protocol import BaseConnection
 from pyspades import contained as loaders
-from pyspades.world import Character
 from pyspades.common import Vertex3
 from pyspades.constants import *
 

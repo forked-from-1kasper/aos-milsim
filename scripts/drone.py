@@ -1,12 +1,10 @@
 from dataclasses import dataclass
-from functools import partial
 from enum import Enum, auto
 from random import uniform
 from math import floor
 
 from twisted.internet import reactor
 
-from pyspades.contained import GrenadePacket
 from pyspades.protocol import BaseProtocol
 from pyspades.common import Vertex3
 from pyspades.world import Grenade

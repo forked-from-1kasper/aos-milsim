@@ -1,4 +1,4 @@
-from math import sqrt, floor, inf, isinf, isnan
+from math import floor, inf, isinf, isnan
 from random import choice
 
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
@@ -7,8 +7,7 @@ from twisted.internet import reactor
 from pyspades.constants import (
     TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, CHAT_ALL
 )
-from pyspades.collision import distance_3d_vector
-from pyspades.contained import GrenadePacket
+
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 
