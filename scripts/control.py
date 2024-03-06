@@ -3,7 +3,7 @@ from pyspades.constants import *
 from milsim.common import *
 
 def ppBodyPart(P):
-    label = P.name.upper() if P.fractured else P.name
+    label = P.abbrev.upper() if P.fractured and not P.splint else P.abbrev
     suffix = ite(P.venous, "*", "") + ite(P.arterial, "**", "")
     return f"{label}{suffix}: {P.hp:.2f}"
 
@@ -34,7 +34,7 @@ def bandage(conn, *args):
         if P.arterial or P.venous:
             P.venous = False
             conn.bandage -= 1
-            return f"You have bandaged your {P.name}."
+            return f"You have bandaged your {P.label}."
 
 @command('tourniquet', 't')
 def tourniquet(conn, *args):
@@ -50,7 +50,7 @@ def tourniquet(conn, *args):
         if P.arterial:
             P.arterial = False
             conn.tourniquet -= 1
-            return f"You put a tourniquet on your {P.name}."
+            return f"You put a tourniquet on your {P.label}."
 
 @command('splint', 's')
 def splint(conn, *args):
@@ -66,7 +66,7 @@ def splint(conn, *args):
         if P.fractured:
             P.splint = True
             conn.splint -= 1
-            return f"You put a splint on your {P.name}."
+            return f"You put a splint on your {P.label}."
 
 class Engine:
     @staticmethod
@@ -126,12 +126,19 @@ def lookat(conn):
 def shoot(conn, what):
     if not conn.hp: return
 
-    where = {"torso": TORSO, "head": HEAD, "arm": ARMS, "leg": LEGS}.get(what)
+    where = {
+        "torso": Limb.torso,
+        "head":  Limb.head,
+        "arml":  Limb.arml,
+        "armr":  Limb.armr,
+        "legl":  Limb.legl,
+        "legr":  Limb.legr
+    }.get(what)
 
     if where is not None:
-        conn.hit(5, kill_type = MELEE_KILL, fractured = True, part = where)
+        conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = where)
     else:
-        return "Usage: /shoot (torso|head|arm|leg)"
+        return "Usage: /shoot (torso|head|arml|armr|legl|legr)"
 
 def apply_script(protocol, connection, config):
     return protocol, connection

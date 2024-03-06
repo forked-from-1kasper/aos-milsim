@@ -4,9 +4,7 @@ from random import choice
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
 from twisted.internet import reactor
 
-from pyspades.constants import (
-    TORSO, HEAD, ARMS, LEGS, GRENADE_KILL, CHAT_ALL
-)
+from pyspades.constants import CHAT_ALL
 
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
@@ -79,12 +77,12 @@ class Boom:
             return
 
         if Option.message:
-            msg           = loaders.ChatMessage()
-            msg.player_id = self.conn.player_id
-            msg.chat_type = CHAT_ALL
-            msg.value     = Option.message
+            contained           = loaders.ChatMessage()
+            contained.player_id = self.conn.player_id
+            contained.chat_type = CHAT_ALL
+            contained.value     = Option.message
 
-            self.conn.protocol.broadcast_contained(msg)
+            self.conn.protocol.broadcast_contained(contained)
 
         pos = self.conn.world_object.position
         blast.effect(self.conn, pos - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0)

@@ -270,7 +270,7 @@ private:
                     if (onHitEffect != Py_None) {
                         PyObject_CallFunction(
                             onHitEffect, "fffiiii", r.x, r.y, r.z, X, Y, Z,
-                            static_cast<uint8_t>(HitEffectTarget::ground)
+                            static_cast<uint8_t>(HitEffect::block)
                         );
                     }
                 }
@@ -333,8 +333,8 @@ private:
                 }
             }
 
-            int target = -1; HitType hit;
-            T mindist = std::numeric_limits<T>::infinity();
+            int target = -1; Limb hit;
+            T dist = std::numeric_limits<T>::infinity();
 
             for (const auto & player : players) {
                 auto origin = player.position.translate(0, 0, player.crouch ? -1.05 : -1.1);
@@ -344,57 +344,57 @@ private:
                 );
 
                 auto & torso = player.crouch ? Box::torsoc<T> : Box::torso<T>;
-                auto dist = torso.intersect(ray);
+                auto d = torso.intersect(ray);
 
-                if (dist < mindist) {
-                    mindist = dist;
-                    target  = player.id;
-                    hit     = TORSO;
+                if (d < dist) {
+                    dist   = d;
+                    target = player.id;
+                    hit    = Limb::torso;
                 }
 
                 auto & head = Box::head<T>;
-                dist = head.intersect(ray);
+                d = head.intersect(ray);
 
-                if (dist < mindist) {
-                    mindist = dist;
-                    target  = player.id;
-                    hit     = HEAD;
+                if (d < dist) {
+                    dist   = d;
+                    target = player.id;
+                    hit    = Limb::head;
                 }
 
                 auto & legl = player.crouch ? Box::legc_left<T> : Box::leg_left<T>;
-                dist = legl.intersect(ray);
+                d = legl.intersect(ray);
 
-                if (dist < mindist) {
-                    mindist = dist;
-                    target  = player.id;
-                    hit     = LEGS;
+                if (d < dist) {
+                    dist   = d;
+                    target = player.id;
+                    hit    = Limb::legl;
                 }
 
                 auto & legr = player.crouch ? Box::legc_right<T> : Box::leg_right<T>;
-                dist = legr.intersect(ray);
+                d = legr.intersect(ray);
 
-                if (dist < mindist) {
-                    mindist = dist;
-                    target  = player.id;
-                    hit     = LEGS;
+                if (d < dist) {
+                    dist   = d;
+                    target = player.id;
+                    hit    = Limb::legr;
                 }
 
                 auto & armr = player.crouch ? Box::armc_right<T> : Box::arm_right<T>;
-                dist = armr.intersect(ray.rot(Vector3<T>(0, 0, 1), -std::numbers::pi_v<T> / 4));
+                d = armr.intersect(ray);
 
-                if (dist < mindist) {
-                    mindist = dist;
-                    target  = player.id;
-                    hit     = ARMS;
+                if (d < dist) {
+                    dist   = d;
+                    target = player.id;
+                    hit    = Limb::armr;
                 }
 
                 auto & arml = player.crouch ? Box::armc_left<T> : Box::arm_left<T>;
-                dist = arml.intersect(ray);
+                d = arml.intersect(ray.rot(Vector3<T>(0, 0, 1), -std::numbers::pi_v<T> / 4));
 
-                if (dist < mindist) {
-                    mindist = dist;
-                    target  = player.id;
-                    hit     = ARMS;
+                if (d < dist) {
+                    dist   = d;
+                    target = player.id;
+                    hit    = Limb::arml;
                 }
             }
 
@@ -407,11 +407,11 @@ private:
                 }
 
                 if (onHitEffect != Py_None) {
-                    Vector3<T> w = r + dr * mindist;
+                    Vector3<T> w = r + dr * dist;
 
                     PyObject_CallFunction(
                         onHitEffect, "fffiiii", w.x, w.y, w.z, X, Y, Z,
-                        static_cast<uint8_t>(targetOfHitType(hit))
+                        static_cast<uint8_t>(effectOfLimb(hit))
                     );
                 }
 

@@ -1,10 +1,19 @@
 from dataclasses import dataclass
 from typing import Dict, List
 from math import pi, exp, log
+from enum import Enum
 
-from pyspades.constants import TORSO, HEAD, ARMS, LEGS
+from pyspades.constants import SPADE_TOOL
 
 ite = lambda b, v1, v2: v1 if b else v2
+
+class Limb(Enum):
+    head  = 0
+    torso = 1
+    arml  = 2
+    armr  = 3
+    legl  = 4
+    legr  = 5
 
 EXTENSION_BASE          = 0x40
 EXTENSION_TRACE_BULLETS = 0x10
@@ -133,7 +142,10 @@ class Linear:
         return self.w1 + t * (self.w2 - self.w1)
 
 @dataclass
-class Part:
+class ABCLimb:
+    abbrev    : str
+    label     : str
+
     hp        : int  = 100
     venous    : bool = False
     arterial  : bool = False
@@ -151,8 +163,10 @@ class Part:
         self.fractured = False
         self.splint    = False
 
-class Torso(Part):
-    name             = "torso"
+    def on_fracture(self, player):
+        pass
+
+class Torso(ABCLimb):
     bleeding_rate    = 0.7
     arterial_density = 0.4
     bleeding         = Linear(15, 70)
@@ -160,16 +174,14 @@ class Torso(Part):
     damage           = Linear(0, 1500)
     rotation_damage  = 0.1
 
-class Head(Part):
-    name             = "head"
+class Head(ABCLimb):
     bleeding_rate    = 1.0
     arterial_density = 0.65
     bleeding         = Linear(10, 50)
     fracture         = Linear(40, 70)
     damage           = Linear(0, 500)
 
-class Arms(Part):
-    name               = "arms"
+class Arm(ABCLimb):
     bleeding_rate      = 0.35
     arterial_density   = 0.7
     bleeding           = Linear(15, 55)
@@ -177,37 +189,46 @@ class Arms(Part):
     damage             = Linear(0, 3000)
     action_damage_rate = 0.25
 
-class Legs(Part):
-    name               = "legs"
+    def on_fracture(self, player):
+        player.set_tool(SPADE_TOOL)
+
+class Leg(ABCLimb):
     bleeding_rate      = 0.55
     arterial_density   = 0.75
     bleeding           = Linear(15, 60)
     fracture           = Linear(500, 650)
     damage             = Linear(0, 4000)
     fall               = Linear(1, 10)
-    sprint_damage_rate = 10.0
-    walk_damage_rate   = 5.0
+    sprint_damage_rate = 7.5
+    walk_damage_rate   = 3.5
 
 class Body:
     arterial_rate = 2.0
 
     def __init__(self):
-        self.torso = Torso()
-        self.head  = Head()
-        self.arms  = Arms()
-        self.legs  = Legs()
+        self.torso = Torso("torso", "torso")
+        self.head  = Head("head", "head")
+        self.arml  = Arm("arml", "left arm")
+        self.armr  = Arm("armr", "right arm")
+        self.legl  = Leg("legl", "left leg")
+        self.legr  = Leg("legr", "right leg")
+
+        self.arms = [self.arml, self.armr]
+        self.legs = [self.legl, self.legr]
 
     def __getitem__(self, k):
-        if k == HEAD:  return self.head
-        if k == TORSO: return self.torso
-        if k == ARMS:  return self.arms
-        if k == LEGS:  return self.legs
+        if k == Limb.torso: return self.torso
+        if k == Limb.head:  return self.head
+        if k == Limb.arml:  return self.arml
+        if k == Limb.armr:  return self.armr
+        if k == Limb.legl:  return self.legl
+        if k == Limb.legr:  return self.legr
 
     def keys(self):
-        return [TORSO, HEAD, ARMS, LEGS]
+        return list(Limb)
 
     def values(self):
-        return [self.torso, self.head, self.arms, self.legs]
+        return [self.torso, self.head, self.arml, self.armr, self.legl, self.legr]
 
 def Magazines(magazines : int, capacity : int) -> type:
     """

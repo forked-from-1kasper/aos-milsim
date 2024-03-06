@@ -3,13 +3,11 @@ from random import choice, uniform
 
 from twisted.internet import reactor
 
-from pyspades.constants import TORSO, HEAD, ARMS, LEGS, GRENADE_KILL
 from pyspades.collision import distance_3d_vector
+from pyspades.constants import GRENADE_KILL
 
 from pyspades.contained import GrenadePacket
 from pyspades.common import Vertex3
-
-parts = [TORSO, HEAD, ARMS, LEGS]
 
 def dummy(*args, **kwargs):
     pass
@@ -63,6 +61,6 @@ def explode(inner, outer, conn, pos):
         if D <= 0: continue
 
         player.hit(
-            D, part=choice(parts), venous=True,
-            hit_by=conn, kill_type=GRENADE_KILL
+            D, limb = choice(player.body.keys()), venous = True,
+            hit_by = conn, kill_type = GRENADE_KILL
         )

@@ -18,24 +18,24 @@ template<typename T> inline bool randbool(T probability)
 template<typename T> T uniform(T m, T M)
 { return m + random<T>() * (M - m); }
 
-enum HitType { TORSO = 0, HEAD = 1, ARMS = 2, LEGS = 3, SPADE = 4 };
-
-enum class HitEffectTarget : uint8_t {
-    ground = 0,
-    head   = 1,
-    torso  = 2,
-    arms   = 3,
-    legs   = 4,
+enum class Limb : uint8_t {
+    head  = 0,
+    torso = 1,
+    arml  = 2,
+    armr  = 3,
+    legl  = 4,
+    legr  = 5
 };
 
-constexpr inline HitEffectTarget targetOfHitType(const HitType hit) {
-    switch (hit) {
-        case TORSO: return HitEffectTarget::torso;
-        case HEAD:  return HitEffectTarget::head;
-        case ARMS:  return HitEffectTarget::arms;
-        case LEGS:  return HitEffectTarget::legs;
-        default:    return HitEffectTarget::ground;
-    }
+enum class HitEffect : uint8_t {
+    block    = 0,
+    headshot = 1,
+    player   = 2,
+};
+
+constexpr inline HitEffect effectOfLimb(const Limb hit) {
+    return hit == Limb::head ? HitEffect::headshot
+                             : HitEffect::player;
 }
 
 namespace Fundamentals {
@@ -62,19 +62,19 @@ namespace Box {
         Vector3<T>(-3.5, -6.5, 2.0), Vector3<T>(8, 8, 7), 0.1
     );
 
-    template<typename T> constexpr auto arm_left = Hitbox<T>(
+    template<typename T> constexpr auto arm_right = Hitbox<T>(
         Vector3<T>(-5.5, 0.5, 4.0), Vector3<T>(2, 9, 6), 0.1
     );
 
-    template<typename T> constexpr auto armc_left = Hitbox<T>(
+    template<typename T> constexpr auto armc_right = Hitbox<T>(
         Vector3<T>(-5.5, 0.5, 3.0), Vector3<T>(2, 9, 6), 0.1
     );
 
-    template<typename T> constexpr auto arm_right = Hitbox<T>(
+    template<typename T> constexpr auto arm_left = Hitbox<T>(
         Vector3<T>(3.5, -4.25, 4.0), Vector3<T>(3, 14, 2), 0.1
     );
 
-    template<typename T> constexpr auto armc_right = Hitbox<T>(
+    template<typename T> constexpr auto armc_left = Hitbox<T>(
         Vector3<T>(3.5, -4.25, 3.0), Vector3<T>(3, 14, 2), 0.1
     );
 
