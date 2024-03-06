@@ -18,7 +18,7 @@ from pyspades.constants import *
 from piqueserver.commands import command
 import milsim.blast as blast
 
-from milsim.simulator import Simulator
+from milsim.simulator import Simulator, cone
 from milsim.weapon import Weapon
 from milsim.common import *
 
@@ -172,6 +172,17 @@ def shoot(conn, what):
     else:
         return "Usage: /shoot (torso|head|arm|leg)"
 
+def dig(player, mu, dt, x, y, z):
+    if not player.world_object or player.world_object.dead: return
+
+    sigma = 0.01 if player.world_object.crouch else 0.05
+    value = max(0, gauss(mu = mu, sigma = sigma) * dt)
+
+    protocol = player.protocol
+
+    if protocol.sim.dig(x, y, z, value):
+        protocol.onDestroy(player.player_id, x, y, z)
+
 def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
@@ -217,35 +228,35 @@ def apply_script(protocol, connection, config):
                         if P.arterial: P.hit(player.body.arterial_rate * dt)
                         if P.venous: P.hit(P.bleeding_rate * dt)
 
-                    if player.world_object:
-                        legs = player.body[LEGS]
+                    legs = player.body[LEGS]
 
-                        moving = player.world_object.up or player.world_object.down or \
-                                 player.world_object.left or player.world_object.right
+                    moving = player.world_object.up or player.world_object.down or \
+                             player.world_object.left or player.world_object.right
 
-                        if moving and legs.fractured:
-                            if player.world_object.sprint:
-                                legs.hit(legs.sprint_damage_rate * dt)
-                            elif not legs.splint:
-                                legs.hit(legs.walk_damage_rate * dt)
+                    if moving and legs.fractured:
+                        if player.world_object.sprint:
+                            legs.hit(legs.sprint_damage_rate * dt)
+                        elif not legs.splint:
+                            legs.hit(legs.walk_damage_rate * dt)
 
-                        arms = player.body[ARMS]
+                    arms = player.body[ARMS]
 
-                        if player.world_object.primary_fire and arms.fractured:
-                            arms.hit(arms.action_damage_rate * dt)
+                    if player.world_object.primary_fire and arms.fractured:
+                        arms.hit(arms.action_damage_rate * dt)
 
-                    if player.tool == SPADE_TOOL and player.world_object and not player.cannot_work():
-                        if player.world_object.primary_fire:
-                            loc = player.world_object.cast_ray(4.0)
-                            if loc: player.dig(dt, 1.0, *loc)
+                    player.weapon_object.update(t)
 
-                        if player.world_object.secondary_fire:
-                            loc = player.world_object.cast_ray(4.0)
-                            if loc:
-                                x, y, z = loc
-                                player.dig(dt, 0.7, x, y, z - 1)
-                                player.dig(dt, 0.7, x, y, z)
-                                player.dig(dt, 0.7, x, y, z + 1)
+                    if not player.cannot_work():
+                        if player.tool == SPADE_TOOL and player.item_shown(t):
+                            if player.world_object.primary_fire:
+                                player.dig1(dt)
+
+                            if player.world_object.secondary_fire:
+                                player.dig2(dt)
+
+                        if player.tool == WEAPON_TOOL:
+                            if player.world_object.primary_fire:
+                                player.shoot(t)
 
                     hp = player.display()
                     if player.hp != hp:
@@ -327,7 +338,9 @@ def apply_script(protocol, connection, config):
 
     class DamageConnection(connection):
         def __init__(self, *argv, **kw):
-            self.last_hp_update = None
+            self.last_hp_update   = None
+            self.weapon_last_shot = -inf
+
             self.body = Body()
 
             connection.__init__(self, *argv, **kw)
@@ -360,14 +373,41 @@ def apply_script(protocol, connection, config):
             arms = self.body.arms
             return arms.fractured and not arms.splint
 
-        def dig(self, mu, dt, x, y, z):
-            if not self.world_object: return
+        def dig1(self, dt):
+            loc = self.world_object.cast_ray(4.0)
+            if loc: dig(self, dt, 1.0, *loc)
 
-            sigma = 0.01 if self.world_object.crouch else 0.05
-            value = max(0, gauss(mu = mu, sigma = sigma) * dt)
+        def dig2(self, dt):
+            loc = self.world_object.cast_ray(4.0)
+            if loc:
+                x, y, z = loc
+                dig(self, dt, 0.7, x, y, z - 1)
+                dig(self, dt, 0.7, x, y, z)
+                dig(self, dt, 0.7, x, y, z + 1)
 
-            if self.protocol.sim.dig(x, y, z, value):
-                self.protocol.onDestroy(self.player_id, x, y, z)
+        def item_shown(self, t):
+            P = not self.world_object.sprint
+            Q = t - self.last_sprint >= 0.5
+            R = t - self.last_tool_update >= 0.5
+            return P and Q and R
+
+        def shoot(self, t):
+            g = self.weapon_object.gun
+
+            P = self.weapon_object.ammo.current() > 0
+            Q = not self.weapon_object.reloading
+            R = t - self.weapon_last_shot >= g.delay
+
+            if P and Q and R and self.item_shown(t):
+                self.weapon_last_shot = t
+                self.weapon_object.ammo.shoot(1)
+
+                n = self.world_object.orientation.normal()
+                r = self.eye() + n * 1.2
+
+                for i in range(0, g.round.pellets):
+                    v = n * gauss(mu = g.round.speed, sigma = g.round.speed * g.velocity_deviation)
+                    self.protocol.sim.add(self, r, cone(v, g.spread), t, g.round)
 
         def set_tool(self, tool):
             self.tool           = tool
@@ -479,19 +519,19 @@ def apply_script(protocol, connection, config):
 
             self.grenade_explode(grenade.position)
 
-        def set_weapon(self, weapon, local=False, no_kill=False):
+        def set_weapon(self, weapon, local = False, no_kill = False):
             if weapon not in guns:
                 return
 
             self.weapon = weapon
-            if self.weapon_object is not None:
-                self.weapon_object.reset()
-
             self.weapon_object = Weapon(self, guns[weapon], self._on_reload)
 
             if not local:
-                change_weapon = loaders.ChangeWeapon()
-                self.protocol.broadcast_contained(change_weapon, save=True)
+                contained           = loaders.ChangeWeapon()
+                contained.player_id = self.player_id
+                contained.weapon    = weapon
+
+                self.protocol.broadcast_contained(contained, save=True)
                 if not no_kill: self.kill(kill_type=CLASS_CHANGE_KILL)
 
         def _on_reload(self):
