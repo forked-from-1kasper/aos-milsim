@@ -12,6 +12,10 @@ This is intended. Some materials are not strong enough to stop bullet completely
 
 Note that **shooting-through-walls hacks are not possible** (unlike vanilla AoS) due to the simulator architecture.
 
+### Can I shoot through the fog?
+
+Yes, although it’s not that easy.
+
 ### Grenade is too dangerous!
 
 1. Don’t run in circles around grenades.
@@ -56,3 +60,9 @@ Go play ARMA + [ACE3](https://github.com/acemod/ACE3).
 Go to a shooting range, airsoft club or army.
 
 (Not to mention that real war is not fun at all.)
+
+# References
+
+* [Under the hood: the physics of projectile ballistics](http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php).
+* [Towards a better, science-based, evaluation of kinetic non-lethal weapons](https://www.researchgate.net/publication/254911398_Towards_a_better_science-based_evaluation_of_kinetic_non-lethal_weapons), L. Koene, A. Papy.
+* [Terminal Ballistics](https://link.springer.com/book/10.1007/978-3-030-46612-1), 3rd edition, Z. Rosenberg, E. Dekel.
