@@ -6,25 +6,30 @@ from twisted.internet import reactor
 
 from pyspades.protocol import BaseProtocol
 from pyspades.constants import WEAPON_TOOL
+from piqueserver.config import config
 from pyspades.common import Vertex3
 from pyspades.team import Team
 
 from piqueserver.commands import command
 import milsim.blast as blast
 
-BOMBS_COUNT = 7
-BOMBER_SPEED = 10
+section = config.section("airstrike")
+
+class Option:
+    zoomv_time = section.option("zoomv_time", 2).get()
+    delay      = section.option("delay", 7 * 60).get()
+    phase      = section.option("phase", 120).get()
+
+BOMBS_COUNT   = 7
+BOMBER_SPEED  = 10
 BOMBING_DELAY = 2
 
-AIRBOMB_DELAY = 3
-AIRBOMB_RADIUS = 10
-AIRBOMB_SAFE_DISTANCE = 150
+AIRBOMB_DELAY                  = 3
+AIRBOMB_RADIUS                 = 10
+AIRBOMB_SAFE_DISTANCE          = 150
 AIRBOMB_GUARANTEED_KILL_RADIUS = 40
 
-ZOOMV_TIME = 2
-AIRSTRIKE_PASSES = 50
-AIRSTRIKE_DELAY = 7 * 60
-AIRSTRIKE_INIT_DELAY = 120
+AIRSTRIKE_PASSES        = 50
 AIRSTRIKE_CAST_DISTANCE = 300
 
 shift = lambda val: val + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
@@ -144,13 +149,13 @@ class Bomber:
         self.ready       = False
 
         if by_server:
-            self.preparation = reactor.callLater(AIRSTRIKE_INIT_DELAY, self.start)
+            self.preparation = reactor.callLater(Option.phase, self.start)
 
     def point(self, conn):
         if not self.active() and self.ready:
             self.player_id = conn.player_id
             self.call = reactor.callLater(
-                ZOOMV_TIME, do_airstrike, self.name, conn, self.restart
+                Option.zoomv_time, do_airstrike, self.name, conn, self.restart
             )
 
     def active(self):
@@ -175,7 +180,7 @@ class Bomber:
         self.stop()
 
         self.ready       = False
-        self.preparation = reactor.callLater(AIRSTRIKE_DELAY, self.start)
+        self.preparation = reactor.callLater(Option.delay, self.start)
 
     def report(self, msg):
         self.protocol.broadcast_chat(

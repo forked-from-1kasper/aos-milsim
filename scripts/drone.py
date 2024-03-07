@@ -11,7 +11,18 @@ from pyspades.world import Grenade
 from pyspades.team import Team
 
 from piqueserver.commands import command, get_player, CommandError
+from piqueserver.config import config
+
 import milsim.blast as blast
+
+section = config.section("drone")
+
+class Option:
+    phase    = section.option("phase", 90).get()
+    delay    = section.option("delay", 240).get()
+    rate     = section.option("rate", 1).get()
+    timeout  = section.option("timeout", 60).get()
+    teamkill = section.option("teamkill", False).get()
 
 MIN_FUSE    = 1.2
 MAX_FUSE    = 3
@@ -21,11 +32,6 @@ class Status(Enum):
     inflight = auto()
     awaiting = auto()
     inwork   = auto()
-
-DRONE_INIT_DELAY   = 90
-DRONE_DELAY        = 240
-DRONE_POLL_DELAY   = 1
-DRONE_POLL_TIMEOUT = 60
 
 class Ghost:
     def __init__(self):
@@ -68,7 +74,7 @@ class Drone:
         self.passed   = 0
 
         if by_server:
-            self.callback = reactor.callLater(DRONE_INIT_DELAY, self.start)
+            self.callback = reactor.callLater(Option.phase, self.start)
 
     def report(self, msg):
         self.protocol.broadcast_chat(
@@ -99,12 +105,12 @@ class Drone:
         self.passed = 0
 
         self.report("Received. Watching for %s" % target.name)
-        self.callback = reactor.callLater(DRONE_POLL_DELAY, self.ping)
+        self.callback = reactor.callLater(Option.rate, self.ping)
 
     def ping(self):
-        self.passed += DRONE_POLL_DELAY
+        self.passed += Option.rate
 
-        if self.passed > DRONE_POLL_TIMEOUT:
+        if self.passed > Option.timeout:
             self.report("Don't see %s. Awaiting for further instructions" % self.target.name)
 
             self.status = Status.awaiting
@@ -143,10 +149,10 @@ class Drone:
 
             else:
                 self.status   = Status.inflight
-                self.callback = reactor.callLater(DRONE_DELAY, self.arrive)
-                self.report("Bombed out. Will be ready in %s seconds" % DRONE_DELAY)
+                self.callback = reactor.callLater(Option.delay, self.arrive)
+                self.report("Bombed out. Will be ready in %s seconds" % Option.delay)
         else:
-            self.callback = reactor.callLater(DRONE_POLL_DELAY, self.ping)
+            self.callback = reactor.callLater(Option.rate, self.ping)
 
     def remaining(self):
         if self.callback:
@@ -173,7 +179,7 @@ def drone(conn, *args):
         if len(args) > 0:
             player = get_player(conn.protocol, args[0], spectators=False)
 
-            if player.team.id == conn.team.id:
+            if player.team.id == conn.team.id and not Option.teamkill:
                 raise CommandError("Expected enemy's nickname")
 
             drone.track(conn, player)
