@@ -1,6 +1,6 @@
+from typing import Dict, List, Callable
 from math import pi, exp, log, inf
 from dataclasses import dataclass
-from typing import Dict, List
 from enum import Enum
 
 from pyspades.constants import SPADE_TOOL
@@ -98,11 +98,12 @@ class Box:
 
 @dataclass
 class Environment:
-    registry : List[Material]
-    default  : Material
-    build    : Material
-    palette  : Dict[int, Material]
-    size     : Box = Box()
+    registry        : List[Material]
+    default         : Material
+    build           : Material
+    palette         : Dict[int, Material]
+    size            : Box = Box()
+    on_flag_capture : Callable = lambda player: None
 
 ρ      = 1.225 # Air density
 factor = 0.5191

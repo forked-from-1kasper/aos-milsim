@@ -518,6 +518,10 @@ def apply_script(protocol, connection, config):
 
             return connection.on_flag_take(self)
 
+        def on_flag_capture(self):
+            self.protocol.environment.on_flag_capture(self)
+            return connection.on_flag_capture(self)
+
         @register_packet_handler(loaders.SetTool)
         def on_tool_change_recieved(self, contained):
             if not self.hp: return
