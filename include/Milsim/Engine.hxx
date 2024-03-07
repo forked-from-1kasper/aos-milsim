@@ -102,7 +102,7 @@ private:
 
     MapData * map; PyObject * onTrace, * onHitEffect, * onHit, * onDestroy;
 
-    double _lag;
+    double _lag, _peak;
 
 private:
     inline Material<T> & material(const Voxel<T> & voxel)
@@ -134,7 +134,7 @@ public:
     size_t defaultMaterial, buildMaterial;
 
     Engine() : onTrace(Py_None), onHitEffect(Py_None), onHit(Py_None), onDestroy(Py_None)
-    { srand(time(NULL)); players.reserve(32); _lag = 0.0; }
+    { srand(time(NULL)); players.reserve(32); _lag = _peak = 0.0; }
 
     ~Engine() { Py_XDECREF(onTrace); }
 
@@ -164,6 +164,8 @@ public:
     { *id = materials.size(); return materials.emplace_back(); }
 
     void wipe(MapData * ptr) {
+        _peak = 0.0;
+
         objects.clear();
         Object<T>::flush();
 
@@ -214,12 +216,14 @@ public:
         const auto T2 = steady_clock::now();
 
         auto diff = duration_cast<microseconds>(T2 - T1).count();
-        _lag = (_lag + diff) / 2;
+        _lag  = (_lag + diff) / 2;
+        _peak = std::max(_peak, double(diff));
     }
 
     inline void flush() { objects.clear(); }
 
-    inline double lag() const { return _lag; }
+    inline double lag()  const { return _lag; }
+    inline double peak() const { return _peak; }
 
     inline size_t alive() const { return objects.size(); }
     inline size_t total() const { return Object<T>::total(); }

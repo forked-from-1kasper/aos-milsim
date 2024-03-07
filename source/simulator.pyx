@@ -93,6 +93,7 @@ cdef extern from "Milsim/Engine.hxx":
 
         void flush()
         double lag()
+        double peak()
         size_t alive()
         size_t total()
 
@@ -149,6 +150,9 @@ cdef class Simulator:
 
     def lag(self):
         return self.engine.lag()
+
+    def peak(self):
+        return self.engine.peak()
 
     def alive(self):
         return self.engine.alive()

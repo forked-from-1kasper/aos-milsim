@@ -1,6 +1,6 @@
+from math import pi, exp, log, inf
 from dataclasses import dataclass
 from typing import Dict, List
-from math import pi, exp, log
 from enum import Enum
 
 from pyspades.constants import SPADE_TOOL
@@ -83,11 +83,26 @@ class Voxel:
     durability : float
 
 @dataclass
+class Box:
+    xmin : float = -inf
+    xmax : float = +inf
+    ymin : float = -inf
+    ymax : float = +inf
+    zmin : float = -inf
+    zmax : float = +inf
+
+    def inside(self, v):
+        return self.xmin <= v.x <= self.xmax and \
+               self.ymin <= v.y <= self.ymax and \
+               self.zmin <= v.z <= self.zmax
+
+@dataclass
 class Environment:
     registry : List[Material]
     default  : Material
     build    : Material
     palette  : Dict[int, Material]
+    size     : Box = Box()
 
 ρ      = 1.225 # Air density
 factor = 0.5191

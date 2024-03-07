@@ -54,8 +54,9 @@ def apply_script(protocol, connection, config):
     class DamageProtocol(protocol):
         def __init__(self, *arg, **kw):
             protocol.__init__(self, *arg, **kw)
-            self.time = reactor.seconds()
-            self.sim  = Simulator(self)
+            self.environment = None
+            self.time        = reactor.seconds()
+            self.sim         = Simulator(self)
 
             self.available_proto_extensions.extend(extensions)
 
@@ -65,6 +66,8 @@ def apply_script(protocol, connection, config):
             E = self.map_info.extensions.get('environment', {})
 
             if isinstance(E, Environment):
+                self.environment = E
+
                 for material in E.registry:
                     self.sim.register(material)
 
@@ -125,6 +128,9 @@ def apply_script(protocol, connection, config):
                     hp = player.display()
                     if player.hp != hp:
                         player.set_hp(hp, kill_type=MELEE_KILL)
+
+                    if not self.environment.size.inside(player.world_object.position):
+                        player.kill()
 
                 player.last_hp_update = t
 

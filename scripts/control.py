@@ -89,10 +89,11 @@ class Engine:
 
     @staticmethod
     def stats(protocol, *argv):
-        return "Total: %d, alive: %d, lag: %.2f us" % (
+        return "Total: %d, alive: %d, lag: %.2f us, peak: %.2f us" % (
             protocol.sim.total(),
             protocol.sim.alive(),
             protocol.sim.lag(),
+            protocol.sim.peak(),
         )
 
     @staticmethod
