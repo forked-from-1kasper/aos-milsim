@@ -38,6 +38,9 @@ cdef extern from "Milsim/Engine.hxx":
     template struct Engine<double>;
     """
 
+    cdef T c_ofMeters "ofMeters"[T](const T)
+    cdef T c_toMeters "toMeters"[T](const T)
+
     unordered_map_t[int, int] * getColorsOf(MapData *)
 
     cdef cppclass Vector3[T]:
@@ -97,6 +100,9 @@ cdef extern from "Milsim/Engine.hxx":
         double peak()
         size_t alive()
         size_t total()
+
+def ofMeters(float x): return c_ofMeters[double](x)
+def toMeters(float y): return c_toMeters[double](y)
 
 def can_see(VXLData data, float x0, float y0, float z0, float x1, float y1, float z1):
     global global_map

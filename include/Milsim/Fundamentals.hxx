@@ -49,6 +49,9 @@ namespace Fundamentals {
     template<typename T> const T densityOfAir = 1.225;
 }
 
+template<typename T> constexpr inline T ofMeters(const T v) { return Fundamentals::m2b<T> * v; }
+template<typename T> constexpr inline T toMeters(const T v) { return Fundamentals::b2m<T> * v; }
+
 namespace Box {
     template<typename T> constexpr auto head = Hitbox<T>(
         Vector3<T>(-2.5, -2.5, -3.0), Vector3<T>(6, 6, 6), 0.1

@@ -12,7 +12,7 @@ from pyspades.constants import *
 from piqueserver.commands import command
 import milsim.blast as blast
 
-from milsim.simulator import Simulator, cone
+from milsim.simulator import Simulator, cone, toMeters
 from milsim.weapon import weapons
 from milsim.common import *
 
@@ -47,6 +47,8 @@ def dig(player, mu, dt, x, y, z):
 
     if protocol.sim.dig(x, y, z, value):
         protocol.onDestroy(player.player_id, x, y, z)
+
+def toMeters3(v): return Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 
 def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
@@ -283,7 +285,9 @@ def apply_script(protocol, connection, config):
 
                 for i in range(0, w.round.pellets):
                     v = n * gauss(mu = w.round.speed, sigma = w.round.speed * w.velocity_deviation)
-                    self.protocol.sim.add(self, r, cone(v, w.spread), t, w.round)
+                    v0 = toMeters3(self.world_object.velocity)
+
+                    self.protocol.sim.add(self, r, v0 + cone(v, w.spread), t, w.round)
 
         def set_tool(self, tool):
             self.tool           = tool
