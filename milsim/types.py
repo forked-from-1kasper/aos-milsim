@@ -101,6 +101,7 @@ class Environment:
     registry        : List[Material]
     default         : Material
     build           : Material
+    water           : Material
     palette         : Dict[int, Material]
     size            : Box = Box()
     on_flag_capture : Callable = lambda player: None

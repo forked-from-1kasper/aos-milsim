@@ -91,6 +91,7 @@ template<typename T> using Iterator = std::list<Object<T>>::iterator;
 template<typename T> struct Voxel {
     size_t id; T durability;
 
+    Voxel() : id(0), durability(1.0) {}
     Voxel(const size_t id, const T value) : id(id), durability(value) {}
 };
 
@@ -131,7 +132,8 @@ private:
 
 public:
     std::vector<Player<T>> players;
-    size_t defaultMaterial, buildMaterial;
+
+    Voxel<T> water; size_t defaultMaterial, buildMaterial;
 
     Engine() : onTrace(Py_None), onHitEffect(Py_None), onHit(Py_None), onDestroy(Py_None)
     { srand(time(NULL)); players.reserve(32); _lag = _peak = 0.0; }
@@ -139,6 +141,8 @@ public:
     ~Engine() { Py_XDECREF(onTrace); }
 
     Voxel<T> & get(int x, int y, int z) {
+        if (z == 63) return water;
+
         auto pos = get_pos(x, y, z);
         auto iter = voxels.find(pos);
 
@@ -151,8 +155,10 @@ public:
         return iter->second;
     }
 
-    void set(const int index, const uint32_t i, const T value)
-    { voxels.insert_or_assign(index, Voxel<T>(i, value)); }
+    void set(const int index, const uint32_t i, const T value) {
+        int x, y, z; get_xyz(index, &x, &y, &z); // ignore z = 63
+        if (z < 63) voxels.insert_or_assign(index, Voxel<T>(i, value));
+    }
 
     template<typename... Args> inline uint64_t add(Args &&... args) {
         auto & obj = objects.emplace_back(args...);
@@ -329,6 +335,7 @@ private:
                     v.x = v.y = v.z = 0.0;
                 }
 
+                // ignore Z ∈ {62, 63} (i.e. water and bottom indestructible layer)
                 if (Z < 62) voxel->durability -= ΔE * (M->durability / M->absorption);
 
                 if (voxel->durability <= 0.0) {

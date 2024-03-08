@@ -63,16 +63,19 @@ def apply_script(protocol, connection, config):
         def on_map_change(self, M):
             self.sim.wipe()
 
-            E = self.map_info.extensions.get('environment', {})
+            E = self.map_info.extensions.get('environment')
 
             if isinstance(E, Environment):
                 self.environment = E
+
+                assert len(E.registry) > 0
 
                 for material in E.registry:
                     self.sim.register(material)
 
                 self.sim.setDefaultMaterial(E.default)
                 self.sim.setBuildMaterial(E.build)
+                self.sim.setWaterMaterial(E.water)
 
                 self.sim.applyPalette(E.palette)
             else:

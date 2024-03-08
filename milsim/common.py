@@ -20,6 +20,7 @@ Steel    = Material(name = "steel",    ricochet = 0.80, deflecting = 77, durabil
 Glass    = Material(name = "glass",    ricochet = 0.0,  deflecting = 0,  durability = 0.15, strength = 7e+6,   density = 2500, absorption = 500,    crumbly = False)
 Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durability = 0.5,  strength = 1e+5,   density = 300,  absorption = 50e+3,  crumbly = True)
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
+Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
 R127x108mm = Round(900, gram(50.00), 150.0000, mm(12.70),  1)
 R762x54mm  = Round(850, gram(10.00), 146.9415, mm(07.62),  1)

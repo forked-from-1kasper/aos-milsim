@@ -62,9 +62,10 @@ def on_flag_capture(conn):
     team.flag.update()
 
 E = Environment(
-    registry        = [StrongConcrete, StrongSteel, Dirt, Sand2],
+    registry        = [StrongConcrete, StrongSteel, Dirt, Sand2, Water],
     default         = Dirt,
     build           = Sand2,
+    water           = Water,
     palette         = palette,
     size            = Box(xmin = 256 - 64, xmax = 256 + 64, ymin = 256 - 64, ymax = 256 + 64),
     on_flag_capture = on_flag_capture,

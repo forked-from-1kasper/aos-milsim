@@ -79,6 +79,7 @@ cdef extern from "Milsim/Engine.hxx":
         void invokeOnDestroy(object)
 
         size_t defaultMaterial, buildMaterial
+        Voxel[T] water
 
         Material[T] & alloc(size_t *)
 
@@ -133,7 +134,7 @@ cdef class Simulator:
     cdef Engine[double] engine
     cdef object protocol
 
-    cdef object defaultMaterial, buildMaterial
+    cdef object defaultMaterial, buildMaterial, waterMaterial
 
     cdef dict materials
 
@@ -211,6 +212,10 @@ cdef class Simulator:
     def setBuildMaterial(self, o):
         self.engine.buildMaterial = o.index
         self.buildMaterial = o
+
+    def setWaterMaterial(self, o):
+        self.engine.water.id = o.index
+        self.waterMaterial = o
 
     def applyPalette(self, palette):
         cdef VXLData data = <VXLData> self.protocol.map
