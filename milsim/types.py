@@ -1,6 +1,8 @@
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Tuple
+from dataclasses import dataclass, field
+from collections.abc import Iterable
+
 from math import pi, exp, log, inf
-from dataclasses import dataclass
 from enum import Enum
 
 from pyspades.constants import SPADE_TOOL
@@ -96,15 +98,21 @@ class Box:
                self.ymin <= v.y <= self.ymax and \
                self.zmin <= v.z <= self.zmax
 
+Vector3i = Tuple[int, int, int]
+
+def void():
+    yield from ()
+
 @dataclass
 class Environment:
     registry        : List[Material]
     default         : Material
     build           : Material
     water           : Material
-    palette         : Dict[int, Material]
-    size            : Box = Box()
     on_flag_capture : Callable = lambda player: None
+    size            : Box = Box()
+    palette         : Dict[int, Material] = field(default_factory = dict)
+    defaults        : Callable[[], Iterable[Tuple[Vector3i, Material]]] = void
 
 ρ      = 1.225 # Air density
 factor = 0.5191

@@ -18,6 +18,9 @@ from milsim.types import Material as PyMaterial, Voxel as PyVoxel
 cdef extern from "stdint.h":
     ctypedef unsigned long long uint64_t
 
+cdef extern from "vxl_c.h":
+    int get_pos(int, int, int)
+
 cdef extern from "world_c.cpp":
     MapData * global_map
 
@@ -240,6 +243,9 @@ cdef class Simulator:
     def get(self, int x, int y, int z):
         cdef Voxel[double] * voxel = &self.engine.get(x, y, z)
         return PyVoxel(self.materials[voxel.id], voxel.durability)
+
+    def set(self, int x, int y, int z, o):
+        self.engine.set(get_pos(x, y, z), o.index, 1.0)
 
     def step(self, t1, t2):
         self.engine.players.resize(len(self.protocol.players))

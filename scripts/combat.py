@@ -72,14 +72,17 @@ def apply_script(protocol, connection, config):
 
                 assert len(E.registry) > 0
 
-                for material in E.registry:
-                    self.sim.register(material)
+                for M in E.registry:
+                    self.sim.register(M)
 
                 self.sim.setDefaultMaterial(E.default)
                 self.sim.setBuildMaterial(E.build)
                 self.sim.setWaterMaterial(E.water)
 
                 self.sim.applyPalette(E.palette)
+
+                for (x, y, z), M in E.defaults():
+                    self.sim.set(x, y, z, M)
             else:
                 raise TypeError
 

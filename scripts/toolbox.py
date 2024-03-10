@@ -34,6 +34,11 @@ def pos2(conn, *args):
         conn.pos2 = loc
         return "Second position set to {}".format(loc)
 
+@command('cast', admin_only=True)
+def cast(conn):
+    if loc := cast_ray(conn):
+        return f"{loc}"
+
 @command('/sel', admin_only=True)
 def sel(conn, *args):
     if conn.pos1 and conn.pos2:
@@ -84,6 +89,11 @@ def elevate(conn, *args):
     z = conn.protocol.map.get_z(x, y) - 3
 
     conn.set_location_safe((x, y, z))
+
+@command(admin_only=True)
+def get_z(conn):
+    x, y, _ = conn.world_object.position.get()
+    return f"z = {conn.protocol.map.get_z(x, y)}"
 
 @command('position', 'pos')
 def position(conn, *args):
