@@ -61,6 +61,37 @@ Go to a shooting range, airsoft club or army.
 
 (Not to mention that real war is not fun at all.)
 
+# Protocol extensions
+
+## Bullet traces
+
+Extension ID: 0x10.
+
+| Field name | Field type  | Notes                                                                           |
+|------------|-------------|---------------------------------------------------------------------------------|
+| index      | UByte       | Strictly increasing (in the current implementation) identifier of a projectile. |
+| position   | LE Float[3] | Current position.                                                               |
+| value      | LE Float    | Current speed divided by the initial speed.                                     |
+| origin     | UByte       | Whether this is the first packet for this identifier.                           |
+
+## Hit effects
+
+Extension ID: 0x11.
+
+Sent whenever projectile hits a target to provide better visual response.
+
+| Field name | Field type  | Notes        |
+|------------|-------------|--------------|
+| position   | LE Float[3] | Hit position |
+| block      | LE Int[3]   | Hit block    |
+| target     | UByte       | *See below*  |
+
+| Target | Description |
+|--------|-------------|
+| 0      | Block       |
+| 1      | Headshot    |
+| 2      | Player      |
+
 # References
 
 * [Under the hood: the physics of projectile ballistics](http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php).

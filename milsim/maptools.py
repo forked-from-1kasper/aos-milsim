@@ -2,7 +2,6 @@ from random import uniform, choice, shuffle
 from itertools import product
 from math import floor
 
-
 from pyspades.constants import BLUE_FLAG, GREEN_FLAG, BLUE_BASE, GREEN_BASE
 
 from milsim.common import *
