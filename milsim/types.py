@@ -114,6 +114,21 @@ class Environment:
     palette         : Dict[int, Material] = field(default_factory = dict)
     defaults        : Callable[[], Iterable[Tuple[Vector3i, Material]]] = void
 
+    def apply(self, sim):
+        assert len(self.registry) > 0
+
+        for M in self.registry:
+            sim.register(M)
+
+        sim.setDefaultMaterial(self.default)
+        sim.setBuildMaterial(self.build)
+        sim.setWaterMaterial(self.water)
+
+        sim.applyPalette(self.palette)
+
+        for (x, y, z), M in self.defaults():
+            sim.set(x, y, z, M)
+
 ρ      = 1.225 # Air density
 factor = 0.5191
 

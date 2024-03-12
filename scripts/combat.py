@@ -1,6 +1,5 @@
-from math import floor, inf, prod
-
 from random import choice, random, gauss, uniform
+from math import floor, inf, prod
 
 from twisted.internet import reactor
 
@@ -16,13 +15,12 @@ from milsim.simulator import Simulator, cone, toMeters
 from milsim.weapon import weapons
 from milsim.common import *
 
-SHOVEL_GUARANTEED_DAMAGE = 50
-
 WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"
-NO_WARNING = [TEAM_CHANGE_KILL, CLASS_CHANGE_KILL]
 
 GRENADE_LETHAL_RADIUS = 4
 GRENADE_SAFETY_RADIUS = 30
+
+SHOVEL_GUARANTEED_DAMAGE = 50
 
 fracture_warning = {
     Limb.torso: "You broke your spine.",
@@ -69,20 +67,7 @@ def apply_script(protocol, connection, config):
 
             if isinstance(E, Environment):
                 self.environment = E
-
-                assert len(E.registry) > 0
-
-                for M in E.registry:
-                    self.sim.register(M)
-
-                self.sim.setDefaultMaterial(E.default)
-                self.sim.setBuildMaterial(E.build)
-                self.sim.setWaterMaterial(E.water)
-
-                self.sim.applyPalette(E.palette)
-
-                for (x, y, z), M in E.defaults():
-                    self.sim.set(x, y, z, M)
+                E.apply(self.sim)
             else:
                 raise TypeError
 
@@ -463,7 +448,7 @@ def apply_script(protocol, connection, config):
             return connection.on_spawn(self, pos)
 
         def on_kill(self, killer, kill_type, grenade):
-            if kill_type not in NO_WARNING:
+            if kill_type != TEAM_CHANGE_KILL and kill_type != CLASS_CHANGE_KILL:
                 self.send_chat(WARNING_ON_KILL)
 
             return connection.on_kill(self, killer, kill_type, grenade)
