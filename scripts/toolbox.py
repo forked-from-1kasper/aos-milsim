@@ -175,7 +175,7 @@ def apply_script(protocol, connection, config):
 
             self.lastmail = -inf
 
-            self.chat_limiter._seconds = 0
+            self.chat_limiter._seconds = 1
             return connection.on_connect(self)
 
     return protocol, ToolboxConnection
