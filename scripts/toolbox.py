@@ -147,7 +147,7 @@ mailbox   = config.section("mailbox")
 mailfile  = mailbox.option("file", "mailbox.txt").get()
 maildelay = mailbox.option("delay", 90).get()
 
-@command()
+@command('mail', 'admin')
 def mail(conn, *args):
     message = join_arguments(args)
 
