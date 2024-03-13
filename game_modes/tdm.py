@@ -15,7 +15,6 @@ INTEL_POINTS = 10
 def score(connection):
     return connection.protocol.get_kill_count()
 
-
 def apply_script(protocol, connection, config):
     class TDMConnection(connection):
         intel_points = config.get('intel_points', INTEL_POINTS)
@@ -37,7 +36,7 @@ def apply_script(protocol, connection, config):
             return result
 
         def explain_game_mode(self):
-            return 'Team Deathmatch: Kill the opposing team.'
+            return 'Team Deathmatch: kill the opposing team.'
 
     class TDMProtocol(protocol):
         game_mode = CTF_MODE

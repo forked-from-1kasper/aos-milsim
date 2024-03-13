@@ -110,7 +110,7 @@ class Drone:
     def ping(self):
         self.passed += Option.rate
 
-        if self.passed > Option.timeout:
+        if self.passed > Option.timeout or self.target.world_object is None:
             self.report("Don't see %s. Awaiting for further instructions" % self.target.name)
 
             self.status = Status.awaiting
