@@ -51,7 +51,7 @@ def toMeters3(v): return Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
-    class DamageProtocol(protocol):
+    class CombatProtocol(protocol):
         def __init__(self, *arg, **kw):
             protocol.__init__(self, *arg, **kw)
             self.environment = None
@@ -200,7 +200,7 @@ def apply_script(protocol, connection, config):
                     venous = venous, arterial = arterial, fractured = fractured,
                 )
 
-    class DamageConnection(connection):
+    class CombatConnection(connection):
         def __init__(self, *argv, **kw):
             self.last_hp_update   = None
             self.weapon_last_shot = -inf
@@ -576,4 +576,4 @@ def apply_script(protocol, connection, config):
                         venous = True, hit_by = self, kill_type = MELEE_KILL
                     )
 
-    return DamageProtocol, DamageConnection
+    return CombatProtocol, CombatConnection
