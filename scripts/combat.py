@@ -86,8 +86,8 @@ def apply_script(protocol, connection, config):
                     dt = t - player.last_hp_update
 
                     for P in player.body.values():
-                        if P.arterial: P.hit(player.body.arterial_rate * dt)
-                        if P.venous: P.hit(P.bleeding_rate * dt)
+                        if P.arterial: P.hit(P.arterial_rate * dt)
+                        if P.venous: P.hit(P.venous_rate * dt)
 
                     moving = player.world_object.up or player.world_object.down or \
                              player.world_object.left or player.world_object.right

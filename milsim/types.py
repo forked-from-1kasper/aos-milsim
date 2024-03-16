@@ -207,7 +207,8 @@ class ABCLimb:
         pass
 
 class Torso(ABCLimb):
-    bleeding_rate    = 0.7
+    venous_rate      = 0.7
+    arterial_rate    = 2.8
     arterial_density = 0.4
     bleeding         = Linear(15, 70)
     fracture         = Linear(500, 1000)
@@ -215,14 +216,16 @@ class Torso(ABCLimb):
     rotation_damage  = 0.1
 
 class Head(ABCLimb):
-    bleeding_rate    = 1.0
+    venous_rate      = 1.0
+    arterial_rate    = 4.3
     arterial_density = 0.65
     bleeding         = Linear(10, 50)
     fracture         = Linear(40, 70)
     damage           = Linear(0, 500)
 
 class Arm(ABCLimb):
-    bleeding_rate      = 0.35
+    venous_rate        = 0.35
+    arterial_rate      = 1.7
     arterial_density   = 0.7
     bleeding           = Linear(15, 55)
     fracture           = Linear(450, 600)
@@ -233,7 +236,8 @@ class Arm(ABCLimb):
         player.set_tool(SPADE_TOOL)
 
 class Leg(ABCLimb):
-    bleeding_rate      = 0.55
+    venous_rate        = 0.55
+    arterial_rate      = 2.1
     arterial_density   = 0.75
     bleeding           = Linear(15, 60)
     fracture           = Linear(500, 650)
@@ -243,8 +247,6 @@ class Leg(ABCLimb):
     walk_damage_rate   = 3.5
 
 class Body:
-    arterial_rate = 2.0
-
     def __init__(self):
         self.torso = Torso("torso", "torso")
         self.head  = Head("head", "head")
