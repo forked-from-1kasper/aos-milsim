@@ -37,6 +37,8 @@ class Mine:
 
 @command('mine', 'm')
 def mine(conn, *args):
+    if not conn.world_object or conn.world_object.dead: return
+
     loc = conn.world_object.cast_ray(Option.setup_distance)
 
     if not loc:
@@ -63,13 +65,15 @@ def givemine(conn, *args):
 
 @command('checkmines', 'cm')
 def checkmines(conn, *args):
+    if not conn.world_object or conn.world_object.dead: return
+
     return "You have %d mine(s)." % conn.mines
 
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
-        def __init__(self, *arg, **kw):
+        def __init__(self, *args, **kw):
             self.mines = {}
-            return protocol.__init__(self, *arg, **kw)
+            return protocol.__init__(self, *args, **kw)
 
         def explode(self, pos):
             if pos in self.mines:
@@ -81,6 +85,10 @@ def apply_script(protocol, connection, config):
             return protocol.on_map_change(self, map)
 
     class MineConnection(connection):
+        def __init__(self, *args, **kw):
+            self.mines = 0
+            return connection.__init__(self, *args, **kw)
+
         def on_spawn(self, pos):
             self.mines = 2
             return connection.on_spawn(self, pos)
