@@ -52,8 +52,8 @@ def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
     class CombatProtocol(protocol):
-        def __init__(self, *arg, **kw):
-            protocol.__init__(self, *arg, **kw)
+        def __init__(self, *w, **kw):
+            protocol.__init__(self, *w, **kw)
             self.environment = None
             self.time        = reactor.seconds()
             self.sim         = Simulator(self)
@@ -201,13 +201,13 @@ def apply_script(protocol, connection, config):
                 )
 
     class CombatConnection(connection):
-        def __init__(self, *argv, **kw):
+        def __init__(self, *w, **kw):
             self.last_hp_update   = None
             self.weapon_last_shot = -inf
 
             self.body = Body()
 
-            connection.__init__(self, *argv, **kw)
+            connection.__init__(self, *w, **kw)
 
         def height(self):
             if self.world_object:

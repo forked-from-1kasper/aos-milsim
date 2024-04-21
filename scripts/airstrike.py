@@ -88,11 +88,11 @@ def do_airstrike(name, conn, callback):
     callback()
 
 @command(admin_only=True)
-def gift(conn, *args):
+def gift(conn):
     do_airstrike("Panavia Tornado ECR", conn, dummy)
 
 @command('air')
-def air(conn, *args):
+def air(conn):
     bomber = conn.get_bomber()
     remaining = bomber.remaining()
 

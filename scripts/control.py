@@ -8,7 +8,7 @@ def ppBodyPart(P):
     return f"{label}{suffix}: {P.hp:.2f}"
 
 @command()
-def health(conn, *args):
+def health(conn):
     try:
         if conn.world_object is not None and not conn.world_object.dead:
             return " ".join(map(ppBodyPart, conn.body.values()))
@@ -16,12 +16,12 @@ def health(conn, *args):
         return "Body not initialized."
 
 @command()
-def weapon(conn, *args):
+def weapon(conn):
     if conn.weapon_object is not None:
         return conn.weapon_object.ammo.info()
 
 @command('bandage', 'b')
-def bandage(conn, *args):
+def bandage(conn):
     if not conn.hp: return
 
     if not conn.bleeding():
@@ -37,7 +37,7 @@ def bandage(conn, *args):
             return f"You have bandaged your {P.label}."
 
 @command('tourniquet', 't')
-def tourniquet(conn, *args):
+def tourniquet(conn):
     if not conn.hp: return
 
     if not conn.bleeding():
@@ -53,7 +53,7 @@ def tourniquet(conn, *args):
             return f"You put a tourniquet on your {P.label}."
 
 @command('splint', 's')
-def splint(conn, *args):
+def splint(conn):
     if not conn.hp: return
 
     if not conn.fractured():
