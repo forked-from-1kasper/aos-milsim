@@ -70,11 +70,11 @@ def splint(conn):
 
 class Engine:
     @staticmethod
-    def debug(protocol, *argv):
+    def debug(protocol, *w):
         usage = "Usage: /engine debug (on|off)"
 
         try:
-            (value,) = argv
+            (value,) = w
         except ValueError:
             return usage
 
@@ -88,7 +88,7 @@ class Engine:
             return usage
 
     @staticmethod
-    def stats(protocol, *argv):
+    def stats(protocol, *w):
         return "Total: %d, alive: %d, lag: %.2f us, peak: %.2f us" % (
             protocol.sim.total(),
             protocol.sim.alive(),
@@ -97,18 +97,18 @@ class Engine:
         )
 
     @staticmethod
-    def flush(protocol, *argv):
+    def flush(protocol, *w):
         alive = protocol.sim.alive()
         protocol.sim.flush()
 
         return "Removed %d object(s)" % alive
 
 @command('engine', admin_only=True)
-def engine(conn, subcmd, *argv):
+def engine(conn, subcmd, *w):
     protocol = conn.protocol
 
     if hasattr(Engine, subcmd):
-        return getattr(Engine, subcmd)(protocol, *argv)
+        return getattr(Engine, subcmd)(protocol, *w)
     else:
         return "Unknown command: %s" % str(subcmd)
 

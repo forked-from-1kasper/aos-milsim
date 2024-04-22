@@ -36,7 +36,7 @@ class Mine:
         blast.effect(player, loc, Vertex3(0, 0, 0), 0)
 
 @command('mine', 'm')
-def mine(conn, *args):
+def mine(conn):
     if not conn.world_object or conn.world_object.dead: return
 
     loc = conn.world_object.cast_ray(Option.setup_distance)
@@ -59,12 +59,12 @@ def mine(conn, *args):
             return "You do not have mines."
 
 @command('givemine', 'gm', admin_only=True)
-def givemine(conn, *args):
+def givemine(conn):
     conn.mines += 1
     return "You got a mine."
 
 @command('checkmines', 'cm')
-def checkmines(conn, *args):
+def checkmines(conn):
     if not conn.world_object or conn.world_object.dead: return
 
     return "You have %d mine(s)." % conn.mines
@@ -85,9 +85,9 @@ def apply_script(protocol, connection, config):
             return protocol.on_map_change(self, map)
 
     class MineConnection(connection):
-        def __init__(self, *args, **kw):
+        def __init__(self, *w, **kw):
             self.mines = 0
-            return connection.__init__(self, *args, **kw)
+            return connection.__init__(self, *w, **kw)
 
         def on_spawn(self, pos):
             self.mines = 2
