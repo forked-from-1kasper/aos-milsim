@@ -1,4 +1,4 @@
-from random import choice, random, gauss, uniform
+from random import choice, gauss, uniform
 from math import floor, inf, prod
 
 from twisted.internet import reactor
@@ -32,8 +32,6 @@ fracture_warning = {
 }
 
 bleeding_warning = "You're bleeding."
-
-randbool = lambda prob: random() <= prob
 
 def dig(player, mu, dt, x, y, z):
     if not player.world_object or player.world_object.dead: return

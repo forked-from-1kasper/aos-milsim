@@ -1,7 +1,10 @@
 from itertools import product
+from random import random
 from math import atan
 
 from milsim.types import *
+
+randbool = lambda prob: random() <= prob
 
 mm   = lambda s: s / 1000
 gram = lambda m: m / 1000
