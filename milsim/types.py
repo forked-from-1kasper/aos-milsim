@@ -6,6 +6,7 @@ from math import pi, exp, log, inf
 from enum import Enum
 
 from pyspades.constants import SPADE_TOOL
+from pyspades.common import Vertex3
 
 ite = lambda b, v1, v2: v1 if b else v2
 
@@ -113,6 +114,7 @@ class Environment:
     size            : Box = Box()
     palette         : Dict[int, Material] = field(default_factory = dict)
     defaults        : Callable[[], Iterable[Tuple[Vector3i, Material]]] = void
+    north           : Vertex3 = Vertex3(1, 0, 0)
 
     def apply(self, sim):
         assert len(self.registry) > 0

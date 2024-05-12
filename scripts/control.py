@@ -2,6 +2,8 @@ from piqueserver.commands import command
 from pyspades.constants import *
 from milsim.common import *
 
+yn = lambda b: "yes" if b else "no"
+
 def ppBodyPart(P):
     label = P.abbrev.upper() if P.fractured and not P.splint else P.abbrev
     suffix = ite(P.venous, "*", "") + ite(P.arterial, "**", "")
@@ -119,7 +121,7 @@ def lookat(conn):
 
     if loc is not None:
         block = conn.protocol.sim.get(*loc)
-        return f"Material: {block.material.name}, durability: {block.durability:.2f}."
+        return f"Material: {block.material.name}, durability: {block.durability:.2f}, crumbly: {yn(block.material.crumbly)}."
     else:
         return "Block is too far."
 

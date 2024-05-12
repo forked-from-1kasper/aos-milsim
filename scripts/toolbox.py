@@ -1,4 +1,4 @@
-from math import inf, fmod, tan, acos, pi
+from math import inf, fmod, tan, acos, pi, tau, atan2, degrees, floor
 from itertools import product
 from random import randint
 from time import time
@@ -13,6 +13,9 @@ from pyspades.constants import *
 from milsim.simulator import toMeters
 
 dot = lambda u, v: u.x * v.x + u.y * v.y + u.z * v.z
+xOy = lambda v: Vertex3(v.x, v.y, 0)
+xOz = lambda v: Vertex3(v.x, 0, v.z)
+yOz = lambda v: Vertex3(0, v.y, v.z)
 
 def edge(a, b):
     return range(min(a, b), max(a, b) + 1)
@@ -197,10 +200,32 @@ def protractor(conn):
             return "Use /protractor again while facing the second point."
         else:
             t = dot(conn.world_object.orientation.normal(), conn.protractor)
-            θ = acos(t) * 180 / pi
+            θ = degrees(acos(t))
 
             conn.protractor = None
             return "%.2f deg" % θ
+
+def clockwise(v1, v2):
+    return atan2(v1.x * v2.y - v1.y * v2.x, v1.x * v2.x + v1.y * v2.y)
+
+def azimuth(E, v):
+    φ = clockwise(E.north, v)
+    return φ if φ > 0 else φ + tau
+
+def needle(φ):
+    label = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    N     = len(label)
+    Δφ    = tau / N
+    t     = (φ + Δφ / 2) / Δφ
+    return label[floor(t) % N]
+
+@command()
+def compass(conn):
+    if conn.world_object is not None:
+        o = xOy(conn.world_object.orientation)
+        φ = azimuth(conn.protocol.environment, o)
+        θ = degrees(φ)
+        return "%.0f deg, %s" % (θ, needle(φ))
 
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
