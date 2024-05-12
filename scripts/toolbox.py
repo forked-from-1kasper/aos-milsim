@@ -1,13 +1,18 @@
+from math import inf, fmod, tan, acos, pi
+from itertools import product
+from random import randint
+from time import time
+
 from piqueserver.commands import command, join_arguments
 from piqueserver.config import config
 
 from pyspades import contained as loaders
+from pyspades.common import Vertex3
 from pyspades.constants import *
 
-from itertools import product
-from random import randint
-from time import time
-from math import inf
+from milsim.simulator import toMeters
+
+dot = lambda u, v: u.x * v.x + u.y * v.y + u.z * v.z
 
 def edge(a, b):
     return range(min(a, b), max(a, b) + 1)
@@ -18,9 +23,9 @@ def cube(u, v):
 
     return product(edge(x1, x2), edge(y1, y2), edge(z1, z2))
 
-def cast_ray(conn):
+def cast_ray(conn, limit = 128):
     if not conn.world_object: return
-    return conn.world_object.cast_ray(128)
+    return conn.world_object.cast_ray(limit)
 
 @command('/pos1', admin_only=True)
 def pos1(conn, *args):
@@ -167,8 +172,42 @@ def mail(conn, *args):
         conn.lastmail = timestamp
         return "Message sent."
 
+@command()
+def rangefinder(conn):
+    error = 2.0
+
+    if loc := cast_ray(conn, limit = 1024):
+        # this number is a little wrong, but anyway we’ll truncate the result
+        d = conn.world_object.position.distance(Vertex3(*loc))
+        m = toMeters(d)
+        M = m - fmod(m, error)
+
+        if m < error:
+            return "< %.0f m" % error
+        else:
+            return "%.0f m" % M
+    else:
+        return "Too far."
+
+@command()
+def protractor(conn):
+    if conn.world_object is not None:
+        if conn.protractor is None:
+            conn.protractor = conn.world_object.orientation.normal().copy()
+            return "Use /protractor again while facing the second point."
+        else:
+            t = dot(conn.world_object.orientation.normal(), conn.protractor)
+            θ = acos(t) * 180 / pi
+
+            conn.protractor = None
+            return "%.2f deg" % θ
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
+        def __init__(self, *w, **kw):
+            self.protractor = None
+            return connection.__init__(self, *w, **kw)
+
         def on_connect(self):
             self.pos1 = None
             self.pos2 = None
