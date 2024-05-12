@@ -45,8 +45,12 @@ namespace Fundamentals {
     template<typename T> constexpr T m2b = playerHeightInBlocks<T> / playerHeightInMeters<T>;
     template<typename T> constexpr T b2m = 1 / m2b<T>;
 
-    template<typename T> const Vector3<T> g(0, 0, 9.81);
-    template<typename T> const T densityOfAir = 1.225;
+    template<typename T> const Vector3<T> g(0, 0, 9.81); // m/s²
+
+    template<typename T> constexpr T molarMassDryAir     = 0.0289652; // kg/mol
+    template<typename T> constexpr T molarMassWaterVapor = 0.018016;  // kg/mol
+    template<typename T> constexpr T gasConstant         = 8.31446;   // J / (K · mol)
+    template<typename T> constexpr T absoluteZero        = -273.15;   // Celsius
 }
 
 template<typename T> constexpr inline T ofMeters(const T v) { return Fundamentals::m2b<T> * v; }

@@ -16,6 +16,12 @@
 #include "Python.h"
 #include "vxl_c.h"
 
+template<typename Real> Real vaporPressureOfWater(const Real T) {
+    // https://en.wikipedia.org/wiki/Tetens_equation
+    auto k = T > 0 ? (17.27 * T) / (T + 237.3) : (21.875 * T) / (T + 265.5);
+    return 610.78 * exp(k);
+}
+
 inline void retain(PyObject * & member, PyObject * const obj) {
     if (member != Py_None)
         Py_DECREF(member);
@@ -105,6 +111,9 @@ private:
 
     double _lag, _peak;
 
+    T _temperature, _pressure, _humidity; Vector3<T> _wind;
+    T _densityOfAir;
+
 private:
     inline Material<T> & material(const Voxel<T> & voxel)
     { return materials[voxel.id]; }
@@ -169,7 +178,28 @@ public:
     inline Material<T> & alloc(size_t * id)
     { *id = materials.size(); return materials.emplace_back(); }
 
+    void set(const T t, const T p, const T φ, const Vector3<T> & w) {
+        using namespace Fundamentals;
+
+        _temperature = t;
+        _pressure    = p;
+        _humidity    = φ;
+        _wind        = w;
+
+        // https://en.wikipedia.org/wiki/Density_of_air#Humid_air
+        auto pv = φ * vaporPressureOfWater<T>(t), ε = gasConstant<T> * (t - absoluteZero<T>);
+        _densityOfAir = (pv * molarMassWaterVapor<T> + (p - pv) * molarMassDryAir<T>) / ε;
+    }
+
+    inline T          temperature() const { return _temperature; }
+    inline T          pressure()    const { return _pressure; }
+    inline T          humidity()    const { return _humidity; }
+    inline T          density()     const { return _densityOfAir; }
+    inline Vector3<T> wind()        const { return _wind; }
+
     void wipe(MapData * ptr) {
+        set(0, 101325, 0.3, Vector3<T>(0, 0, 0));
+
         _peak = 0.0;
 
         objects.clear();
@@ -429,9 +459,8 @@ private:
                 stuck = true;
             }
 
-            auto wind = Vector3<T>(0, 0, 0), u = wind - v;
-
-            auto F = g<T> * m + u * (0.5 * densityOfAir<T> * u.abs() * o.drag * o.area);
+            auto u  = _wind - v;
+            auto F  = g<T> * m + u * (0.5 * _densityOfAir * u.abs() * o.drag * o.area);
             auto dv = F * (dt / m);
 
             t1 += dt; r += dr; v += dv;

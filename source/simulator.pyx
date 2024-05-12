@@ -92,6 +92,14 @@ cdef extern from "Milsim/Engine.hxx":
         void set(const int, const uint32_t, const T)
         Voxel[T] & get(int, int, int)
 
+        void set(const T, const T, const T, const Vector3[T] &)
+
+        T temperature()
+        T pressure()
+        T humidity()
+        T density()
+        Vector3[T] wind()
+
         bool_t dig(int, int, int, T)
         bool_t smash(int, int, int, T)
 
