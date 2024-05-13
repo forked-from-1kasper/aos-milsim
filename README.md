@@ -1,38 +1,5 @@
 ![Screenshot](extra/Screenshot.png)
 
-# Description
-
-## combat.py
-
-This is the main script responsible for the following things:
-1. Server-side ballistics.
-2. Advanced damage system.
-3. Different materials for blocks.
-
-## control.py
-
-
-
-## mines.py
-
-
-
-## airstrike.py
-
-
-
-## drone.py
-
-
-
-## kamikaze.py
-
-
-
-## toolbox.py
-
-
-
 # FAQ
 
 ### Weapons are too dangerous! One shot kills instantly
