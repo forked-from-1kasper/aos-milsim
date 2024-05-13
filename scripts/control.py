@@ -128,13 +128,19 @@ def lookat(conn):
 @command()
 def weather(conn):
     o = conn.protocol.sim
+    W = conn.protocol.environment.weather
 
-    return "%.0f degrees, %.1f hPa, %.0f %%, %.1f m/s" % (
-        o.temperature(),
-        o.pressure() / 100,
-        o.humidity() * 100,
-        o.wind().length()
-    )
+    wind = o.wind()
+    θ = azimuth(conn.protocol.environment, xOy(wind))
+
+    t = o.temperature()      # Celsius
+    p = o.pressure() / 100   # hPa
+    φ = o.humidity() * 100   # %
+    v = wind.length()        # m/s
+    d = needle(θ)            # N/E/S/W
+    k = W.cloudiness() * 100 # %
+
+    return f"{t:.0f} degrees, {p:.1f} hPa, humidity {φ:.0f} %, wind {v:.1f} m/s ({d}), cloud cover {k:.0f} %"
 
 @command()
 def shoot(conn, what):

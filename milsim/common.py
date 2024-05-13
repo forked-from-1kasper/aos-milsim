@@ -1,6 +1,6 @@
+from math import atan, atan2, tau, floor
 from itertools import product
 from random import random
-from math import atan
 
 from milsim.types import *
 
@@ -31,3 +31,22 @@ Parabellum = Round(600, gram(08.03), 104.7573, mm(09.00),  1)
 Shot       = Round(457, gram(38.00),  15.0817, mm(18.40), 15)
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
+
+dot = lambda u, v: u.x * v.x + u.y * v.y + u.z * v.z
+xOy = lambda v: Vertex3(v.x, v.y, 0)
+xOz = lambda v: Vertex3(v.x, 0, v.z)
+yOz = lambda v: Vertex3(0, v.y, v.z)
+
+def clockwise(v1, v2):
+    return atan2(v1.x * v2.y - v1.y * v2.x, v1.x * v2.x + v1.y * v2.y)
+
+def azimuth(E, v):
+    φ = clockwise(E.north, v)
+    return φ if φ > 0 else φ + tau
+
+def needle(φ):
+    label = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    N     = len(label)
+    Δφ    = tau / N
+    t     = (φ + Δφ / 2) / Δφ
+    return label[floor(t) % N]

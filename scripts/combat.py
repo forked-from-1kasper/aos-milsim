@@ -4,6 +4,7 @@ from math import floor, inf, prod
 from twisted.internet import reactor
 
 from pyspades.packet import register_packet_handler
+from pyspades.color import interpolate_rgb
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
@@ -50,6 +51,8 @@ def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
     class CombatProtocol(protocol):
+        complete_coverage_fog = (200, 200, 200)
+
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.environment = None
@@ -58,7 +61,16 @@ def apply_script(protocol, connection, config):
 
             self.available_proto_extensions.extend(extensions)
 
+        def update_weather(self):
+            self.sim.update(self.environment)
+
+            k = self.environment.weather.cloudiness()
+            fog = interpolate_rgb(self.default_fog, self.complete_coverage_fog, k)
+            self.set_fog_color(fog)
+
         def on_map_change(self, M):
+            retval = protocol.on_map_change(self, M)
+
             self.sim.wipe()
 
             E = self.map_info.extensions.get('environment')
@@ -66,10 +78,11 @@ def apply_script(protocol, connection, config):
             if isinstance(E, Environment):
                 self.environment = E
                 E.apply(self.sim)
+                self.update_weather()
             else:
                 raise TypeError
 
-            return protocol.on_map_change(self, M)
+            return retval
 
         def on_world_update(self):
             t = reactor.seconds()
@@ -127,7 +140,7 @@ def apply_script(protocol, connection, config):
 
             if self.environment is not None:
                 if self.environment.weather.update(dt):
-                    self.sim.update(self.environment)
+                    self.update_weather()
 
             self.sim.step(self.time, t)
 

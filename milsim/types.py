@@ -115,7 +115,7 @@ class Weather:
     def wind(self) -> Tuple[float, float]:
         raise NotImplementedError
 
-    def clouds(self) -> float:
+    def cloudiness(self) -> float:
         return NotImplementedError
 
 class StaticWeather(Weather):
@@ -141,7 +141,7 @@ class StaticWeather(Weather):
     def wind(self):
         return self.w
 
-    def clouds(self):
+    def cloudiness(self):
         return self.k
 
 Vector3i = Tuple[int, int, int]
@@ -176,8 +176,6 @@ class Environment:
 
         for (x, y, z), M in self.defaults():
             sim.set(x, y, z, M)
-
-        sim.update(self)
 
 factor = 0.5191
 
