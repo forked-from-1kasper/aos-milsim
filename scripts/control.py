@@ -126,6 +126,17 @@ def lookat(conn):
         return "Block is too far."
 
 @command()
+def weather(conn):
+    o = conn.protocol.sim
+
+    return "%.0f degrees, %.1f hPa, %.0f %%, %.1f m/s" % (
+        o.temperature(),
+        o.pressure() / 100,
+        o.humidity() * 100,
+        o.wind().length()
+    )
+
+@command()
 def shoot(conn, what):
     if not conn.hp: return
 

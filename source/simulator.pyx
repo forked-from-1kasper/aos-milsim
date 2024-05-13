@@ -8,7 +8,7 @@ from cython.operator import dereference as deref
 from cython.operator import postincrement
 from cpython.ref cimport PyObject
 
-from math import pi
+from math import pi, sin, cos
 
 from pyspades.vxl cimport VXLData, MapData
 from pyspades.common import Vertex3
@@ -147,6 +147,11 @@ cdef void unpackMaterial(object o, Material[double] * M):
     M.absorption = o.absorption
     M.crumbly    = o.crumbly
 
+cdef Vector3[double] polar(object v, float r, float t):
+    x = v.x * cos(t) - v.y * sin(t)
+    y = v.x * sin(t) + v.y * cos(t)
+    return Vector3[double](r * x, r * y, 0)
+
 cdef class Simulator:
     cdef Engine[double] engine
     cdef object protocol
@@ -177,6 +182,28 @@ cdef class Simulator:
 
     def total(self):
         return self.engine.total()
+
+    def update(self, E):
+        o = E.weather
+        t = o.temperature()
+        p = o.pressure()
+        h = o.humidity()
+
+        v, d = o.wind()
+        self.engine.set(t, p, h, polar(E.north, v, d))
+
+    def temperature(self):
+        return self.engine.temperature()
+
+    def pressure(self):
+        return self.engine.pressure()
+
+    def humidity(self):
+        return self.engine.humidity()
+
+    def wind(self):
+        cdef Vector3[double] w = self.engine.wind()
+        return Vertex3(w.x, w.y, w.z)
 
     def invokeOnTrace(self, callback):
         self.engine.invokeOnTrace(callback)

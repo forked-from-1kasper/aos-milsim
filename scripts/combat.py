@@ -125,7 +125,11 @@ def apply_script(protocol, connection, config):
 
                 player.last_hp_update = t
 
-            if self.sim: self.sim.step(self.time, t)
+            if self.environment is not None:
+                if self.environment.weather.update(dt):
+                    self.sim.update(self.environment)
+
+            self.sim.step(self.time, t)
 
             self.time = t
 

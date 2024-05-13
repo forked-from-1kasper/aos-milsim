@@ -99,6 +99,51 @@ class Box:
                self.ymin <= v.y <= self.ymax and \
                self.zmin <= v.z <= self.zmax
 
+class Weather:
+    def update(self, dt):
+        raise NotImplementedError
+
+    def temperature(self) -> float:
+        raise NotImplementedError
+
+    def pressure(self) -> float:
+        raise NotImplementedError
+
+    def humidity(self) -> float:
+        raise NotImplementedError
+
+    def wind(self) -> Tuple[float, float]:
+        raise NotImplementedError
+
+    def clouds(self) -> float:
+        return NotImplementedError
+
+class StaticWeather(Weather):
+    def __init__(self, t = 15, p = 101325, φ = 0.3, w = (0, 0), k = 0):
+        self.t = t
+        self.p = p
+        self.φ = φ
+        self.w = w
+        self.k = k
+
+    def update(self, dt):
+        return False
+
+    def temperature(self):
+        return self.t
+
+    def pressure(self):
+        return self.p
+
+    def humidity(self):
+        return self.φ
+
+    def wind(self):
+        return self.w
+
+    def clouds(self):
+        return self.k
+
 Vector3i = Tuple[int, int, int]
 
 def void():
@@ -115,6 +160,7 @@ class Environment:
     palette         : Dict[int, Material] = field(default_factory = dict)
     defaults        : Callable[[], Iterable[Tuple[Vector3i, Material]]] = void
     north           : Vertex3 = Vertex3(1, 0, 0)
+    weather         : Weather = StaticWeather()
 
     def apply(self, sim):
         assert len(self.registry) > 0
@@ -131,7 +177,8 @@ class Environment:
         for (x, y, z), M in self.defaults():
             sim.set(x, y, z, M)
 
-ρ      = 1.225 # Air density
+        sim.update(self)
+
 factor = 0.5191
 
 @dataclass
@@ -146,7 +193,6 @@ class Round:
         self.grenade = False
         self.drag    = (factor * self.mass) / (self.ballistic * (self.caliber ** 2))
         self.area    = (pi / 4) * (self.caliber ** 2)
-        self.k       = (ρ * self.drag * self.area) / (2 * self.mass)
 
 class Ammo:
     def total(self):
