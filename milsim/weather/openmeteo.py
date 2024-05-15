@@ -1,5 +1,5 @@
+from math import radians, log, isfinite
 from random import weibullvariate
-from math import radians, log
 import requests
 
 from milsim.types import Weather
@@ -85,11 +85,18 @@ class OpenMeteo(Weather):
         self.wind_direction = radians(float(json['wind_direction_10m'])) # deg -> rad
 
         # just to be sure
+        if not isfinite(self.t): self.t = 0
+        if not isfinite(self.p): self.p = 101300
+
         self.wind_speed = max(0, self.wind_speed)
         self.wind_gusts = max(0, self.wind_gusts)
 
+        if not isfinite(self.wind_speed):     self.wind_speed     = 0
+        if not isfinite(self.wind_gusts):     self.wind_gusts     = 0
+        if not isfinite(self.wind_direction): self.wind_direction = 0
+
         self.φ = clamp(0, 1, self.φ)
-        self.k = clamp(0, 1, self.k)
+        self.c = clamp(0, 1, self.c)
 
         # estimate Weibull distribution parameters from two quantiles
         # https://www.johndcook.com/quantiles_parameters.pdf
