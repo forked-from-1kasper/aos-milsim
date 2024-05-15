@@ -41,8 +41,11 @@ class OpenMeteo(Weather):
         self.t = 0
         self.φ = 0
         self.p = 101300
-        self.k = 0
+        self.c = 0
         self.w = (0, 0)
+
+        self.k = 0
+        self.λ = 0
 
         try:
             self.download()
@@ -50,7 +53,8 @@ class OpenMeteo(Weather):
             pass
 
     def shake(self):
-        self.w = (weibullvariate(self.λ, self.k), self.wind_direction)
+        v = self.wind_speed if self.k < 1e-8 else weibullvariate(self.λ, self.k)
+        self.w = (v, self.wind_direction)
 
     def download(self):
         variables = [
@@ -98,14 +102,21 @@ class OpenMeteo(Weather):
         self.φ = clamp(0, 1, self.φ)
         self.c = clamp(0, 1, self.c)
 
-        # estimate Weibull distribution parameters from two quantiles
-        # https://www.johndcook.com/quantiles_parameters.pdf
-        p1, x1 = 0.05, self.wind_speed
+        # Estimate Weibull distribution parameters from two quantiles (https://www.johndcook.com/quantiles_parameters.pdf).
+        # For this distribution mean value is Γ(1 + 1/k)(ln2)^(−1/k) times larger than mode.
+        # It’s ≈1.4 for k = 1 and approaches 1 as k → +∞, so we take something between.
+        p1, x1 = 0.50, self.wind_speed / 1.2
         p2, x2 = 0.99, self.wind_gusts
 
         ε1, ε2 = -log(1 - p1), -log(1 - p2)
 
-        self.k = log(ε2 / ε1) / log(x2 / x1)
+        if x1 < 1e-3:
+            self.k = 0 # almost no wind
+        elif x2 < 1e-3:
+            self.k = 0 # almost no gusts
+        else:
+            self.k = log(ε2 / ε1) / log(x2 / x1)
+
         self.λ = x1 / (ε1 ** (1 / self.k))
 
         self.shake()
