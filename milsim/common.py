@@ -25,10 +25,11 @@ Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durabil
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
-R127x108mm = Round(900, gram(50.00), 150.0000, mm(12.70),  1)
-R762x54mm  = Round(850, gram(10.00), 146.9415, mm(07.62),  1)
-Parabellum = Round(600, gram(08.03), 104.7573, mm(09.00),  1)
-Shot       = Round(457, gram(38.00),  15.0817, mm(18.40), 15)
+R145x114mm = Round(1000, gram(67.00), 150.0000, mm(14.50),  1)
+R127x108mm = Round(900,  gram(50.00), 150.0000, mm(12.70),  1)
+R762x54mm  = Round(850,  gram(10.00), 146.9415, mm(07.62),  1)
+Parabellum = Round(600,  gram(08.03), 104.7573, mm(09.00),  1)
+Shot       = Round(457,  gram(38.00),  15.0817, mm(18.40), 15)
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 
