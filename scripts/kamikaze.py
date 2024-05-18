@@ -91,18 +91,14 @@ class Boom:
         self.conn.grenade_destroy(floor(pos.x), floor(pos.y), floor(pos.z + 3))
 
 @command('boom', 'a')
-def boom(conn, *args):
-    fuse = 0
-    if len(args) > 0:
-        fuse, *rest = args
+def boom(conn, fuse = 0):
+    try:
+        fuse = float(fuse)
+    except ValueError:
+        return "Usage: /boom [delay in seconds]"
 
-        try:
-            fuse = float(fuse)
-        except ValueError:
-            return "Usage: /boom [delay in seconds]"
-
-        if isnan(fuse) or isinf(fuse):
-            return "Are you a hacker?"
+    if isnan(fuse) or isinf(fuse):
+        return "Are you a hacker?"
 
     return conn.boom.start(fuse)
 

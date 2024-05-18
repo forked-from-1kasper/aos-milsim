@@ -1,6 +1,14 @@
 from dataclasses import dataclass
+from itertools import product
+from random import choice
+from math import floor
 
-from pyspades.collision import distance_3d_vector
+from twisted.internet import reactor
+
+from pyspades.packet import register_packet_handler
+from pyspades.constants import BUILD_BLOCK
+from pyspades import contained as loaders
+from pyspades.world import cube_line
 from pyspades.common import Vertex3
 
 from piqueserver.commands import command
@@ -11,13 +19,7 @@ import milsim.blast as blast
 
 section = config.section("mines")
 
-class Option:
-    activation_distance = section.option("activation_distance", 3.5).get()
-    setup_distance      = section.option("setup_distance", 13).get()
-
-def down(pos):
-    x, y, z = pos
-    return (x, y, z + 1)
+setup_distance = section.option("setup_distance", 13).get()
 
 @dataclass
 class Mine:
@@ -25,11 +27,15 @@ class Mine:
 
     def explode(self, protocol, pos):
         if self.player_id not in protocol.players:
-            return
+            ids = list(protocol.players.keys())
+            if len(ids) > 0:
+                self.player_id = choice(ids)
+            else:
+                return
+
         player = protocol.players[self.player_id]
 
         x, y, z = pos
-
         loc = Vertex3(x + 0.5, y + 0.5, z - 0.5)
 
         player.grenade_explode(loc)
@@ -39,13 +45,16 @@ class Mine:
 def mine(conn):
     if not conn.world_object or conn.world_object.dead: return
 
-    loc = conn.world_object.cast_ray(Option.setup_distance)
+    loc = conn.world_object.cast_ray(setup_distance)
 
     if not loc:
         return "You can't place a mine so far away from yourself."
     else:
         if loc in conn.protocol.mines:
+            conn.mines -= 1
+
             conn.protocol.explode(loc)
+            return
 
         _, _, z = loc
         if z == 63:
@@ -58,7 +67,7 @@ def mine(conn):
         else:
             return "You do not have mines."
 
-@command('givemine', 'gm', admin_only=True)
+@command('givemine', 'gm', admin_only = True)
 def givemine(conn):
     conn.mines += 1
     return "You got a mine."
@@ -72,78 +81,107 @@ def checkmines(conn):
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
         def __init__(self, *args, **kw):
+            self.dirty = False
+
             self.mines = {}
             return protocol.__init__(self, *args, **kw)
 
-        def explode(self, pos):
-            if pos in self.mines:
-                mine = self.mines.pop(pos)
-                mine.explode(self, pos)
-
-        def on_map_change(self, map):
+        def on_map_change(self, M):
             self.mines = {}
-            return protocol.on_map_change(self, map)
+            return protocol.on_map_change(self, M)
+
+        def explode(self, x, y, z):
+            r = (x, y, z)
+
+            if r in self.mines:
+                self.mines.pop(r).explode(self, r)
+
+        def on_world_update(self):
+            if self.dirty:
+                flying = []
+
+                for r in self.mines.keys():
+                    if not self.map.get_solid(*r):
+                        flying.append(r)
+
+                for x, y, z in flying:
+                    self.explode(x, y, z)
+
+                self.dirty = False
+
+            return protocol.on_world_update(self)
+
+        def broadcast_contained(self, contained, unsequenced = False, sender = None, team = None, save = False, rule = None):
+            protocol.broadcast_contained(self, contained, unsequenced, sender, team, save, rule)
+
+            if isinstance(contained, loaders.BlockAction):
+                # This is intentionally not in `on_block_build`.
+                if contained.value == BUILD_BLOCK:
+                    self.explode(contained.x, contained.y, contained.z + 1)
+
+            if isinstance(contained, loaders.BlockLine):
+                locs = cube_line(
+                    contained.x1, contained.y1, contained.z1,
+                    contained.x2, contained.y2, contained.z2
+                )
+
+                for x, y, z in locs:
+                    self.explode(x, y, z + 1)
 
     class MineConnection(connection):
         def __init__(self, *w, **kw):
+            self.previous_position = None
             self.mines = 0
             return connection.__init__(self, *w, **kw)
 
         def on_spawn(self, pos):
+            self.previous_position = self.world_object.position.copy()
             self.mines = 2
             return connection.on_spawn(self, pos)
 
-        def refill(self, local=False):
+        def on_kill(self, killer, kill_type, grenade):
+            self.previous_position = None
+            return connection.on_kill(self, killer, kill_type, grenade)
+
+        def refill(self, local = False):
             self.mines = 2
             return connection.refill(self, local)
 
-        def check_mine(self, pos0):
-            try:
-                affected = []
-                for pos, mine in self.protocol.mines.items():
-                    x, y, z = pos
-                    dist = distance_3d_vector(pos0, Vertex3(x, y, z))
+        def take_flag(self):
+            flag = self.team.other.flag
+            x, y, z = floor(flag.x), floor(flag.y), floor(flag.z)
 
-                    if dist <= Option.activation_distance:
-                        affected.append(pos)
+            connection.take_flag(self)
 
-                for pos in affected:
-                    self.protocol.explode(pos)
-
-            except RuntimeError:
-                pass
-
-        def check_mine_by_pos(self, positions):
-            affected = []
-            for pos, mine in self.protocol.mines.items():
-                if pos in positions or not self.protocol.map.get_solid(*pos):
-                    affected.append(pos)
-
-            for pos in affected:
-                self.protocol.explode(pos)
+            if flag.player is not None: # when the flag was actually taken
+                for Δx, Δy in product(range(-1, 2), range(-1, 2)):
+                    self.protocol.explode(x + Δx, y + Δy, z)
 
         def on_position_update(self):
-            self.check_mine(self.world_object.position)
+            if self.previous_position is not None:
+                r1 = self.previous_position.get()
+                r2 = self.world_object.position.get()
+
+                for x, y, z in cube_line(*r1, *r2):
+                    self.protocol.explode(x, y, self.protocol.map.get_z(x, y, z))
+
+                self.previous_position = self.world_object.position.copy()
+
             return connection.on_position_update(self)
 
         def on_block_removed(self, x, y, z):
-            self.check_mine_by_pos([(x, y, z)])
             connection.on_block_removed(self, x, y, z)
 
+            self.protocol.explode(x, y, z)
+            self.protocol.dirty = True
+
         def grenade_destroy(self, x, y, z):
-            if connection.grenade_destroy(self, x, y, z) == False:
-                return False
-            else:
-                self.check_mine_by_pos(grenade_zone(x, y, z))
-                self.check_mine(Vertex3(x, y, z))
-                return True
+            retval = connection.grenade_destroy(self, x, y, z)
 
-        def on_block_build(self, x, y, z):
-            self.check_mine_by_pos([(x, y, z + 1)])
-            return connection.on_block_build(self, x, y, z)
+            if retval != False:
+                for X, Y, Z in grenade_zone(x, y, z):
+                    self.protocol.explode(X, Y, Z)
 
-        def on_line_build(self, points):
-            self.check_mine_by_pos(map(down, points))
-            return connection.on_line_build(self, points)
+            return retval
 
     return MineProtocol, MineConnection

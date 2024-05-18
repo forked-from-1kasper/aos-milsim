@@ -64,8 +64,11 @@ def apply_script(protocol, connection, config):
         def update_weather(self):
             self.sim.update(self.environment)
 
-            k = self.environment.weather.cloudiness()
-            fog = interpolate_rgb(self.default_fog, self.complete_coverage_fog, k)
+            fog = interpolate_rgb(
+                self.default_fog,
+                self.complete_coverage_fog,
+                self.environment.weather.cloudiness()
+            )
             self.set_fog_color(fog)
 
         def on_map_change(self, M):
@@ -381,9 +384,7 @@ def apply_script(protocol, connection, config):
 
         def grenade_explode(self, r):
             blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
-
-            x, y, z = floor(r.x), floor(r.y), floor(r.z)
-            self.grenade_destroy(x, y, z)
+            self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z))
 
         def grenade_exploded(self, grenade):
             if self.name is None or self.team.spectator:

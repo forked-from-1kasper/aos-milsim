@@ -188,20 +188,20 @@ def drone(conn, *args):
 
 def apply_script(protocol, connection, config):
     class DroneProtocol(protocol):
-        def __init__(self, *arg, **kw):
-            protocol.__init__(self, *arg, **kw)
+        def __init__(self, *w, **kw):
+            protocol.__init__(self, *w, **kw)
             self.drones = {
                 self.team_spectator.id : Ghost(),
                 self.team_1.id         : Drone("DJI Mavic 3",   self.team_1, self),
                 self.team_2.id         : Drone("DJI Phantom 4", self.team_2, self)
             }
 
-        def on_map_change(self, map):
+        def on_map_change(self, M):
             for drone in self.drones.values():
                 drone.stop()
                 drone.init(by_server=True)
 
-            return protocol.on_map_change(self, map)
+            return protocol.on_map_change(self, M)
 
     class DroneConnection(connection):
         def get_drone(self):

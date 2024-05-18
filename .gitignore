@@ -5,5 +5,6 @@ config.toml
 /maps
 /logs
 /build
+/archive
 *.so
 *.o
