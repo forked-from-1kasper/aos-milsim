@@ -52,8 +52,7 @@ def mine(conn):
     else:
         if loc in conn.protocol.mines:
             conn.mines -= 1
-
-            conn.protocol.explode(loc)
+            conn.protocol.explode(*loc)
             return
 
         _, _, z = loc
