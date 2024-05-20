@@ -42,7 +42,7 @@ def dig(player, mu, dt, x, y, z):
 
     protocol = player.protocol
 
-    if protocol.sim.dig(x, y, z, value):
+    if protocol.simulator.dig(x, y, z, value):
         protocol.onDestroy(player.player_id, x, y, z)
 
 def toMeters3(v): return Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
@@ -57,12 +57,12 @@ def apply_script(protocol, connection, config):
             protocol.__init__(self, *w, **kw)
             self.environment = None
             self.time        = reactor.seconds()
-            self.sim         = Simulator(self)
+            self.simulator   = Simulator(self)
 
             self.available_proto_extensions.extend(extensions)
 
         def update_weather(self):
-            self.sim.update(self.environment)
+            self.simulator.update(self.environment)
 
             fog = interpolate_rgb(
                 self.default_fog,
@@ -74,13 +74,13 @@ def apply_script(protocol, connection, config):
         def on_map_change(self, M):
             retval = protocol.on_map_change(self, M)
 
-            self.sim.wipe()
+            self.simulator.wipe()
 
             E = self.map_info.extensions.get('environment')
 
             if isinstance(E, Environment):
                 self.environment = E
-                E.apply(self.sim)
+                E.apply(self.simulator)
                 self.update_weather()
             else:
                 raise TypeError
@@ -145,7 +145,7 @@ def apply_script(protocol, connection, config):
                 if self.environment.weather.update(dt):
                     self.update_weather()
 
-            self.sim.step(self.time, t)
+            self.simulator.step(self.time, t)
 
             self.time = t
 
@@ -293,7 +293,7 @@ def apply_script(protocol, connection, config):
                     v = n * gauss(mu = w.round.speed, sigma = w.round.speed * w.velocity_deviation)
                     v0 = toMeters3(self.world_object.velocity)
 
-                    self.protocol.sim.add(self, r, v0 + cone(v, w.spread), t, w.round)
+                    self.protocol.simulator.add(self, r, v0 + cone(v, w.spread), t, w.round)
 
         def set_tool(self, tool):
             self.tool           = tool
@@ -312,7 +312,7 @@ def apply_script(protocol, connection, config):
 
             self.hp = 100
 
-        def refill(self, local=False):
+        def refill(self, local = False):
             for P in self.body.values():
                 if P.fractured: P.splint = True
 
@@ -377,7 +377,7 @@ def apply_script(protocol, connection, config):
                 return False
 
             for X, Y, Z in grenade_zone(x, y, z):
-                if self.protocol.sim.smash(X, Y, Z, TNT(gram(60))):
+                if self.protocol.simulator.smash(X, Y, Z, TNT(gram(60))):
                     self.protocol.onDestroy(self.player_id, X, Y, Z)
 
             return True
@@ -441,17 +441,17 @@ def apply_script(protocol, connection, config):
         def on_block_build(self, x, y, z):
             self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
 
-            self.protocol.sim.build(x, y, z)
+            self.protocol.simulator.build(x, y, z)
             return connection.on_block_build(self, x, y, z)
 
         def on_line_build(self, points):
             for (x, y, z) in points:
-                self.protocol.sim.build(x, y, z)
+                self.protocol.simulator.build(x, y, z)
 
             return connection.on_line_build(self, points)
 
         def on_block_removed(self, x, y, z):
-            self.protocol.sim.destroy(x, y, z)
+            self.protocol.simulator.destroy(x, y, z)
             return connection.on_block_removed(self, x, y, z)
 
         def on_spawn(self, pos):

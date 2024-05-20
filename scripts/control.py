@@ -81,10 +81,10 @@ class Engine:
             return usage
 
         if value == 'on':
-            protocol.sim.invokeOnTrace(protocol.onTrace)
+            protocol.simulator.invokeOnTrace(protocol.onTrace)
             return "Debug is turned on."
         elif value == 'off':
-            protocol.sim.invokeOnTrace(None)
+            protocol.simulator.invokeOnTrace(None)
             return "Debug is turned off."
         else:
             return usage
@@ -92,16 +92,16 @@ class Engine:
     @staticmethod
     def stats(protocol, *w):
         return "Total: %d, alive: %d, lag: %.2f us, peak: %.2f us" % (
-            protocol.sim.total(),
-            protocol.sim.alive(),
-            protocol.sim.lag(),
-            protocol.sim.peak(),
+            protocol.simulator.total(),
+            protocol.simulator.alive(),
+            protocol.simulator.lag(),
+            protocol.simulator.peak(),
         )
 
     @staticmethod
     def flush(protocol, *w):
-        alive = protocol.sim.alive()
-        protocol.sim.flush()
+        alive = protocol.simulator.alive()
+        protocol.simulator.flush()
 
         return "Removed %d object(s)" % alive
 
@@ -120,14 +120,14 @@ def lookat(conn):
     loc = conn.world_object.cast_ray(7.0)
 
     if loc is not None:
-        block = conn.protocol.sim.get(*loc)
+        block = conn.protocol.simulator.get(*loc)
         return f"Material: {block.material.name}, durability: {block.durability:.2f}, crumbly: {yn(block.material.crumbly)}."
     else:
         return "Block is too far."
 
 @command()
 def weather(conn):
-    o = conn.protocol.sim
+    o = conn.protocol.simulator
     W = conn.protocol.environment.weather
 
     wind = o.wind()
