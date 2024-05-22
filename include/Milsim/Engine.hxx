@@ -52,7 +52,7 @@ private:
     static uint64_t gidx; uint64_t _index;
 
 public:
-    bool grenade; T mass, drag, area;
+    bool grenade; T mass, ballistic, area; uint32_t model;
 
     int thrower; T timestamp, v0;
 
@@ -60,9 +60,10 @@ public:
 
     Object(
         const int i, const Vector3<T> & r, const Vector3<T> & v,
-        const T timestamp, bool grenade, const T m, const T drag, const T A
+        const T timestamp, bool grenade, const T m,
+        const T ballistic, const uint32_t model, const T A
     ) : thrower(i), timestamp(timestamp), position(r), velocity(v),
-        grenade(grenade), mass(m), drag(drag), area(A)
+        grenade(grenade), mass(m), ballistic(ballistic), model(model), area(A)
     { v0 = v.abs(); _index = gidx; gidx++; }
 
     ~Object() {}
@@ -111,8 +112,10 @@ private:
 
     double _lag, _peak;
 
+    // Independent variables.
     T _temperature, _pressure, _humidity; Vector3<T> _wind;
-    T _densityOfAir;
+    // Derived variables.
+    T _density, _mach;
 
 private:
     inline Material<T> & material(const Voxel<T> & voxel)
@@ -186,15 +189,49 @@ public:
         _humidity    = φ;
         _wind        = w;
 
+        // 1) Here we assume Dalton’s law.
+
         // https://en.wikipedia.org/wiki/Density_of_air#Humid_air
-        auto pv = φ * vaporPressureOfWater<T>(t), ε = gasConstant<T> * (t - absoluteZero<T>);
-        _densityOfAir = (pv * molarMassWaterVapor<T> + (p - pv) * molarMassDryAir<T>) / ε;
+        auto p₁ = φ * vaporPressureOfWater<T>(t), p₂ = p - p₁;
+
+        auto ε = gasConstant<T> * (t - absoluteZero<T>);
+        _density = (p₁ * molarMassWaterVapor<T> + p₂ * molarMassDryAir<T>) / ε;
+
+        // 2) Here we assume Amagat’s law.
+
+        // https://en.wikipedia.org/wiki/Heat_capacity_ratio#Relation_with_degrees_of_freedom
+        constexpr T γ₁ = 1.333333, γ₂ = 1.4;
+
+        // https://physicspages.com/pdf/Thermal%20physics/Bulk%20modulus%20and%20the%20speed%20of%20sound.pdf
+        // pV^γ = A, p = AV^−γ, K = −VdP/V = −Vd(AV^−γ)/V = −VA(−γ)V^(−γ + 1) = γAV^−γ = γp
+        auto K₁ = γ₁ * p, K₂ = γ₂ * p;
+
+        // https://en.wikipedia.org/wiki/Partial_pressure#Partial_volume_(Amagat's_law_of_additive_volume)
+        auto x₁ = p₁ / p, x₂ = p₂ / p;
+
+        /*
+            https://eng.libretexts.org/Bookshelves/Civil_Engineering/Book%3A_Fluid_Mechanics_(Bar-Meir)/00%3A_Introduction/1.6%3A_Fluid_Properties/1.6.2%3A_Bulk_Modulus/1.6.2.1%3A_Bulk_Modulus_of_Mixtures
+
+            Kᵢ = −VᵢdP/dVᵢ,
+            dV = dV₁ + dV₂
+               = −V₁dP/K₁ − V₂dP/K₂
+               = −x₁VdP/K₁ − x₂VdP/K₂
+               = −VdP(x₁/K₁ + x₂/K₂),
+            K = −VdP/dV = 1/(x₁/K₁ + x₂/K₂)
+        */
+        auto K = 1.0 / (x₁ / K₁ + x₂ / K₂);
+
+        // https://en.wikipedia.org/wiki/Speed_of_sound#Equations
+        _mach = std::sqrt(K / _density);
+
+        // See also: http://resource.npl.co.uk/acoustics/techguides/speedair/
     }
 
     inline T          temperature() const { return _temperature; }
     inline T          pressure()    const { return _pressure; }
     inline T          humidity()    const { return _humidity; }
-    inline T          density()     const { return _densityOfAir; }
+    inline T          density()     const { return _density; }
+    inline T          mach()        const { return _mach; }
     inline Vector3<T> wind()        const { return _wind; }
 
     void wipe(MapData * ptr) {
@@ -279,7 +316,7 @@ private:
         Object<T> & o = *it;
 
         Voxel<T> * voxel = nullptr; Material<T> * M = nullptr;
-        T m = o.mass; Vector3<T> r(o.position), v(o.velocity), n;
+        Vector3<T> r(o.position), v(o.velocity), n;
 
         uint64_t N = 1;
 
@@ -359,7 +396,7 @@ private:
                     auto E = E₀ * ε - M->strength * o.mass * (1 - ε) / (drag * M->density);
                     ΔE = E₀ - E;
 
-                    v *= sqrt(E / E₀);
+                    v *= std::sqrt(E / E₀);
                 } else {
                     ΔE = E₀; stuck = true;
                     v.x = v.y = v.z = 0.0;
@@ -459,8 +496,11 @@ private:
                 stuck = true;
             }
 
+            auto m  = o.mass;
             auto u  = _wind - v;
-            auto F  = g<T> * m + u * (0.5 * _densityOfAir * u.abs() * o.drag * o.area);
+            auto CD = drag(o.model, o.ballistic, u.abs() / _mach);
+            auto F  = g<T> * m + u * (0.5 * _density * u.abs() * CD * o.area);
+
             auto dv = F * (dt / m);
 
             t1 += dt; r += dr; v += dv;

@@ -10,6 +10,10 @@ from pyspades.common import Vertex3
 
 ite = lambda b, v1, v2: v1 if b else v2
 
+Pound = 0.45359237
+Yard  = 0.9144
+Inch  = 0.0254
+
 class Limb(Enum):
     head  = 0
     torso = 1
@@ -177,20 +181,47 @@ class Environment:
         for (x, y, z), M in self.defaults():
             sim.set(x, y, z, M)
 
-factor = 0.5191
+class Round:
+    pass
 
 @dataclass
-class Round:
-    speed     : float
-    mass      : float
-    ballistic : float
-    caliber   : float
-    pellets   : int
+class Bullet(Round):
+    muzzle  : float
+    mass    : float
+    BC      : float
+    caliber : float
+
+    grenade = False
+    pellets = 1
 
     def __post_init__(self):
-        self.grenade = False
-        self.drag    = (factor * self.mass) / (self.ballistic * (self.caliber ** 2))
-        self.area    = (pi / 4) * (self.caliber ** 2)
+        self.area = 0.25 * pi * self.caliber * self.caliber
+
+        # http://www.x-ballistics.eu/cms/ballistics/how-to-calculate-the-trajectory/
+        m = self.mass / Pound
+        d = self.caliber / Inch
+        i = m / (d * d)
+        self.ballistic = i / self.BC
+
+class G1(Bullet):
+    model = 1
+
+class G7(Bullet):
+    model = 2
+
+@dataclass
+class Ball(Round):
+    muzzle   : float
+    mass     : float
+    diameter : float
+    pellets  : int
+
+    grenade   = False
+    model     = 3
+    ballistic = 0.0
+
+    def __post_init__(self):
+        self.area = 0.25 * pi * self.diameter * self.diameter
 
 class Ammo:
     def total(self):

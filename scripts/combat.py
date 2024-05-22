@@ -290,7 +290,7 @@ def apply_script(protocol, connection, config):
                 r = self.eye() + n * 1.2
 
                 for i in range(0, w.round.pellets):
-                    v = n * gauss(mu = w.round.speed, sigma = w.round.speed * w.velocity_deviation)
+                    v = n * gauss(mu = w.round.muzzle, sigma = w.round.muzzle * w.velocity_deviation)
                     v0 = toMeters3(self.world_object.velocity)
 
                     self.protocol.simulator.add(self, r, v0 + cone(v, w.spread), t, w.round)

@@ -6,11 +6,13 @@ from milsim.types import *
 
 randbool = lambda prob: random() <= prob
 
-mm   = lambda s: s / 1000
-gram = lambda m: m / 1000
-yard = lambda s: s * 0.9144
-inch = lambda s: s * 0.0254
-TNT  = lambda m: m * 4.6e+6
+mm    = lambda s: s / 1000
+gram  = lambda m: m / 1000
+yard  = lambda s: s * Yard
+inch  = lambda s: s * Inch
+pound = lambda m: m * Pound
+grain = lambda m: m * Pound / 7000
+TNT   = lambda m: m * 4.6e+6
 
 isosceles = lambda H, d: atan(0.5 * d / H)
 
@@ -25,11 +27,12 @@ Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durabil
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
-R145x114mm = Round(1000, gram(67.00), 150.0000, mm(14.50),  1)
-R127x108mm = Round(900,  gram(50.00), 150.0000, mm(12.70),  1)
-R762x54mm  = Round(850,  gram(10.00), 146.9415, mm(07.62),  1)
-Parabellum = Round(600,  gram(08.03), 104.7573, mm(09.00),  1)
-Shot       = Round(457,  gram(38.00),  15.0817, mm(18.40), 15)
+Shot = Ball(457, grain(82.0), mm(9.65), 15)
+
+R145x114mm = G1(1000, gram(67.00), 0.800, mm(14.50))
+R127x108mm = G1(900,  gram(50.00), 0.732, mm(12.70))
+R762x54mm  = G7(850,  gram(10.00), 0.187, mm(07.62))
+Parabellum = G1(600,  gram(08.03), 0.212, mm(09.00))
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 

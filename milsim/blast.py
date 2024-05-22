@@ -36,11 +36,13 @@ def damage(obj, pos, inner, outer):
     return 100 * sqrt(t)
 
 class Fragment:
+    grenade = True
+    model   = 0
+
     def __init__(self):
-        self.mass    = uniform(1 / 1000, 5 / 1000)
-        self.area    = 0.01 * 0.01
-        self.drag    = 0.5
-        self.grenade = True
+        self.mass      = uniform(1 / 1000, 5 / 1000)
+        self.area      = 0.01 * 0.01
+        self.ballistic = 1.0
 
 def explode(inner, outer, conn, pos):
     timestamp = reactor.seconds()
@@ -52,7 +54,7 @@ def explode(inner, outer, conn, pos):
         β = uniform(0, 2 * pi)
 
         v = Vertex3(sin(α) * cos(β), sin(α) * sin(β), cos(α)) * speed
-        conn.protocol.sim.add(conn, pos, v, timestamp, Fragment())
+        conn.protocol.simulator.add(conn, pos, v, timestamp, Fragment())
 
     for _, player in conn.protocol.players.items():
         if not player or not player.hp or not player.world_object: return

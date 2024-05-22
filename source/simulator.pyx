@@ -70,11 +70,14 @@ cdef extern from "Milsim/Engine.hxx":
         size_t id
         T durability
 
+    cpdef cppclass DragModel:
+        pass
+
     cdef cppclass Engine[T]:
         vector[Player[T]] players
 
         Engine()
-        uint64_t add(int, Vector3[T] r, Vector3[T] v, T timestamp, bool_t grenade, T mass, T drag, T area)
+        uint64_t add(int, Vector3[T] r, Vector3[T] v, T timestamp, bool_t grenade, T mass, T ballistic, uint32_t model, T area)
         void step(T, T)
 
         void wipe(MapData *)
@@ -98,6 +101,7 @@ cdef extern from "Milsim/Engine.hxx":
         T pressure()
         T humidity()
         T density()
+        T mach()
         Vector3[T] wind()
 
         bool_t dig(int, int, int, T)
@@ -234,7 +238,8 @@ cdef class Simulator:
             timestamp,
             params.grenade,
             params.mass,
-            params.drag,
+            params.ballistic,
+            params.model,
             params.area
         )
 
