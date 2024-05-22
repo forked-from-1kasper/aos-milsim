@@ -98,7 +98,7 @@ Sent whenever projectile hits a target to provide better visual response.
 * [Towards a better, science-based, evaluation of kinetic non-lethal weapons](https://www.researchgate.net/publication/254911398_Towards_a_better_science-based_evaluation_of_kinetic_non-lethal_weapons), L. Koene, A. Papy.
 * [Terminal Ballistics](https://link.springer.com/book/10.1007/978-3-030-46612-1), 3rd edition, Z. Rosenberg, E. Dekel.
 
-## License
+# License
 
 Copyright © 2021–2024 Siegmentation Fault
 
