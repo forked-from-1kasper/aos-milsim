@@ -72,13 +72,12 @@ default = (0, 0, 0)
 
 def Entity(blue_flag = default, green_flag = default, blue_base = default, green_base = default):
     def Implementation(team, eid):
-        if eid == BLUE_FLAG:
-            return blue_flag
-        if eid == GREEN_FLAG:
-            return green_flag
-        if eid == BLUE_BASE:
-            return blue_base
-        if eid == GREEN_BASE:
-            return green_base
+        x, y, z = blue_flag  if eid == BLUE_FLAG  else \
+                  green_flag if eid == GREEN_FLAG else \
+                  blue_base  if eid == BLUE_BASE  else \
+                  green_base if eid == GREEN_BASE else \
+                  default
+
+        return x, y, team.protocol.map.get_z(x, y, z)
 
     return Implementation
