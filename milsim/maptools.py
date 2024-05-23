@@ -61,21 +61,23 @@ def Team(blue = failure, green = failure):
 
     return Implementation
 
-def Random(*argv):
-    def Implementation(conn):
-        fun = choice(argv)
-        return fun(conn)
+def Random(*fns):
+    def Implementation(*w, **kw):
+        fn = choice(fns)
+        return fn(*w, **kw)
 
     return Implementation
 
 default = (0, 0, 0)
 
 def Entity(blue_flag = default, green_flag = default, blue_base = default, green_base = default):
+    take = lambda o: choice(o) if isinstance(o, list) else o
+
     def Implementation(team, eid):
-        x, y, z = blue_flag  if eid == BLUE_FLAG  else \
-                  green_flag if eid == GREEN_FLAG else \
-                  blue_base  if eid == BLUE_BASE  else \
-                  green_base if eid == GREEN_BASE else \
+        x, y, z = take(blue_flag)  if eid == BLUE_FLAG  else \
+                  take(green_flag) if eid == GREEN_FLAG else \
+                  take(blue_base)  if eid == BLUE_BASE  else \
+                  take(green_base) if eid == GREEN_BASE else \
                   default
 
         return x, y, team.protocol.map.get_z(x, y, z)

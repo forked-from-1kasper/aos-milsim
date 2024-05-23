@@ -21,6 +21,8 @@ Sand     = Material(name = "sand",     ricochet = 0.4,  deflecting = 83, durabil
 Wood     = Material(name = "wood",     ricochet = 0.75, deflecting = 80, durability = 3.0,  strength = 2.1e+6, density = 800,  absorption = 50e+3,  crumbly = False)
 Concrete = Material(name = "concrete", ricochet = 0.4,  deflecting = 75, durability = 5.0,  strength = 5e+6,   density = 2400, absorption = 100e+3, crumbly = False)
 Asphalt  = Material(name = "asphalt",  ricochet = 0.6,  deflecting = 78, durability = 6.0,  strength = 1.2e+6, density = 2400, absorption = 80e+3,  crumbly = False)
+Stone    = Material(name = "stone",    ricochet = 0.5,  deflecting = 90, durability = 30.0, strength = 20e+6,  density = 2500, absorption = 5e+5,   crumbly = False)
+Brick    = Material(name = "brick",    ricochet = 0.3,  deflecting = 76, durability = 7.0,  strength = 2e+6,   density = 1800, absorption = 80e+3,  crumbly = False)
 Steel    = Material(name = "steel",    ricochet = 0.80, deflecting = 77, durability = 10.0, strength = 500e+6, density = 7850, absorption = 150e+3, crumbly = False)
 Glass    = Material(name = "glass",    ricochet = 0.0,  deflecting = 0,  durability = 0.15, strength = 7e+6,   density = 2500, absorption = 500,    crumbly = False)
 Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durability = 0.5,  strength = 1e+5,   density = 300,  absorption = 50e+3,  crumbly = True)
