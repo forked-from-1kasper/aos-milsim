@@ -142,23 +142,47 @@ def weather(conn):
 
     return f"{t:.0f} degrees, {p:.1f} hPa, humidity {φ:.0f} %, wind {v:.1f} m/s ({d}), cloud cover {k:.0f} %"
 
+limbs = {
+    "torso": Limb.torso,
+    "head":  Limb.head,
+    "arml":  Limb.arml,
+    "armr":  Limb.armr,
+    "legl":  Limb.legl,
+    "legr":  Limb.legr
+}
+
 @command()
-def shoot(conn, what):
+def fracture(conn, target):
     if not conn.hp: return
 
-    where = {
-        "torso": Limb.torso,
-        "head":  Limb.head,
-        "arml":  Limb.arml,
-        "armr":  Limb.armr,
-        "legl":  Limb.legl,
-        "legr":  Limb.legr
-    }.get(what)
+    limb = limbs.get(target)
 
-    if where is not None:
-        conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = where)
+    if limb is not None:
+        conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
     else:
-        return "Usage: /shoot (torso|head|arml|armr|legl|legr)"
+        return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
+
+@command()
+def vein(conn, target):
+    if not conn.hp: return
+
+    limb = limbs.get(target)
+
+    if limb is not None:
+        conn.body[limb].venous = True
+    else:
+        return "Usage: /vein (torso|head|arml|armr|legl|legr)"
+
+@command()
+def artery(conn, target):
+    if not conn.hp: return
+
+    limb = limbs.get(target)
+
+    if limb is not None:
+        conn.body[limb].arterial = True
+    else:
+        return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
 def apply_script(protocol, connection, config):
     return protocol, connection
