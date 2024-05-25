@@ -11,6 +11,10 @@ def ppBodyPart(P):
 
 @command()
 def health(conn):
+    """
+    Report health status
+    /health
+    """
     try:
         if conn.world_object is not None and not conn.world_object.dead:
             return " ".join(map(ppBodyPart, conn.body.values()))
@@ -19,11 +23,19 @@ def health(conn):
 
 @command()
 def weapon(conn):
+    """
+    Print remaining ammo status
+    /weapon
+    """
+
     if conn.weapon_object is not None:
         return conn.weapon_object.ammo.info()
 
 @command('bandage', 'b')
 def bandage(conn):
+    """
+    Put the bandage (used to stop venous bleeding)
+    """
     if not conn.hp: return
 
     if not conn.bleeding():
@@ -40,6 +52,10 @@ def bandage(conn):
 
 @command('tourniquet', 't')
 def tourniquet(conn):
+    """
+    Put the tourniquet (used to stop arterial bleeding)
+    /t or /tourniquet
+    """
     if not conn.hp: return
 
     if not conn.bleeding():
@@ -56,6 +72,10 @@ def tourniquet(conn):
 
 @command('splint', 's')
 def splint(conn):
+    """
+    Splint a broken limb
+    /s or /splint
+    """
     if not conn.hp: return
 
     if not conn.fractured():
@@ -116,6 +136,10 @@ def engine(conn, subcmd, *w):
 
 @command()
 def lookat(conn):
+    """
+    Report a given block durability
+    /lookat
+    """
     if not conn.world_object: return
     loc = conn.world_object.cast_ray(7.0)
 
@@ -127,6 +151,11 @@ def lookat(conn):
 
 @command()
 def weather(conn):
+    """
+    Report current weather conditions
+    /weather
+    """
+
     o = conn.protocol.simulator
     W = conn.protocol.environment.weather
 

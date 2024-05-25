@@ -23,10 +23,20 @@ whitelist = {
 
 @command(admin_only = True)
 def disconnect(conn, nickname):
+    """
+    Silently disconnect a given player.
+    /disconnect <player>
+    """
+
     get_player(conn.protocol, nickname).disconnect(ERROR_UNDEFINED)
 
 @command(admin_only = True)
 def hardban(conn, nickname):
+    """
+    Hardban a given player.
+    /hardban <player>
+    """
+
     protocol = conn.protocol
 
     player = get_player(protocol, nickname)
@@ -37,6 +47,11 @@ def hardban(conn, nickname):
 
 @command()
 def status(conn, nickname = None):
+    """
+    Print ban expiry date
+    /status [player]
+    """
+
     protocol = conn.protocol
 
     player = get_player(protocol, nickname) if nickname is not None else conn

@@ -92,10 +92,15 @@ class Boom:
 
 @command('boom', 'a')
 def boom(conn, fuse = 0):
+    """
+    Detonates the explosive belt after a given number of seconds.
+    /boom [delay]
+    """
+
     try:
         fuse = float(fuse)
     except ValueError:
-        return "Usage: /boom [delay in seconds]"
+        return "Usage: /boom [delay]"
 
     if isnan(fuse) or isinf(fuse):
         return "Are you a hacker?"

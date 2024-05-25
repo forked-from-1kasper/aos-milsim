@@ -93,6 +93,11 @@ def gift(conn):
 
 @command('air')
 def air(conn):
+    """
+    Report time before bomber's arrival.
+    /air
+    """
+
     bomber = conn.get_bomber()
     remaining = bomber.remaining()
 

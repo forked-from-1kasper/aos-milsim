@@ -101,10 +101,19 @@ def get_z(conn):
 
 @command('position', 'pos')
 def position(conn, *args):
+    """
+    Print the current position on the map
+    /position
+    """
     return str(conn.world_object.position)
 
 @command()
 def printcolor(conn, *args):
+    """
+    Print the selected color
+    /printcolor
+    """
+
     if conn.color is not None:
         r, g, b = conn.color
         return f"#{r:02x}{g:02x}{b:02x}"
@@ -127,6 +136,10 @@ class StressPacket:
 
 @command()
 def stress(conn, *args):
+    """
+    Sends random data with a given packet id.
+    /stress [packet id]
+    """
     if len(args) > 0:
         id, *rest = args
 
@@ -144,7 +157,12 @@ invite      = discord.option("invite", "<no invite>").get()
 description = discord.option("description", "Discord").get()
 
 @command()
-def discord(conn, *args):
+def discord(conn):
+    """
+    Print the information about server's discord.
+    /discord
+    """
+
     return "%s: %s" % (description, invite)
 
 mailbox   = config.section("mailbox")
@@ -153,6 +171,11 @@ maildelay = mailbox.option("delay", 90).get()
 
 @command('mail', 'admin')
 def mail(conn, *args):
+    """
+    Leaves a message to the server administrator
+    /mail <your message>
+    """
+
     message = join_arguments(args)
 
     if not message:
@@ -173,6 +196,11 @@ def mail(conn, *args):
 
 @command()
 def rangefinder(conn):
+    """
+    Measures the distance between the player and a given point
+    /rangefinder
+    """
+
     error = 2.0
 
     if loc := cast_ray(conn, limit = 1024):
@@ -190,6 +218,11 @@ def rangefinder(conn):
 
 @command()
 def protractor(conn):
+    """
+    Measures the angle between the player and two specified points
+    /protractor
+    """
+
     if conn.world_object is not None:
         if conn.protractor is None:
             conn.protractor = conn.world_object.orientation.normal().copy()
@@ -203,6 +236,11 @@ def protractor(conn):
 
 @command()
 def compass(conn):
+    """
+    Prints the current azimuth
+    /compass
+    """
+
     if conn.world_object is not None:
         o = xOy(conn.world_object.orientation)
         φ = azimuth(conn.protocol.environment, o)

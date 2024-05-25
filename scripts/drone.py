@@ -161,7 +161,15 @@ class Drone:
             return None
 
 @command('drone', 'd')
-def drone(conn, *args):
+def drone(conn, nickname = None):
+    """
+    Commands the drone to follow the player
+    /drone <player>
+    """
+
+    if nickname is None:
+        return "Usage: /drone <player>"
+
     if conn.player_id not in conn.protocol.players: return
 
     drone = conn.get_drone()
@@ -176,15 +184,12 @@ def drone(conn, *args):
         drone.report("Drone is busy")
 
     if drone.status == Status.awaiting:
-        if len(args) > 0:
-            player = get_player(conn.protocol, args[0], spectators = False)
+        player = get_player(conn.protocol, nickname, spectators = False)
 
-            if player.team.id == conn.team.id and not Option.teamkill:
-                raise CommandError("Expected enemy's nickname")
+        if player.team.id == conn.team.id and not Option.teamkill:
+            raise CommandError("Expected enemy's nickname")
 
-            drone.track(conn, player)
-        else:
-            conn.send_lines(["Usage: /drone <player>"], 'usage')
+        drone.track(conn, player)
 
 def apply_script(protocol, connection, config):
     class DroneProtocol(protocol):
