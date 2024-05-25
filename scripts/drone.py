@@ -177,7 +177,7 @@ def drone(conn, *args):
 
     if drone.status == Status.awaiting:
         if len(args) > 0:
-            player = get_player(conn.protocol, args[0], spectators=False)
+            player = get_player(conn.protocol, args[0], spectators = False)
 
             if player.team.id == conn.team.id and not Option.teamkill:
                 raise CommandError("Expected enemy's nickname")

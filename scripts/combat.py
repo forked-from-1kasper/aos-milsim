@@ -9,7 +9,6 @@ from pyspades import contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
-from piqueserver.commands import command
 import milsim.blast as blast
 
 from milsim.simulator import Simulator, cone, toMeters
@@ -434,9 +433,6 @@ def apply_script(protocol, connection, config):
                     self.send_chat_status("You broke your legs.")
 
                 self.set_hp(self.display(), kill_type=FALL_KILL)
-
-        def on_connect(self):
-            return connection.on_connect(self)
 
         def on_block_build(self, x, y, z):
             self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
