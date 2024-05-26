@@ -29,12 +29,14 @@ Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durabil
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
-Shot = Ball(457, grain(82.0), mm(9.65), 15)
+Shot     = Ball(457.00, grain(82.000),  mm(9.65), 15, isosceles(yard(25), inch(40)))
+Buckshot = Ball(396.24, grain(350.000), mm(8.38), 5,  isosceles(yard(25), inch(40)))
+Bullet   = Ball(540.00, grain(109.375), mm(10.4), 1,  0)
 
 R145x114mm = G1(1000, gram(67.00), 0.800, mm(14.50))
 R127x108mm = G1(900,  gram(50.00), 0.732, mm(12.70))
 R762x54mm  = G7(850,  gram(10.00), 0.187, mm(07.62))
-Parabellum = G1(600,  gram(08.03), 0.212, mm(09.00))
+Parabellum = G1(600,  gram(8.03),  0.212, mm(09.00))
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 

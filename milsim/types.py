@@ -193,6 +193,7 @@ class Bullet(Round):
 
     grenade = False
     pellets = 1
+    spread  = 0
 
     def __post_init__(self):
         self.area = 0.25 * pi * self.caliber * self.caliber
@@ -215,6 +216,7 @@ class Ball(Round):
     mass     : float
     diameter : float
     pellets  : int
+    spread   : float
 
     grenade   = False
     model     = 3

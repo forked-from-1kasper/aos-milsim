@@ -56,7 +56,6 @@ class Rifle(Weapon):
     round              = R762x54mm
     delay              = 0.50
     reload_time        = 2.5
-    spread             = 0
     velocity_deviation = 0.05
 
 class SMG(Weapon):
@@ -65,7 +64,6 @@ class SMG(Weapon):
     round              = Parabellum
     delay              = 0.11
     reload_time        = 2.5
-    spread             = 0
     velocity_deviation = 0.05
 
 class Shotgun(Weapon):
@@ -74,7 +72,6 @@ class Shotgun(Weapon):
     round              = Shot
     delay              = 1.00
     reload_time        = 0.5
-    spread             = isosceles(yard(25), inch(40))
     velocity_deviation = 0.10
 
 weapons = {RIFLE_WEAPON: Rifle, SMG_WEAPON: SMG, SHOTGUN_WEAPON: Shotgun}

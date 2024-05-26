@@ -292,7 +292,7 @@ def apply_script(protocol, connection, config):
                     v = n * gauss(mu = w.round.muzzle, sigma = w.round.muzzle * w.velocity_deviation)
                     v0 = toMeters3(self.world_object.velocity)
 
-                    self.protocol.simulator.add(self, r, v0 + cone(v, w.spread), t, w.round)
+                    self.protocol.simulator.add(self, r, v0 + cone(v, w.round.spread), t, w.round)
 
         def set_tool(self, tool):
             self.tool           = tool
