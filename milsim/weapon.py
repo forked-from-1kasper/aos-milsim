@@ -69,7 +69,7 @@ class SMG(Weapon):
 class Shotgun(Weapon):
     name               = "Shotgun"
     Ammo               = Heap(6, 48)
-    round              = Shot
+    round              = Buckshot1
     delay              = 1.00
     reload_time        = 0.5
     velocity_deviation = 0.10

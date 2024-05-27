@@ -29,9 +29,9 @@ Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durabil
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
-Shot     = Ball(457.00, grain(82.000),  mm(9.65), 15, isosceles(yard(25), inch(40)))
-Buckshot = Ball(396.24, grain(350.000), mm(8.38), 5,  isosceles(yard(25), inch(40)))
-Bullet   = Ball(540.00, grain(109.375), mm(10.4), 1,  0)
+Buckshot1 = Ball(457.00, grain(82.000),  mm(9.65), 15, isosceles(yard(25), inch(40)))
+Buckshot2 = Ball(396.24, grain(350.000), mm(8.38), 5,  isosceles(yard(25), inch(40)))
+Bullet    = Ball(540.00, grain(109.375), mm(10.4), 1,  0)
 
 R145x114mm = G1(1000, gram(67.00), 0.800, mm(14.50))
 R127x108mm = G1(900,  gram(50.00), 0.732, mm(12.70))
