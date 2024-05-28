@@ -47,7 +47,7 @@ def dig(player, mu, dt, x, y, z):
 def toMeters3(v): return Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 
 def apply_script(protocol, connection, config):
-    extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
+    milsim_extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
     class CombatProtocol(protocol):
         complete_coverage_fog = (200, 200, 200)
@@ -58,7 +58,7 @@ def apply_script(protocol, connection, config):
             self.time        = reactor.seconds()
             self.simulator   = Simulator(self)
 
-            self.available_proto_extensions.extend(extensions)
+            self.available_proto_extensions.extend(milsim_extensions)
 
         def update_weather(self):
             self.simulator.update(self.environment)

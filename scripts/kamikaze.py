@@ -73,10 +73,7 @@ class Boom:
         self.last  = reactor.seconds()
         self.defer = None
 
-        if not self.alive():
-            return
-
-        if Option.message:
+        if self.alive() and Option.message:
             contained           = loaders.ChatMessage()
             contained.player_id = self.conn.player_id
             contained.chat_type = CHAT_ALL
@@ -113,9 +110,9 @@ def apply_script(protocol, connection, config):
             self.boom = Boom(self)
             return connection.on_join(self)
 
-        def on_kill(self, killer, kill_type, grenade):
+        def on_spawn(self, pos):
             self.boom.stop()
-            return connection.on_kill(self, killer, kill_type, grenade)
+            return connection.on_spawn(self, pos)
 
         def on_team_changed(self, old_team):
             self.boom.stop() # Just to be sure
