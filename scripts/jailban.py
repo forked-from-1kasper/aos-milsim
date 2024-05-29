@@ -3,9 +3,9 @@ from twisted.internet import reactor
 
 from piqueserver.commands import command, get_player
 
-from pyspades.constants import ERROR_UNDEFINED, ERROR_BANNED
 from pyspades.player import ServerConnection
 from pyspades import contained as loaders
+from pyspades.constants import *
 
 prohibited = {
     loaders.WeaponInput.id,
@@ -73,7 +73,14 @@ def status(conn, nickname = None):
         return "Not banned"
 
 def apply_script(protocol, connection, config):
+    extensions = [(EXTENSION_KICKREASON, 1)]
+
     class JailbanProtocol(protocol):
+        def __init__(self, *w, **kw):
+            protocol.__init__(self, *w, **kw)
+
+            self.available_proto_extensions.extend(extensions)
+
         def save_bans(self):
             protocol.save_bans(self)
 
@@ -106,7 +113,20 @@ def apply_script(protocol, connection, config):
             if silent:
                 return # only `FeatureProtocol.add_ban` uses this
             else:
-                return connection.kick(self, reason, silent)
+                message = "{} was kicked: {}".format(self.name, reason) if reason is not None else \
+                          "{} was kicked".format(self.name)
+
+                self.protocol.broadcast_chat(message, irc = True)
+
+                if EXTENSION_KICKREASON in self.proto_extensions and reason is not None:
+                    contained           = loaders.ChatMessage()
+                    contained.player_id = 255
+                    contained.chat_type = CHAT_SYSTEM
+                    contained.value     = reason
+
+                    self.send_contained(contained)
+
+                self.peer.disconnect_later(ERROR_KICKED)
 
         def loader_received(self, loader):
             if self.banned and loader.dataLength > 0:
