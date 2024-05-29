@@ -482,7 +482,7 @@ def apply_script(protocol, connection, config):
             if torso.fractured and not torso.splint:
                 torso.hit(torso.rotation_damage)
 
-            return connection.on_orientation_update(self, x, y, z)
+            return retval
 
         def on_tool_set_attempt(self, tool):
             if self.body.arml.fractured or self.body.armr.fractured:
