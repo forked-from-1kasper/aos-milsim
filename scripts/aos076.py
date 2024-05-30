@@ -123,10 +123,8 @@ def apply_script(protocol, connection, config):
                 self.send_contained(MapStart(self.protocol))
             elif self.map_data is None:
                 return
-            elif self.map_cached:
-                return
 
-            if not self.map_data.data_left():
+            if not self.map_data.data_left() or self.map_cached:
                 self.map_data = None
 
                 for data in self.saved_loaders:
