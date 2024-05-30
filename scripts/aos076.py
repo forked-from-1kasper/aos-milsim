@@ -8,6 +8,17 @@ from pyspades import contained as loaders
 from pyspades.loaders import Loader
 from pyspades.common import encode
 
+def crc32(generator):
+    size, crc, data = 0, 0, generator.get_data()
+
+    while data is not None:
+        crc = zlib.crc32(data, crc)
+        size += len(data)
+
+        data = generator.get_data()
+
+    return size, crc
+
 class WorldUpdate:
     id = 2
 
@@ -59,9 +70,11 @@ class MapStart:
         self.protocol = protocol
 
     def write(self, writer):
+        size, crc = crc32(self.protocol.map.get_generator())
+
         writer.writeByte(self.id, True)
-        writer.writeInt(self.protocol.map_size, True, False)
-        writer.writeInt(self.protocol.map_crc32, True, False)
+        writer.writeInt(size, True, False)
+        writer.writeInt(crc, True, False)
         writer.writeString(encode(self.protocol.map_info.short_name))
 
 # `HandShakeInit` is wrongly registered as client-side packet.
@@ -81,24 +94,6 @@ def apply_script(protocol, connection, config):
         def __init__(self, *w, **kw):
             self.world_update = WorldUpdate(self, True)
             return protocol.__init__(self, *w, **kw)
-
-        def on_map_change(self, M):
-            retval = protocol.on_map_change(self, M)
-
-            G = M.get_generator()
-
-            size, crc, data = 0, 0, G.get_data()
-
-            while data is not None:
-                crc = zlib.crc32(data, crc)
-                size += len(data)
-
-                data = G.get_data()
-
-            self.map_crc32 = crc
-            self.map_size  = size
-
-            return retval
 
         def update_network(self):
             if len(self.players) <= 0:
