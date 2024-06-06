@@ -122,35 +122,39 @@ def randbyte():
     return randint(0, 255)
 
 class StressPacket:
-    def __init__(self, id = None):
-        self.id = id
+    def __init__(self, pid = None, length = None):
+        self.id     = randint(0, 60) if pid is None else pid
+        self.length = randint(0, 4096) if length is None else length
 
     def write(self, writer):
-        if self.id is not None:
-            writer.writeByte(self.id, True)
-        else:
-            writer.writeByte(randbyte(), False)
+        writer.writeByte(self.id, True)
 
-        for i in range(randint(0, 4096)):
+        for i in range(self.length):
             writer.writeByte(randbyte(), False)
 
 @command()
-def stress(conn, *args):
+def stress(conn, pid = None, length = None):
     """
     Sends random data with a given packet id.
-    /stress [packet id]
+    /stress [packet id] [packet length]
     """
-    if len(args) > 0:
-        id, *rest = args
 
-        try:
-            id = int(id)
-        except ValueError:
-            return "Usage: /stress [packet id]"
+    try:
+        if pid is not None:
+            pid = int(pid)
+    except ValueError:
+        return "Packet id expected to be an integer."
 
-        conn.send_contained(StressPacket(id))
-    else:
-        conn.send_contained(StressPacket())
+    try:
+        if length is not None:
+            length = int(length)
+
+            if length < 0:
+                raise ValueError
+    except ValueError:
+        return "Packet length expected to be a positive integer."
+
+    conn.send_contained(StressPacket(pid, length))
 
 discord     = config.section("discord")
 invite      = discord.option("invite", "<no invite>").get()
