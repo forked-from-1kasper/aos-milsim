@@ -109,6 +109,16 @@ def apply_script(protocol, connection, config):
 
             return connection.on_command(self, command, parameters)
 
+        def on_flag_take(self):
+            if self.banned: return False
+
+            return connection.on_flag_take(self)
+
+        def ban(self, reason = None, duration = None):
+            self.drop_flag()
+
+            connection.ban(self, reason, duration)
+
         def kick(self, reason = None, silent = False):
             if silent:
                 return # only `FeatureProtocol.add_ban` uses this
