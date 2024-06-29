@@ -23,8 +23,13 @@ def cube(u, v):
     return product(edge(x1, x2), edge(y1, y2), edge(z1, z2))
 
 def cast_ray(conn, limit = 128):
-    if not conn.world_object: return
+    if not conn.world_object: return None
     return conn.world_object.cast_ray(limit)
+
+@command('cast', admin_only=True)
+def cast(conn):
+    if loc := cast_ray(conn):
+        return f"{loc}"
 
 @command('/pos1', admin_only=True)
 def pos1(conn, *args):
@@ -37,11 +42,6 @@ def pos2(conn, *args):
     if loc := cast_ray(conn):
         conn.pos2 = loc
         return "Second position set to {}".format(loc)
-
-@command('cast', admin_only=True)
-def cast(conn):
-    if loc := cast_ray(conn):
-        return f"{loc}"
 
 @command('/sel', admin_only=True)
 def sel(conn, *args):
