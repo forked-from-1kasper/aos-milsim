@@ -90,6 +90,14 @@ def splint(conn):
             conn.splint -= 1
             return f"You put a splint on your {P.label}."
 
+def microseconds(T):
+    if T <= 1e+3:
+        return "{:.2f} us".format(T)
+    elif T <= 1e+6:
+        return "{:.2f} ms".format(T / 1e+3)
+    else:
+        return "{:.2f} s".format(T / 1e+6)
+
 class Engine:
     @staticmethod
     def debug(protocol, *w):
@@ -111,11 +119,11 @@ class Engine:
 
     @staticmethod
     def stats(protocol, *w):
-        return "Total: %d, alive: %d, lag: %.2f us, peak: %.2f us" % (
-            protocol.simulator.total(),
-            protocol.simulator.alive(),
-            protocol.simulator.lag(),
-            protocol.simulator.peak(),
+        return "Total: {total}, alive: {alive}, lag: {lag}, peak: {peak}".format(
+            total = protocol.simulator.total(),
+            alive = protocol.simulator.alive(),
+            lag   = microseconds(protocol.simulator.lag()),
+            peak  = microseconds(protocol.simulator.peak()),
         )
 
     @staticmethod
@@ -123,7 +131,7 @@ class Engine:
         alive = protocol.simulator.alive()
         protocol.simulator.flush()
 
-        return "Removed %d object(s)" % alive
+        return "Removed {} object(s)".format(alive)
 
 @command('engine', admin_only=True)
 def engine(conn, subcmd, *w):
@@ -132,7 +140,7 @@ def engine(conn, subcmd, *w):
     if hasattr(Engine, subcmd):
         return getattr(Engine, subcmd)(protocol, *w)
     else:
-        return "Unknown command: %s" % str(subcmd)
+        return "Unknown command: {}".format(subcmd)
 
 @command()
 def lookat(conn):

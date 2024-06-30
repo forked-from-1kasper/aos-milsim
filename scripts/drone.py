@@ -78,7 +78,7 @@ class Drone:
 
     def report(self, msg):
         self.protocol.broadcast_chat(
-            "<%s> %s. Over." % (self.name, msg),
+            "<{}> {}. Over.".format(self.name, msg),
             global_message=False, team=self.team
         )
 
@@ -104,14 +104,14 @@ class Drone:
         self.status = Status.inwork
         self.passed = 0
 
-        self.report("Received. Watching for %s" % target.name)
+        self.report("Received. Watching for {}".format(target.name))
         self.callback = reactor.callLater(Option.rate, self.ping)
 
     def ping(self):
         self.passed += Option.rate
 
         if self.passed > Option.timeout or self.target.world_object is None:
-            self.report("Don't see %s. Awaiting for further instructions" % self.target.name)
+            self.report("Don't see {}. Awaiting for further instructions".format(self.target.name))
 
             self.status = Status.awaiting
             self.passed = 0
@@ -150,7 +150,7 @@ class Drone:
             else:
                 self.status   = Status.inflight
                 self.callback = reactor.callLater(Option.delay, self.arrive)
-                self.report("Bombed out. Will be ready in %s seconds" % Option.delay)
+                self.report("Bombed out. Will be ready in {} seconds".format(Option.delay))
         else:
             self.callback = reactor.callLater(Option.rate, self.ping)
 
@@ -167,9 +167,6 @@ def drone(conn, nickname = None):
     /drone <player>
     """
 
-    if nickname is None:
-        return "Usage: /drone <player>"
-
     if conn.player_id not in conn.protocol.players: return
 
     drone = conn.get_drone()
@@ -178,10 +175,17 @@ def drone(conn, nickname = None):
         remaining = drone.remaining()
         if remaining:
             approx = (remaining // 5 + 1) * 5
-            drone.report("Will be on the battlefield in %d seconds" % approx)
+            drone.report("Will be on the battlefield in {:.0f} seconds".format(approx))
+
+        return
 
     if drone.status == Status.inwork:
         drone.report("Drone is busy")
+
+        return
+
+    if nickname is None:
+        return "Usage: /drone <player>"
 
     if drone.status == Status.awaiting:
         player = get_player(conn.protocol, nickname, spectators = False)

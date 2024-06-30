@@ -50,12 +50,12 @@ class Boom:
             return choice(self.protection)
 
         if fuse < 0 or fuse > Option.max_fuse:
-            return "Delay should be non-negative and less than %d." % Option.max_fuse
+            return "Delay should be non-negative and less than {}.".format(Option.max_fuse)
 
         dt = reactor.seconds() - self.last
 
         if dt < Option.delay:
-            return "Wait %.1f seconds." % (Option.delay - dt)
+            return "Wait {:.1f} seconds.".format(Option.delay - dt)
 
         self.defer = reactor.callLater(fuse, self.callback)
 

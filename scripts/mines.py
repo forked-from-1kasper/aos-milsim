@@ -72,19 +72,20 @@ def mine(conn):
 
     if not loc: return "You can't place a mine so far away from yourself."
 
-    if loc in conn.protocol.tile_entities:
-        conn.mines -= 1
-        conn.protocol.get_tile_entity(*loc).on_pressure()
-        return
-
-    _, _, z = loc
-    if z == 63: return "You can't place a mine on water"
+    x, y, z = loc
+    if z >= 63: return "You can't place a mine on water"
 
     if conn.mines > 0:
-        conn.protocol.add_tile_entity(Landmine, conn.protocol, loc, conn.player_id)
-
         conn.mines -= 1
-        return "Mine placed at %s" % str(loc)
+
+        entity = conn.protocol.get_tile_entity(x, y, z)
+
+        if entity is not dummy:
+            entity.on_pressure()
+            return
+
+        conn.protocol.add_tile_entity(Landmine, conn.protocol, loc, conn.player_id)
+        return "Mine placed at {}".format(loc)
     else:
         return "You do not have mines."
 
@@ -96,8 +97,7 @@ def givemine(conn):
 @command('checkmines', 'cm')
 def checkmines(conn):
     if not conn.world_object or conn.world_object.dead: return
-
-    return "You have %d mine(s)." % conn.mines
+    return "You have {} mine(s).".format(conn.mines)
 
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
