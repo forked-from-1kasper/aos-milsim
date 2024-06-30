@@ -17,54 +17,76 @@ from piqueserver.config import config
 from milsim.common import grenade_zone
 import milsim.blast as blast
 
-section = config.section("mines")
+class TileEntity:
+    def __init__(self, protocol, position):
+        self.protocol = protocol
+        self.position = position
 
-setup_distance = section.option("setup_distance", 13).get()
+    def on_pressure(self):
+        pass
 
-@dataclass
-class Mine:
-    player_id : int
+    def on_destroy(self):
+        self.protocol.remove_tile_entity(*self.position)
 
-    def explode(self, protocol, pos):
-        if self.player_id not in protocol.players:
-            ids = list(protocol.players.keys())
+class DummyEntitiy(TileEntity):
+    def __init__(self):
+        pass
+
+    def on_destroy(self):
+        pass
+
+dummy = DummyEntitiy()
+
+class Explosive(TileEntity):
+    def __init__(self, protocol, position, player_id):
+        self.player_id = player_id
+        TileEntity.__init__(self, protocol, position)
+
+    def explode(self):
+        self.protocol.remove_tile_entity(*self.position)
+
+        if self.player_id not in self.protocol.players:
+            ids = list(self.protocol.players.keys())
             if len(ids) > 0:
                 self.player_id = choice(ids)
             else:
                 return
 
-        player = protocol.players[self.player_id]
+        player = self.protocol.players[self.player_id]
 
-        x, y, z = pos
+        x, y, z = self.position
         loc = Vertex3(x + 0.5, y + 0.5, z - 0.5)
 
         player.grenade_explode(loc)
         blast.effect(player, loc, Vertex3(0, 0, 0), 0)
 
+class Landmine(Explosive):
+    on_pressure = Explosive.explode
+    on_destroy  = Explosive.explode
+
 @command('mine', 'm')
 def mine(conn):
     if not conn.world_object or conn.world_object.dead: return
 
-    loc = conn.world_object.cast_ray(setup_distance)
+    loc = conn.world_object.cast_ray(10)
 
-    if not loc:
-        return "You can't place a mine so far away from yourself."
+    if not loc: return "You can't place a mine so far away from yourself."
+
+    if loc in conn.protocol.tile_entities:
+        conn.mines -= 1
+        conn.protocol.get_tile_entity(*loc).on_pressure()
+        return
+
+    _, _, z = loc
+    if z == 63: return "You can't place a mine on water"
+
+    if conn.mines > 0:
+        conn.protocol.add_tile_entity(Landmine, conn.protocol, loc, conn.player_id)
+
+        conn.mines -= 1
+        return "Mine placed at %s" % str(loc)
     else:
-        if loc in conn.protocol.mines:
-            conn.mines -= 1
-            conn.protocol.explode(*loc)
-            return
-
-        _, _, z = loc
-        if z == 63:
-            return "You can't place a mine on water"
-
-        if conn.mines > 0:
-            conn.protocol.mines[loc] = Mine(conn.player_id)
-            conn.mines -= 1
-            return "Mine placed at %s" % str(loc)
-        else:
-            return "You do not have mines."
+        return "You do not have mines."
 
 @command('givemine', 'gm', admin_only = True)
 def givemine(conn):
@@ -79,34 +101,40 @@ def checkmines(conn):
 
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
-        def __init__(self, *args, **kw):
-            self.dirty = False
+        def __init__(self, *w, **kw):
+            self.map_dirty = False
+            self.tile_entities = {}
 
-            self.mines = {}
-            return protocol.__init__(self, *args, **kw)
+            return protocol.__init__(self, *w, **kw)
+
+        def add_tile_entity(self, klass, *w, **kw):
+            entity = klass(*w, **kw)
+            self.tile_entities[entity.position] = entity
+
+            return entity
+
+        def get_tile_entity(self, x, y, z):
+            return self.tile_entities.get((x, y, z), dummy)
+
+        def remove_tile_entity(self, x, y, z):
+            self.tile_entities.pop((x, y, z))
 
         def on_map_change(self, M):
-            self.mines = {}
+            self.tile_entities.clear()
             return protocol.on_map_change(self, M)
 
-        def explode(self, x, y, z):
-            r = (x, y, z)
-
-            if r in self.mines:
-                self.mines.pop(r).explode(self, r)
-
         def on_world_update(self):
-            if self.dirty:
+            if self.map_dirty:
                 flying = []
 
-                for r in self.mines.keys():
+                for r, e in self.tile_entities.items():
                     if not self.map.get_solid(*r):
-                        flying.append(r)
+                        flying.append(e)
 
-                for x, y, z in flying:
-                    self.explode(x, y, z)
+                for e in flying:
+                    e.on_destroy()
 
-                self.dirty = False
+                self.map_dirty = False
 
             return protocol.on_world_update(self)
 
@@ -116,7 +144,7 @@ def apply_script(protocol, connection, config):
             if isinstance(contained, loaders.BlockAction):
                 # This is intentionally not in `on_block_build`.
                 if contained.value == BUILD_BLOCK:
-                    self.explode(contained.x, contained.y, contained.z + 1)
+                    self.get_tile_entity(contained.x, contained.y, contained.z + 1).on_pressure()
 
             if isinstance(contained, loaders.BlockLine):
                 locs = cube_line(
@@ -125,7 +153,7 @@ def apply_script(protocol, connection, config):
                 )
 
                 for x, y, z in locs:
-                    self.explode(x, y, z + 1)
+                    self.get_tile_entity(x, y, z + 1).on_pressure()
 
     class MineConnection(connection):
         def __init__(self, *w, **kw):
@@ -154,15 +182,19 @@ def apply_script(protocol, connection, config):
 
             if flag.player is not None: # when the flag was actually taken
                 for Δx, Δy in product(range(-1, 2), range(-1, 2)):
-                    self.protocol.explode(x + Δx, y + Δy, z)
+                    self.protocol.get_tile_entity(x + Δx, y + Δy, z).on_pressure()
 
         def on_position_update(self):
             if self.previous_position is not None:
                 r1 = self.previous_position.get()
                 r2 = self.world_object.position.get()
 
+                M = self.protocol.map
                 for x, y, z in cube_line(*r1, *r2):
-                    self.protocol.explode(x, y, self.protocol.map.get_z(x, y, z))
+                    for Δz in range(4):
+                        if M.get_solid(x, y, z + Δz):
+                            self.protocol.get_tile_entity(x, y, z + Δz).on_pressure()
+                            break
 
                 self.previous_position = self.world_object.position.copy()
 
@@ -171,15 +203,15 @@ def apply_script(protocol, connection, config):
         def on_block_removed(self, x, y, z):
             connection.on_block_removed(self, x, y, z)
 
-            self.protocol.explode(x, y, z)
-            self.protocol.dirty = True
+            self.protocol.get_tile_entity(x, y, z).on_destroy()
+            self.protocol.map_dirty = True
 
         def grenade_destroy(self, x, y, z):
             retval = connection.grenade_destroy(self, x, y, z)
 
             if retval != False:
                 for X, Y, Z in grenade_zone(x, y, z):
-                    self.protocol.explode(X, Y, Z)
+                    self.protocol.get_tile_entity(X, Y, Z).on_destroy()
 
             return retval
 

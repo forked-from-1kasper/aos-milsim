@@ -22,7 +22,7 @@ section = config.section("kamikaze")
 class Option:
     message  = section.option("message", None).get()
     max_fuse = section.option("max_fuse", 60).get()
-    delay    = section.option("delay", 30).get()
+    delay    = section.option("delay", 15).get()
 
 class Boom:
     protection = [
@@ -81,11 +81,11 @@ class Boom:
 
             self.conn.protocol.broadcast_contained(contained)
 
-        pos = self.conn.world_object.position
-        blast.effect(self.conn, pos - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0)
+        r = self.conn.world_object.position
+        blast.effect(self.conn, r - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0)
 
-        blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, pos)
-        self.conn.grenade_destroy(floor(pos.x), floor(pos.y), floor(pos.z + 3))
+        if self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3)):
+            blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
 
 @command('boom', 'a')
 def boom(conn, fuse = 0):

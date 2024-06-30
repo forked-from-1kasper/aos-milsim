@@ -48,8 +48,8 @@ def airbomb_explode(conn, pos):
         X, Y = shift(x), shift(y)
         Z = conn.protocol.map.get_z(X, Y)
 
-        conn.grenade_destroy(X, Y, Z)
-        reactor.callLater(random(), blast.effect, conn, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
+        if conn.grenade_destroy(X, Y, Z):
+            reactor.callLater(random(), blast.effect, conn, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
 
 def drop_airbomb(conn, x, y, vx, vy):
     if conn.player_id not in conn.protocol.players: return

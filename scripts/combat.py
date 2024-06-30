@@ -60,6 +60,8 @@ def apply_script(protocol, connection, config):
 
             self.available_proto_extensions.extend(milsim_extensions)
 
+            self.team_spectator.kills = 0 # bugfix
+
         def update_weather(self):
             self.simulator.update(self.environment)
 
@@ -382,11 +384,11 @@ def apply_script(protocol, connection, config):
             return True
 
         def grenade_explode(self, r):
-            blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
-            self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z))
+            if self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z)):
+                blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
 
         def grenade_exploded(self, grenade):
-            if self.name is None or self.team.spectator:
+            if self.name is None:
                 return
 
             self.grenade_explode(grenade.position)
