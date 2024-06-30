@@ -94,7 +94,7 @@ class Drone:
             self.callback = None
 
     def arrive(self):
-        self.grenades = 3
+        self.grenades = 5
         self.status = Status.awaiting
         self.report("Drone on the battlefield")
 
