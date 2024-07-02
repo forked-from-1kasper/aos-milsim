@@ -160,7 +160,7 @@ class Environment:
     build           : Material
     water           : Material
     on_flag_capture : Callable = lambda player: None
-    size            : Box = Box()
+    size            : Box = field(default_factory = Box)
     palette         : Dict[int, Material] = field(default_factory = dict)
     defaults        : Callable[[], Iterable[Tuple[Vector3i, Material]]] = void
     north           : Vertex3 = Vertex3(1, 0, 0)

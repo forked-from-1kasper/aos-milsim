@@ -1,15 +1,15 @@
-PYTHON      ?= python3.10
-CXX         ?= c++
-CYTHON      ?= cython
-LIBPYSPADES ?= $(HOME)/.local/lib/$(PYTHON)/site-packages/pyspades/
-LIBPYTHON   ?= /usr/include/$(PYTHON)
-CXXFLAGS     = -pthread -std=c++23 -fPIC -I$(INCLUDEDIR) -I$(LIBPYSPADES) -I$(LIBPYTHON)
-LDFLAGS      = -pthread -shared
-SOURCEDIR    = source
-INCLUDEDIR   = include
-BUILDDIR     = build
-DYNLIBNAME   = milsim/simulator.so
-HXXFILES     = $(shell find $(INCLUDEDIR) -type f -name '*.hxx')
+PYTHON       ?= python3
+PYTHONCONFIG ?= python3-config
+CXX          ?= c++
+CYTHON       ?= cython
+LIBPYSPADES  ?= $(shell $(PYTHON) -m site --user-site)/pyspades
+SOURCEDIR     = source
+INCLUDEDIR    = include
+BUILDDIR      = build
+DYNLIBNAME    = milsim/simulator.so
+HXXFILES      = $(shell find $(INCLUDEDIR) -type f -name '*.hxx')
+CXXFLAGS      = -pthread -std=c++23 -fPIC -I$(INCLUDEDIR) -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
+LDFLAGS       = -pthread -shared
 
 all: hier $(DYNLIBNAME)
 
