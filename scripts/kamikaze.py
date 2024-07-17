@@ -106,9 +106,9 @@ def boom(conn, fuse = 0):
 
 def apply_script(protocol, connection, config):
     class KamikazeConnection(connection):
-        def on_join(self):
+        def __init__(self, *w, **kw):
+            connection.__init__(self, *w, **kw)
             self.boom = Boom(self)
-            return connection.on_join(self)
 
         def on_spawn(self, pos):
             self.boom.stop()
