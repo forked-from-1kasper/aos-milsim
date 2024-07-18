@@ -79,7 +79,7 @@ def blockAction(conn, value, pos1, pos2):
     return "Set {} blocks.".format(N)
 
 @command('/set', admin_only=True)
-def set(conn, *args):
+def set_block(conn, *args):
     if not (conn.pos1 and conn.pos2): return
 
     value = DESTROY_BLOCK if len(args) >= 1 and args[0] == "0" else BUILD_BLOCK
@@ -254,8 +254,8 @@ def compass(conn):
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def __init__(self, *w, **kw):
+            connection.__init__(self, *w, **kw)
             self.protractor = None
-            return connection.__init__(self, *w, **kw)
 
         def on_connect(self):
             self.pos1 = None
