@@ -1,8 +1,8 @@
 from random import randint, random
 from itertools import product
 
-from milsim.simulator import VxlData
 from pyspades.constants import *
+from milsim.vxl import VxlData
 
 from milsim.common import *
 
