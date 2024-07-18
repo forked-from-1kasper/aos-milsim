@@ -1,5 +1,5 @@
+from itertools import product, islice
 from dataclasses import dataclass
-from itertools import product
 from random import choice
 from math import floor
 
@@ -11,11 +11,24 @@ from pyspades import contained as loaders
 from pyspades.world import cube_line
 from pyspades.common import Vertex3
 
+from piqueserver.map import Map, MapNotFound
 from piqueserver.commands import command
 from piqueserver.config import config
 
+from milsim.vxl import VxlData, onDeleteQueue, deleteQueueClear
 from milsim.common import grenade_zone
 import milsim.blast as blast
+
+def load_vxl(self, rot):
+    try:
+        fin = open(rot.get_map_filename(self.load_dir), 'rb')
+    except OSError:
+        raise MapNotFound(rot.name)
+
+    self.data = VxlData(fin)
+    fin.close()
+
+Map.load_vxl = load_vxl # is there any better way to override this?
 
 class TileEntity:
     def __init__(self, protocol, position):
@@ -102,7 +115,6 @@ def checkmines(conn):
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
         def __init__(self, *w, **kw):
-            self.map_dirty = False
             self.tile_entities = {}
 
             return protocol.__init__(self, *w, **kw)
@@ -121,20 +133,13 @@ def apply_script(protocol, connection, config):
 
         def on_map_change(self, M):
             self.tile_entities.clear()
+            deleteQueueClear()
+
             return protocol.on_map_change(self, M)
 
         def on_world_update(self):
-            if self.map_dirty:
-                flying = []
-
-                for r, e in self.tile_entities.items():
-                    if not self.map.get_solid(*r):
-                        flying.append(e)
-
-                for e in flying:
-                    e.on_destroy()
-
-                self.map_dirty = False
+            for x, y, z in islice(onDeleteQueue(), 50):
+                self.get_tile_entity(x, y, z).on_destroy()
 
             return protocol.on_world_update(self)
 
@@ -202,9 +207,7 @@ def apply_script(protocol, connection, config):
 
         def on_block_removed(self, x, y, z):
             connection.on_block_removed(self, x, y, z)
-
             self.protocol.get_tile_entity(x, y, z).on_destroy()
-            self.protocol.map_dirty = True
 
         def grenade_destroy(self, x, y, z):
             retval = connection.grenade_destroy(self, x, y, z)

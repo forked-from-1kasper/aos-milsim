@@ -24,13 +24,13 @@ cdef extern from "vxl_c.h":
 cdef extern from "world_c.cpp":
     MapData * global_map
 
-    int c_can_see "can_see" (
+    int c_can_see "can_see"(
         MapData *,
         float x0, float y0, float z0,
         float x1, float y1, float z1
     )
 
-    int c_cast_ray "cast_ray" (
+    int c_cast_ray "cast_ray"(
         MapData *, float x0, float y0, float z0,
         float x1, float y1, float z1, float length,
         long * x, long * y, long * z

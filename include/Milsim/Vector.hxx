@@ -100,3 +100,6 @@ template<typename T> Vector3<T> cone(const Vector3<T> & v, const T σ) {
 
     return v.rot(left, α).rot(n, β);
 }
+
+using Vector3i = Vector3<int>;
+using Vector3f = Vector3<float>;

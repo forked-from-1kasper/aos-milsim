@@ -1,7 +1,7 @@
 from random import randint, random
 from itertools import product
 
-from pyspades.vxl import VXLData
+from milsim.simulator import VxlData
 from pyspades.constants import *
 
 from milsim.common import *
@@ -131,7 +131,7 @@ def floor(vxl, offset, k):
                     vxl.set_point(256 + x, 256 + y, z, STEEL)
 
 def gen_script(basename, seed):
-    vxl = VXLData()
+    vxl = VxlData()
 
     for x, y in product(range(512), range(512)):
         vxl.set_point(x, y, 63, WATER)
