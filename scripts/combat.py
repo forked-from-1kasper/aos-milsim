@@ -1,4 +1,4 @@
-from random import choice, gauss, uniform
+from random import choice, uniform
 from math import floor, inf
 
 from twisted.internet import reactor
@@ -10,7 +10,7 @@ from pyspades.constants import *
 
 import milsim.blast as blast
 
-from milsim.simulator import Simulator, cone
+from milsim.manager.simulator import ABCSimulatorManager
 from milsim.weapon import weapons
 from milsim.common import *
 
@@ -32,60 +32,34 @@ fracture_warning = {
 
 bleeding_warning = "You're bleeding."
 
-def dig(player, mu, dt, x, y, z):
-    if not player.world_object or player.world_object.dead: return
+def SetTool(conn):
+    contained           = loaders.SetTool()
+    contained.player_id = conn.player_id
+    contained.value     = conn.tool
 
-    sigma = 0.01 if player.world_object.crouch else 0.05
-    value = max(0, gauss(mu = mu, sigma = sigma) * dt)
-
-    protocol = player.protocol
-
-    if protocol.simulator.dig(x, y, z, value):
-        protocol.onDestroy(player.player_id, x, y, z)
+    return contained
 
 def apply_script(protocol, connection, config):
     milsim_extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
-    class CombatProtocol(protocol):
+    class CombatProtocol(protocol, ABCSimulatorManager):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
-            self.environment = None
-            self.time        = reactor.seconds()
-            self.simulator   = Simulator(self)
+            ABCSimulatorManager.__init__(self)
 
             self.available_proto_extensions.extend(milsim_extensions)
-
             self.team_spectator.kills = 0 # bugfix
-
-        def update_weather(self):
-            self.simulator.update(self.environment)
-            self.set_fog_color(self.environment.weather.fog())
 
         def on_map_change(self, M):
             retval = protocol.on_map_change(self, M)
-            self.simulator.wipe()
-
-            E = self.map_info.extensions.get('environment')
-
-            if isinstance(E, Environment):
-                self.environment = E
-                E.apply(self.simulator)
-                self.update_weather()
-            else:
-                raise TypeError("“environment” expected to be of the type milsim.types.Enviornment")
+            self.onWipe(self.map_info.extensions.get('environment'))
 
             return retval
 
         def on_world_update(self):
+            self.onTick()
+
             t = reactor.seconds()
-            dt = t - self.time
-
-            if self.environment is not None:
-                if self.environment.weather.update(dt):
-                    self.update_weather()
-
-            self.simulator.step(self.time, t)
-            self.time = t
 
             for player in self.players.values():
                 P = player.team is not None and not player.team.spectator
@@ -113,17 +87,12 @@ def apply_script(protocol, connection, config):
 
                     player.weapon_object.update(t)
 
-                    if not player.cannot_work():
-                        if player.tool == SPADE_TOOL and player.item_shown(t):
-                            if player.world_object.primary_fire:
-                                player.dig1(dt)
+                    if player.item_shown(t):
+                        if player.world_object.primary_fire:
+                            player.tool_object.lmb(t, dt)
 
-                            if player.world_object.secondary_fire:
-                                player.dig2(dt)
-
-                        if player.tool == WEAPON_TOOL:
-                            if player.world_object.primary_fire:
-                                player.shoot(t)
+                        if player.world_object.secondary_fire:
+                            player.tool_object.rmb(t, dt)
 
                     hp = player.body.average()
                     if player.hp != hp:
@@ -136,78 +105,13 @@ def apply_script(protocol, connection, config):
 
             protocol.on_world_update(self)
 
-        def onTrace(self, index, x, y, z, value, origin):
-            self.broadcast_contained(
-                TracerPacket(index, Vertex3(x, y, z), value, origin = origin),
-                rule = hasTraceExtension
-            )
-
-        def onHitEffect(self, x, y, z, X, Y, Z, target):
-            self.broadcast_contained(
-                HitEffectPacket(Vertex3(x, y, z), X, Y, Z, target),
-                rule = hasHitEffects
-            )
-
-        def onDestroy(self, pid, x, y, z):
-            if pid not in self.players:
-                return
-
-            player = self.players[pid]
-
-            count = self.map.destroy_point(x, y, z)
-
-            if count:
-                contained           = loaders.BlockAction()
-                contained.x         = x
-                contained.y         = y
-                contained.z         = z
-                contained.value     = DESTROY_BLOCK
-                contained.player_id = pid
-
-                self.broadcast_contained(contained, save=True)
-                self.update_entities()
-
-                player.on_block_removed(x, y, z)
-                player.total_blocks_removed += count
-
-        def onHit(self, thrower, target, index, E, A, grenade):
-            if target not in self.players:
-                return
-
-            player    = self.players[target]
-            hit_by    = self.players.get(thrower, player)
-            limb      = Limb(index)
-            kill_type = GRENADE_KILL if grenade else HEADSHOT_KILL if limb == Limb.head else WEAPON_KILL
-
-            damage, venous, arterial, fractured = 0, False, False, False
-
-            if E <= 0:
-                return
-            else:
-                e = (E / A) / (100 * 100) # energy per area, J/cm²
-
-                P = player.body[limb]
-
-                if randbool(logistic(P.bleeding(e))):
-                    if randbool(P.arterial_density):
-                        arterial = True
-                    else:
-                        venous = True
-
-                fractured = randbool(logistic(P.fracture(E)))
-                damage    = 100 * logistic(P.damage(E))
-
-            if damage > 0:
-                player.hit(
-                    damage, limb = limb, hit_by = hit_by, kill_type = kill_type,
-                    venous = venous, arterial = arterial, fractured = fractured,
-                )
-
     class CombatConnection(connection):
         def __init__(self, *w, **kw):
-            self.last_hp_update   = None
-            self.weapon_last_shot = -inf
+            self.spade_object   = SpadeTool(self)
+            self.block_object   = BlockTool(self)
+            self.grenade_object = GrenadeTool(self)
 
+            self.last_hp_update = None
             self.body = Body()
 
             connection.__init__(self, *w, **kw)
@@ -226,60 +130,40 @@ def apply_script(protocol, connection, config):
                     o.position.z + o.velocity.z * dt - self.height(),
                 )
 
-        def cannot_work(self):
-            return (self.body.arml.fractured and not self.body.arml.splint) or \
-                   (self.body.armr.fractured and not self.body.armr.splint)
-
         def item_shown(self, t):
             P = not self.world_object.sprint
             Q = t - self.last_sprint >= 0.5
             R = t - self.last_tool_update >= 0.5
             return P and Q and R
 
-        def dig1(self, dt):
-            loc = self.world_object.cast_ray(4.0)
-            if loc: dig(self, dt, 1.0, *loc)
+        def set_tool(self, tool):
+            old_tool              = self.tool
+            self.tool             = tool
+            self.last_tool_update = reactor.seconds()
 
-        def dig2(self, dt):
-            loc = self.world_object.cast_ray(4.0)
-            if loc:
-                x, y, z = loc
-                dig(self, dt, 0.7, x, y, z - 1)
-                dig(self, dt, 0.7, x, y, z)
-                dig(self, dt, 0.7, x, y, z + 1)
+            if tool == SPADE_TOOL:
+                self.tool_object = self.spade_object
+            if tool == BLOCK_TOOL:
+                self.tool_object = self.block_object
+            if tool == WEAPON_TOOL:
+                self.tool_object = self.weapon_object
+            if tool == GRENADE_TOOL:
+                self.tool_object = self.grenade_object
 
-        def shoot(self, t):
-            w = self.weapon_object
+            if old_tool == WEAPON_TOOL:
+                self.weapon_object.set_shoot(False)
 
-            P = w.ammo.current() > 0
-            Q = not w.reloading
-            R = t - self.weapon_last_shot >= w.delay
+            if self.tool == WEAPON_TOOL:
+                self.on_shoot_set(self.world_object.primary_fire)
+                self.weapon_object.set_shoot(self.world_object.primary_fire)
 
-            if P and Q and R and self.item_shown(t):
-                self.weapon_last_shot = t
-                w.ammo.shoot(1)
+            self.world_object.set_weapon(self.tool == WEAPON_TOOL)
+            self.on_tool_changed(self.tool)
 
-                self.update_hud()
+            if self.filter_visibility_data or self.filter_animation_data:
+                return
 
-                n = self.world_object.orientation.normal()
-                r = self.eye() + n * 1.2
-
-                for i in range(w.round.pellets):
-                    v = n * gauss(mu = w.round.muzzle, sigma = w.round.muzzle * w.velocity_deviation)
-                    v0 = toMeters3(self.world_object.velocity)
-
-                    self.protocol.simulator.add(self, r, v0 + cone(v, w.round.spread), t, w.round)
-
-        def set_tool(self, tool, broadcast = True):
-            self.tool           = tool
-            contained           = loaders.SetTool()
-            contained.player_id = self.player_id
-            contained.value     = tool
-
-            if broadcast:
-                self.protocol.broadcast_contained(contained, save = True)
-            else:
-                self.send_contained(contained)
+            self.protocol.broadcast_contained(SetTool(self), save = True)
 
         def reset_health(self):
             self.last_hp_update = reactor.seconds()
@@ -372,8 +256,8 @@ def apply_script(protocol, connection, config):
         def set_weapon(self, weapon, local = False, no_kill = False):
             if weapon not in weapons: return
 
-            self.weapon = weapon
-            self.weapon_object = weapons[weapon](self._on_reload)
+            self.weapon        = weapon
+            self.weapon_object = weapons[weapon](self)
 
             if not local:
                 contained           = loaders.ChangeWeapon()
@@ -429,6 +313,8 @@ def apply_script(protocol, connection, config):
             return connection.on_block_removed(self, x, y, z)
 
         def on_spawn(self, pos):
+            self.tool_object = self.weapon_object
+
             self.last_sprint      = -inf
             self.last_tool_update = -inf
 
@@ -464,22 +350,20 @@ def apply_script(protocol, connection, config):
 
         def on_tool_set_attempt(self, tool):
             if self.body.arml.fractured or self.body.armr.fractured:
-                self.set_tool(SPADE_TOOL, broadcast = False)
+                self.send_contained(SetTool(self))
+
                 return False
             else:
                 return connection.on_tool_set_attempt(self, tool)
 
         def on_grenade(self, fuse):
-            if self.cannot_work():
+            if not self.spade_object.enabled():
                 self.send_chat_error("How did you do that??")
                 return False
 
             return connection.on_grenade(self, fuse)
 
         def on_block_destroy(self, x, y, z, mode):
-            if self.cannot_work():
-                return False
-
             if self.tool == WEAPON_TOOL or self.tool == SPADE_TOOL:
                 if mode == DESTROY_BLOCK:
                     return False
@@ -513,27 +397,7 @@ def apply_script(protocol, connection, config):
             if self.on_tool_set_attempt(contained.value) == False:
                 return
 
-            old_tool              = self.tool
-            self.tool             = contained.value
-            self.last_tool_update = reactor.seconds()
-
-            if old_tool == WEAPON_TOOL:
-                self.weapon_object.set_shoot(False)
-
-            if self.tool == WEAPON_TOOL:
-                self.on_shoot_set(self.world_object.primary_fire)
-                self.weapon_object.set_shoot(self.world_object.primary_fire)
-
-            self.world_object.set_weapon(self.tool == WEAPON_TOOL)
-            self.on_tool_changed(self.tool)
-
-            if self.filter_visibility_data or self.filter_animation_data:
-                return
-
-            pingback           = loaders.SetTool()
-            pingback.player_id = self.player_id
-            pingback.value     = contained.value
-            self.protocol.broadcast_contained(pingback, sender=self, save=True)
+            self.set_tool(contained.value)
 
         @register_packet_handler(loaders.ExistingPlayer)
         @register_packet_handler(loaders.ShortPlayerData)
@@ -554,7 +418,7 @@ def apply_script(protocol, connection, config):
         def on_hit_recieved(self, contained):
             if not self.hp: return
 
-            if contained.value == MELEE and not self.cannot_work():
+            if contained.value == MELEE and self.spade_object.enabled():
                 player = self.protocol.players.get(contained.player_id)
 
                 if player is not None:

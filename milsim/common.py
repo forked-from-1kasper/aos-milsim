@@ -1,13 +1,10 @@
 from math import atan, atan2, tau, floor
 from itertools import product
-from random import random
 
 from milsim.simulator import toMeters
 from milsim.types import *
 
 toMeters3 = lambda v: Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
-
-randbool = lambda prob: random() <= prob
 
 mm    = lambda s: s / 1000
 gram  = lambda m: m / 1000

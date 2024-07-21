@@ -56,10 +56,11 @@ def explode(inner, outer, conn, pos):
         v = Vertex3(sin(α) * cos(β), sin(α) * sin(β), cos(α)) * speed
         conn.protocol.simulator.add(conn, pos, v, timestamp, Fragment())
 
-    for _, player in conn.protocol.players.items():
-        if not player or not player.hp or not player.world_object: return
+    for player in conn.protocol.players.values():
+        if not player.hp or not player.world_object: return
 
         D = damage(player.world_object, pos, inner, outer)
+
         if D <= 0: continue
 
         player.hit(

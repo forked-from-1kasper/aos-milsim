@@ -3,11 +3,14 @@ from dataclasses import dataclass, field
 from collections.abc import Iterable
 
 from math import pi, exp, log, inf, floor, prod
+from random import random, gauss
 from enum import Enum
 
 from pyspades.color import interpolate_rgb
 from pyspades.constants import SPADE_TOOL
 from pyspades.common import Vertex3
+
+randbool = lambda prob: random() <= prob
 
 ite = lambda b, v1, v2: v1 if b else v2
 
@@ -259,7 +262,11 @@ class Gun:
 logit    = lambda t: -log(1 / t - 1)
 logistic = lambda t: 1 / (1 + exp(-t))
 
-class Linear:
+class ABCMap:
+    def __call__(self, v):
+        raise NotImplementedError
+
+class Linear(ABCMap):
     def __init__(self, x1, x2, y1 = logit(0.01), y2 = logit(0.99)):
         self.v1 = min(x1, x2)
         self.v2 = max(x1, x2)
@@ -281,6 +288,27 @@ class ABCLimb:
     arterial  : bool = False
     fractured : bool = False
     splint    : bool = False
+
+    bleeding = ABCMap()
+    fracture = ABCMap()
+    damage   = ABCMap()
+
+    def ofEnergyAndArea(self, E, A):
+        damage, venous, arterial, fractured = 0, False, False, False
+
+        if E > 0:
+            e = (E / A) / (100 * 100) # energy per area, J/cm²
+
+            if randbool(logistic(self.bleeding(e))):
+                if randbool(self.arterial_density):
+                    arterial = True
+                else:
+                    venous = True
+
+            fractured = randbool(logistic(self.fracture(E)))
+            damage    = 100 * logistic(self.damage(E))
+
+        return damage, venous, arterial, fractured
 
     def hit(self, value):
         if value <= 0: return
@@ -489,3 +517,55 @@ def Heap(capacity : int, stock : int) -> type:
             return f"{self.remaining} {noun} in reserve"
 
     return Implementation
+
+class Tool:
+    def lmb(self, t, dt):
+        pass
+
+    def rmb(self, t, dt):
+        pass
+
+def dig(player, mu, dt, x, y, z):
+    if not player.world_object or player.world_object.dead: return
+
+    sigma = 0.01 if player.world_object.crouch else 0.05
+    value = max(0, gauss(mu = mu, sigma = sigma) * dt)
+
+    protocol = player.protocol
+
+    if protocol.simulator.dig(x, y, z, value):
+        protocol.onDestroy(player.player_id, x, y, z)
+
+class SpadeTool(Tool):
+    def __init__(self, player):
+        self.player = player
+
+    def enabled(self):
+        arml, armr = self.player.body.arml, self.player.body.armr
+        return (not arml.fractured or arml.splint) and \
+               (not armr.fractured or armr.splint)
+
+    def lmb(self, t, dt):
+        if self.enabled():
+            loc = self.player.world_object.cast_ray(4.0)
+
+            if loc is not None:
+                dig(self.player, dt, 1.0, *loc)
+
+    def rmb(self, t, dt):
+        if self.enabled():
+            loc = self.player.world_object.cast_ray(4.0)
+
+            if loc is not None:
+                x, y, z = loc
+                dig(self.player, dt, 0.7, x, y, z - 1)
+                dig(self.player, dt, 0.7, x, y, z)
+                dig(self.player, dt, 0.7, x, y, z + 1)
+
+class BlockTool(Tool):
+    def __init__(self, player):
+        self.player = player
+
+class GrenadeTool(Tool):
+    def __init__(self, player):
+        self.player = player
