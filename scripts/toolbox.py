@@ -57,7 +57,7 @@ def blockAction(conn, value, pos1, pos2):
 
     N = 0
 
-    for (x, y, z) in cube(pos1, pos2):
+    for x, y, z in cube(pos1, pos2):
         contained.x = x
         contained.y = y
         contained.z = z

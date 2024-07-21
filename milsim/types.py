@@ -2,9 +2,10 @@ from typing import Dict, List, Callable, Tuple
 from dataclasses import dataclass, field
 from collections.abc import Iterable
 
-from math import pi, exp, log, inf
+from math import pi, exp, log, inf, floor, prod
 from enum import Enum
 
+from pyspades.color import interpolate_rgb
 from pyspades.constants import SPADE_TOOL
 from pyspades.common import Vertex3
 
@@ -104,6 +105,9 @@ class Box:
                self.zmin <= v.z <= self.zmax
 
 class Weather:
+    clear_sky_fog         = (128, 232, 255)
+    complete_coverage_fog = (200, 200, 200)
+
     def update(self, dt):
         raise NotImplementedError
 
@@ -121,6 +125,13 @@ class Weather:
 
     def cloudiness(self) -> float:
         return NotImplementedError
+
+    def fog(self):
+        return interpolate_rgb(
+            self.clear_sky_fog,
+            self.complete_coverage_fog,
+            self.cloudiness()
+        )
 
 class StaticWeather(Weather):
     def __init__(self, t = 15, p = 101325, φ = 0.3, w = (0, 0), k = 0):
@@ -334,9 +345,6 @@ class Body:
         self.legl  = Leg("legl", "left leg")
         self.legr  = Leg("legr", "right leg")
 
-        self.arms = [self.arml, self.armr]
-        self.legs = [self.legl, self.legr]
-
     def __getitem__(self, k):
         if k == Limb.torso: return self.torso
         if k == Limb.head:  return self.head
@@ -348,8 +356,43 @@ class Body:
     def keys(self):
         return list(Limb)
 
+    def arms(self):
+        yield self.arml
+        yield self.armr
+
+    def legs(self):
+        yield self.legl
+        yield self.legr
+
     def values(self):
-        return [self.torso, self.head, self.arml, self.armr, self.legl, self.legr]
+        yield self.torso
+        yield self.head
+        yield self.arml
+        yield self.armr
+        yield self.legl
+        yield self.legr
+
+    def average(self):
+        avg = prod(map(lambda P: P.hp / 100, self.values()))
+        return floor(100 * avg)
+
+    def bleeding(self):
+        return any(map(lambda P: P.venous or P.arterial, self.values()))
+
+    def fractured(self):
+        return any(map(lambda P: P.fractured, self.values()))
+
+    def reset(self):
+        for P in self.values():
+            P.reset()
+
+    def update(self, dt):
+        for P in self.values():
+            if P.arterial:
+                P.hit(P.arterial_rate * dt)
+
+            if P.venous:
+                P.hit(P.venous_rate * dt)
 
 def Magazines(magazines : int, capacity : int) -> type:
     """

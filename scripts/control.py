@@ -38,7 +38,7 @@ def bandage(conn):
     """
     if not conn.hp: return
 
-    if not conn.bleeding():
+    if not conn.body.bleeding():
         return "You are not bleeding."
 
     if conn.bandage <= 0:
@@ -58,7 +58,7 @@ def tourniquet(conn):
     """
     if not conn.hp: return
 
-    if not conn.bleeding():
+    if not conn.body.bleeding():
         return "You are not bleeding."
 
     if conn.tourniquet <= 0:
@@ -78,7 +78,7 @@ def splint(conn):
     """
     if not conn.hp: return
 
-    if not conn.fractured():
+    if not conn.body.fractured():
         return "You have no fractures."
 
     if conn.splint <= 0:

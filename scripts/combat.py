@@ -1,17 +1,16 @@
 from random import choice, gauss, uniform
-from math import floor, inf, prod
+from math import floor, inf
 
 from twisted.internet import reactor
 
 from pyspades.packet import register_packet_handler
-from pyspades.color import interpolate_rgb
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
 import milsim.blast as blast
 
-from milsim.simulator import Simulator, cone, toMeters
+from milsim.simulator import Simulator, cone
 from milsim.weapon import weapons
 from milsim.common import *
 
@@ -44,14 +43,10 @@ def dig(player, mu, dt, x, y, z):
     if protocol.simulator.dig(x, y, z, value):
         protocol.onDestroy(player.player_id, x, y, z)
 
-def toMeters3(v): return Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
-
 def apply_script(protocol, connection, config):
     milsim_extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
     class CombatProtocol(protocol):
-        complete_coverage_fog = (200, 200, 200)
-
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.environment = None
@@ -64,17 +59,10 @@ def apply_script(protocol, connection, config):
 
         def update_weather(self):
             self.simulator.update(self.environment)
-
-            fog = interpolate_rgb(
-                self.default_fog,
-                self.complete_coverage_fog,
-                self.environment.weather.cloudiness()
-            )
-            self.set_fog_color(fog)
+            self.set_fog_color(self.environment.weather.fog())
 
         def on_map_change(self, M):
             retval = protocol.on_map_change(self, M)
-
             self.simulator.wipe()
 
             E = self.map_info.extensions.get('environment')
@@ -84,38 +72,42 @@ def apply_script(protocol, connection, config):
                 E.apply(self.simulator)
                 self.update_weather()
             else:
-                raise TypeError
+                raise TypeError("“environment” expected to be of the type milsim.types.Enviornment")
 
             return retval
 
         def on_world_update(self):
             t = reactor.seconds()
-
             dt = t - self.time
 
-            for _, player in self.players.items():
+            if self.environment is not None:
+                if self.environment.weather.update(dt):
+                    self.update_weather()
+
+            self.simulator.step(self.time, t)
+            self.time = t
+
+            for player in self.players.values():
                 P = player.team is not None and not player.team.spectator
                 Q = player.world_object is not None and not player.world_object.dead
 
                 if P and Q and player.last_hp_update is not None:
                     dt = t - player.last_hp_update
 
-                    for P in player.body.values():
-                        if P.arterial: P.hit(P.arterial_rate * dt)
-                        if P.venous: P.hit(P.venous_rate * dt)
+                    player.body.update(dt)
 
                     moving = player.world_object.up or player.world_object.down or \
                              player.world_object.left or player.world_object.right
 
                     if moving:
-                        for leg in player.body.legs:
+                        for leg in player.body.legs():
                             if leg.fractured:
                                 if player.world_object.sprint:
                                     leg.hit(leg.sprint_damage_rate * dt)
                                 elif not leg.splint:
                                     leg.hit(leg.walk_damage_rate * dt)
 
-                    for arm in player.body.arms:
+                    for arm in player.body.arms():
                         if player.world_object.primary_fire and arm.fractured:
                             arm.hit(arm.action_damage_rate * dt)
 
@@ -133,22 +125,14 @@ def apply_script(protocol, connection, config):
                             if player.world_object.primary_fire:
                                 player.shoot(t)
 
-                    hp = player.display()
+                    hp = player.body.average()
                     if player.hp != hp:
-                        player.set_hp(hp, kill_type=MELEE_KILL)
+                        player.set_hp(hp, kill_type = MELEE_KILL)
 
                     if not self.environment.size.inside(player.world_object.position):
                         player.kill()
 
                 player.last_hp_update = t
-
-            if self.environment is not None:
-                if self.environment.weather.update(dt):
-                    self.update_weather()
-
-            self.simulator.step(self.time, t)
-
-            self.time = t
 
             protocol.on_world_update(self)
 
@@ -242,16 +226,6 @@ def apply_script(protocol, connection, config):
                     o.position.z + o.velocity.z * dt - self.height(),
                 )
 
-        def display(self):
-            avg = prod(map(lambda P: P.hp / 100, self.body.values()))
-            return floor(100 * avg)
-
-        def bleeding(self):
-            return any(map(lambda P: P.venous or P.arterial, self.body.values()))
-
-        def fractured(self):
-            return any(map(lambda P: P.fractured, self.body.values()))
-
         def cannot_work(self):
             return (self.body.arml.fractured and not self.body.arml.splint) or \
                    (self.body.armr.fractured and not self.body.armr.splint)
@@ -290,32 +264,33 @@ def apply_script(protocol, connection, config):
                 n = self.world_object.orientation.normal()
                 r = self.eye() + n * 1.2
 
-                for i in range(0, w.round.pellets):
+                for i in range(w.round.pellets):
                     v = n * gauss(mu = w.round.muzzle, sigma = w.round.muzzle * w.velocity_deviation)
                     v0 = toMeters3(self.world_object.velocity)
 
                     self.protocol.simulator.add(self, r, v0 + cone(v, w.round.spread), t, w.round)
 
-        def set_tool(self, tool):
+        def set_tool(self, tool, broadcast = True):
             self.tool           = tool
             contained           = loaders.SetTool()
             contained.player_id = self.player_id
             contained.value     = tool
 
-            self.send_contained(contained)
-            self.protocol.broadcast_contained(contained)
+            if broadcast:
+                self.protocol.broadcast_contained(contained, save = True)
+            else:
+                self.send_contained(contained)
 
         def reset_health(self):
             self.last_hp_update = reactor.seconds()
+            self.hp             = 100
 
-            for P in self.body.values():
-                P.reset()
-
-            self.hp = 100
+            self.body.reset()
 
         def refill(self, local = False):
             for P in self.body.values():
-                if P.fractured: P.splint = True
+                if P.fractured:
+                    P.splint = True
 
                 P.arterial = False
                 P.venous   = False
@@ -332,8 +307,9 @@ def apply_script(protocol, connection, config):
                 self.send_contained(loaders.Restock())
                 self.update_hud()
 
-                if self.display() != 100: # loaders.Restock() reverts hp to 100
-                    self.set_hp(self.display(), kill_type=MELEE_KILL)
+                hp = self.body.average()
+                if hp != 100: # loaders.Restock() reverts hp to 100
+                    self.set_hp(hp, kill_type = MELEE_KILL)
 
         def update_hud(self):
             weapon_reload              = loaders.WeaponReload()
@@ -354,18 +330,18 @@ def apply_script(protocol, connection, config):
             P.hit(value)
 
             if self.hp is not None and self.hp > 0:
-                hp = self.display()
+                hp = self.body.average()
 
                 if hp > 0:
                     if fractured and not P.fractured:
                         self.send_chat_status(fracture_warning[limb])
-                    elif (venous or arterial) and not self.bleeding():
+                    elif (venous or arterial) and not self.body.bleeding():
                         self.send_chat_status(bleeding_warning)
 
                 if fractured and not P.fractured:
                     P.on_fracture(self)
 
-                self.set_hp(hp, hit_by=hit_by, kill_type=kill_type)
+                self.set_hp(hp, hit_by = hit_by, kill_type = kill_type)
                 P.venous    = P.venous or venous
                 P.arterial  = P.arterial or arterial
                 P.fractured = P.fractured or fractured
@@ -434,7 +410,7 @@ def apply_script(protocol, connection, config):
                     legr.fractured = True
                     self.send_chat_status("You broke your legs.")
 
-                self.set_hp(self.display(), kill_type=FALL_KILL)
+                self.set_hp(self.body.average(), kill_type = FALL_KILL)
 
         def on_block_build(self, x, y, z):
             self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
@@ -443,7 +419,7 @@ def apply_script(protocol, connection, config):
             return connection.on_block_build(self, x, y, z)
 
         def on_line_build(self, points):
-            for (x, y, z) in points:
+            for x, y, z in points:
                 self.protocol.simulator.build(x, y, z)
 
             return connection.on_line_build(self, points)
@@ -488,7 +464,7 @@ def apply_script(protocol, connection, config):
 
         def on_tool_set_attempt(self, tool):
             if self.body.arml.fractured or self.body.armr.fractured:
-                self.set_tool(SPADE_TOOL)
+                self.set_tool(SPADE_TOOL, broadcast = False)
                 return False
             else:
                 return connection.on_tool_set_attempt(self, tool)
@@ -513,15 +489,14 @@ def apply_script(protocol, connection, config):
 
             return connection.on_block_destroy(self, x, y, z, mode)
 
-        def on_shoot_set(self, fire):
-            return connection.on_shoot_set(self, fire)
-
         def on_flag_take(self):
             flag = self.team.other.flag
 
+            # You cannot take the flag while standing under it.
             if self.world_object.position.z >= flag.z:
                 return False
 
+            # You cannot take the flag without seeing it (for example, underground).
             if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
                 return False
 
