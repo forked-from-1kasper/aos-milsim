@@ -228,11 +228,16 @@ def protractor(conn):
     """
 
     if conn.world_object is not None:
+        o = conn.world_object.orientation
+
+        if o.length() < 1e-4:
+            return
+
         if conn.protractor is None:
-            conn.protractor = conn.world_object.orientation.normal().copy()
+            conn.protractor = o.normal().copy()
             return "Use /protractor again while facing the second point."
         else:
-            t = dot(conn.world_object.orientation.normal(), conn.protractor)
+            t = dot(o.normal(), conn.protractor)
             θ = degrees(acos(t))
 
             conn.protractor = None

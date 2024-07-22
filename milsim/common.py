@@ -1,4 +1,4 @@
-from math import atan, atan2, tau, floor
+from math import atan, atan2, tau, floor, pi
 from itertools import product
 
 from milsim.simulator import toMeters
@@ -13,6 +13,7 @@ inch  = lambda s: s * Inch
 pound = lambda m: m * Pound
 grain = lambda m: m * Pound / 7000
 TNT   = lambda m: m * 4.6e+6
+MOA   = lambda x: x * pi / 10800
 
 isosceles = lambda H, d: atan(0.5 * d / H)
 
@@ -29,14 +30,14 @@ Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durabil
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
-Buckshot1 = Ball(457.00, grain(82.000),  mm(9.65), 15, isosceles(yard(25), inch(40)))
-Buckshot2 = Ball(396.24, grain(350.000), mm(8.38), 5,  isosceles(yard(25), inch(40)))
-Bullet    = Ball(540.00, grain(109.375), mm(10.4), 1,  0)
+Buckshot1 = Ball(457.00, grain(82.000),  mm(9.65), 15, isosceles(yard(25), inch(40)), 0.10)
+Buckshot2 = Ball(396.24, grain(350.000), mm(8.38), 5,  isosceles(yard(25), inch(40)), 0.10)
+Bullet    = Ball(540.00, grain(109.375), mm(10.4), 1,  0,                             0.10)
 
-R145x114mm = G1(1000, gram(67.00), 0.800, mm(14.50))
-R127x108mm = G1(900,  gram(50.00), 0.732, mm(12.70))
-R762x54mm  = G7(850,  gram(10.00), 0.187, mm(07.62))
-Parabellum = G1(600,  gram(8.03),  0.212, mm(09.00))
+R145x114mm = G1(1000, gram(67.00), 0.800, mm(14.50), MOA(0.7), 0.03)
+R127x108mm = G1(900,  gram(50.00), 0.732, mm(12.70), MOA(0.7), 0.03)
+R762x54mm  = G7(850,  gram(10.00), 0.187, mm(07.62), MOA(0.7), 0.03)
+Parabellum = G1(600,  gram(8.03),  0.212, mm(09.00), MOA(2.5), 0.05)
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 

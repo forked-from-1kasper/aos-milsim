@@ -200,14 +200,15 @@ class Round:
 
 @dataclass
 class Bullet(Round):
-    muzzle  : float
-    mass    : float
-    BC      : float
-    caliber : float
+    muzzle    : float
+    mass      : float
+    BC        : float
+    caliber   : float
+    grouping  : float
+    deviation : float
 
     grenade = False
     pellets = 1
-    spread  = 0
 
     def __post_init__(self):
         self.area = 0.25 * pi * self.caliber * self.caliber
@@ -226,11 +227,12 @@ class G7(Bullet):
 
 @dataclass
 class Ball(Round):
-    muzzle   : float
-    mass     : float
-    diameter : float
-    pellets  : int
-    spread   : float
+    muzzle    : float
+    mass      : float
+    diameter  : float
+    pellets   : int
+    grouping  : float
+    deviation : float
 
     grenade   = False
     model     = 3
@@ -251,13 +253,11 @@ class Ammo:
 
 @dataclass
 class Gun:
-    name               : str   # Name
-    ammo               : type  # Ammunition container constructor
-    round              : Round # Ammunition type used by weapon
-    delay              : float # Time between shots
-    reload_time        : float # Time between reloading and being able to shoot again
-    spread             : float
-    velocity_deviation : float
+    name        : str   # Name
+    ammo        : type  # Ammunition container constructor
+    round       : Round # Ammunition type used by weapon
+    delay       : float # Time between shots
+    reload_time : float # Time between reloading and being able to shoot again
 
 logit    = lambda t: -log(1 / t - 1)
 logistic = lambda t: 1 / (1 + exp(-t))
