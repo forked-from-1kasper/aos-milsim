@@ -57,10 +57,8 @@ def explode(inner, outer, conn, pos):
     for player in conn.protocol.players.values():
         if player.ingame():
             D = damage(player.world_object, pos, inner, outer)
-
-            if D <= 0: continue
-
-            player.hit(
-                D, limb = choice(player.body.keys()), venous = True,
-                hit_by = conn, kill_type = GRENADE_KILL
-            )
+            if D > 0:
+                player.hit(
+                    D, limb = choice(player.body.keys()), venous = True,
+                    hit_by = conn, kill_type = GRENADE_KILL
+                )
