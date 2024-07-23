@@ -3,7 +3,7 @@ from itertools import product
 from random import randint
 from time import time
 
-from piqueserver.commands import command, join_arguments
+from piqueserver.commands import command, player_only, join_arguments
 from piqueserver.config import config
 
 from pyspades.common import Vertex3
@@ -26,25 +26,29 @@ def cast_ray(conn, limit = 128):
     if not conn.world_object: return None
     return conn.world_object.cast_ray(limit)
 
-@command('cast', admin_only=True)
+@command('cast', admin_only = True)
+@player_only
 def cast(conn):
     if loc := cast_ray(conn):
         return f"{loc}"
 
-@command('/pos1', admin_only=True)
-def pos1(conn, *args):
+@command('/pos1', admin_only = True)
+@player_only
+def pos1(conn):
     if loc := cast_ray(conn):
         conn.pos1 = loc
         return "First position set to {}".format(loc)
 
-@command('/pos2', admin_only=True)
-def pos2(conn, *args):
+@command('/pos2', admin_only = True)
+@player_only
+def pos2(conn):
     if loc := cast_ray(conn):
         conn.pos2 = loc
         return "Second position set to {}".format(loc)
 
-@command('/sel', admin_only=True)
-def sel(conn, *args):
+@command('/sel', admin_only = True)
+@player_only
+def sel(conn):
     if conn.pos1 and conn.pos2:
         return "{} -> {}".format(conn.pos1, conn.pos2)
     else:
@@ -78,15 +82,17 @@ def blockAction(conn, value, pos1, pos2):
 
     return "Set {} blocks.".format(N)
 
-@command('/set', admin_only=True)
-def set_block(conn, *args):
+@command('/set', admin_only = True)
+@player_only
+def set_block(conn, action = "1"):
     if not (conn.pos1 and conn.pos2): return
 
-    value = DESTROY_BLOCK if len(args) >= 1 and args[0] == "0" else BUILD_BLOCK
+    value = DESTROY_BLOCK if action == "0" else BUILD_BLOCK
     return blockAction(conn, value, conn.pos1, conn.pos2)
 
-@command(admin_only=True)
-def elevate(conn, *args):
+@command(admin_only = True)
+@player_only
+def elevate(conn):
     if not conn.hp: return
 
     x, y, _ = conn.world_object.position.get()
@@ -94,21 +100,25 @@ def elevate(conn, *args):
 
     conn.set_location_safe((x, y, z))
 
-@command(admin_only=True)
+@command(admin_only = True)
+@player_only
 def get_z(conn):
     x, y, _ = conn.world_object.position.get()
     return f"z = {conn.protocol.map.get_z(x, y)}"
 
 @command('position', 'pos')
-def position(conn, *args):
+@player_only
+def position(conn):
     """
     Print the current position on the map
     /position
     """
-    return str(conn.world_object.position)
+    if conn.ingame():
+        return str(conn.world_object.position)
 
 @command()
-def printcolor(conn, *args):
+@player_only
+def printcolor(conn):
     """
     Print the selected color
     /printcolor
@@ -133,6 +143,7 @@ class StressPacket:
             writer.writeByte(randbyte(), False)
 
 @command()
+@player_only
 def stress(conn, pid = None, length = None):
     """
     Sends random data with a given packet id.
@@ -174,13 +185,14 @@ mailfile  = mailbox.option("file", "mailbox.txt").get()
 maildelay = mailbox.option("delay", 90).get()
 
 @command('mail', 'admin')
-def mail(conn, *args):
+@player_only
+def mail(conn, *w):
     """
     Leaves a message to the server administrator
     /mail <your message>
     """
 
-    message = join_arguments(args)
+    message = join_arguments(w)
 
     if not message:
         return "Do not send empty messages (admins can see your IP)."
@@ -199,6 +211,7 @@ def mail(conn, *args):
         return "Message sent."
 
 @command()
+@player_only
 def rangefinder(conn):
     """
     Measures the distance between the player and a given point
@@ -221,13 +234,14 @@ def rangefinder(conn):
         return "Too far."
 
 @command()
+@player_only
 def protractor(conn):
     """
     Measures the angle between the player and two specified points
     /protractor
     """
 
-    if conn.world_object is not None:
+    if conn.ingame():
         o = conn.world_object.orientation
 
         if o.length() < 1e-4:
@@ -244,13 +258,14 @@ def protractor(conn):
             return "%.2f deg" % θ
 
 @command()
+@player_only
 def compass(conn):
     """
     Prints the current azimuth
     /compass
     """
 
-    if conn.world_object is not None:
+    if conn.ingame():
         o = xOy(conn.world_object.orientation)
         φ = azimuth(conn.protocol.environment, o)
         θ = degrees(φ)

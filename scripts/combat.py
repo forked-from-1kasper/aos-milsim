@@ -62,10 +62,7 @@ def apply_script(protocol, connection, config):
             t = reactor.seconds()
 
             for player in self.players.values():
-                P = player.team is not None and not player.team.spectator
-                Q = player.world_object is not None and not player.world_object.dead
-
-                if P and Q and player.last_hp_update is not None:
+                if player.ingame():
                     dt = t - player.last_hp_update
 
                     player.body.update(dt)
@@ -105,20 +102,33 @@ def apply_script(protocol, connection, config):
 
             protocol.on_world_update(self)
 
+        def take_player(self, player_id):
+            if player_id not in self.players:
+                ids = list(self.players.keys())
+
+                if len(ids) > 0:
+                    return self.players[choice(ids)]
+            else:
+                return self.players[player_id]
+
     class CombatConnection(connection):
         def __init__(self, *w, **kw):
             self.spade_object   = SpadeTool(self)
             self.block_object   = BlockTool(self)
             self.grenade_object = GrenadeTool(self)
 
-            self.last_hp_update = None
+            self.last_hp_update = -inf
             self.body = Body()
 
             connection.__init__(self, *w, **kw)
 
+        def ingame(self):
+            return self.team is not None and not self.team.spectator and \
+                   self.world_object is not None and not self.world_object.dead
+
         def height(self):
-            if self.world_object:
-                return 1.05 if self.world_object.crouch else 1.1
+            if o := self.world_object:
+                return 1.05 if o.crouch else 1.1
 
         def eye(self):
             if o := self.world_object:
@@ -364,11 +374,7 @@ def apply_script(protocol, connection, config):
             return connection.on_grenade(self, fuse)
 
         def on_block_destroy(self, x, y, z, mode):
-            if self.tool == WEAPON_TOOL or self.tool == SPADE_TOOL:
-                if mode == DESTROY_BLOCK:
-                    return False
-
-            if mode == SPADE_DESTROY:
+            if mode == SPADE_DESTROY or mode == DESTROY_BLOCK:
                 return False
 
             return connection.on_block_destroy(self, x, y, z, mode)

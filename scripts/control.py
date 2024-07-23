@@ -1,4 +1,4 @@
-from piqueserver.commands import command
+from piqueserver.commands import command, player_only
 from pyspades.constants import *
 from milsim.common import *
 
@@ -10,18 +10,17 @@ def ppBodyPart(P):
     return f"{label}{suffix}: {P.hp:.2f}"
 
 @command()
+@player_only
 def health(conn):
     """
     Report health status
     /health
     """
-    try:
-        if conn.world_object is not None and not conn.world_object.dead:
-            return " ".join(map(ppBodyPart, conn.body.values()))
-    except AttributeError:
-        return "Body not initialized."
+    if conn.ingame():
+        return " ".join(map(ppBodyPart, conn.body.values()))
 
 @command()
+@player_only
 def weapon(conn):
     """
     Print remaining ammo status
@@ -32,11 +31,12 @@ def weapon(conn):
         return conn.weapon_object.ammo.info()
 
 @command('bandage', 'b')
+@player_only
 def bandage(conn):
     """
     Put the bandage (used to stop venous bleeding)
     """
-    if not conn.hp: return
+    if not conn.ingame(): return
 
     if not conn.body.bleeding():
         return "You are not bleeding."
@@ -51,12 +51,13 @@ def bandage(conn):
             return f"You have bandaged your {P.label}."
 
 @command('tourniquet', 't')
+@player_only
 def tourniquet(conn):
     """
     Put the tourniquet (used to stop arterial bleeding)
     /t or /tourniquet
     """
-    if not conn.hp: return
+    if not conn.ingame(): return
 
     if not conn.body.bleeding():
         return "You are not bleeding."
@@ -71,12 +72,13 @@ def tourniquet(conn):
             return f"You put a tourniquet on your {P.label}."
 
 @command('splint', 's')
+@player_only
 def splint(conn):
     """
     Splint a broken limb
     /s or /splint
     """
-    if not conn.hp: return
+    if not conn.ingame(): return
 
     if not conn.body.fractured():
         return "You have no fractures."
@@ -152,15 +154,13 @@ def engine(conn, subcmd, *w):
         return "Unknown command: {}".format(subcmd)
 
 @command()
+@player_only
 def lookat(conn):
     """
     Report a given block durability
     /lookat
     """
-    if not conn.world_object: return
-    loc = conn.world_object.cast_ray(7.0)
-
-    if loc is not None:
+    if loc := conn.world_object.cast_ray(7.0):
         block = conn.protocol.simulator.get(*loc)
         return f"Material: {block.material.name}, durability: {block.durability:.2f}, crumbly: {yn(block.material.crumbly)}."
     else:
@@ -198,37 +198,31 @@ limbs = {
 }
 
 @command()
-def fracture(conn, target):
-    if not conn.hp: return
-
-    limb = limbs.get(target)
-
-    if limb is not None:
-        conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
-    else:
-        return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
+@player_only
+def fracture(conn, target = None):
+    if conn.ingame():
+        if limb := limbs.get(target):
+            conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
+        else:
+            return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
 
 @command()
-def vein(conn, target):
-    if not conn.hp: return
-
-    limb = limbs.get(target)
-
-    if limb is not None:
-        conn.body[limb].venous = True
-    else:
-        return "Usage: /vein (torso|head|arml|armr|legl|legr)"
+@player_only
+def vein(conn, target = None):
+    if conn.ingame():
+        if limb := limbs.get(target):
+            conn.body[limb].venous = True
+        else:
+            return "Usage: /vein (torso|head|arml|armr|legl|legr)"
 
 @command()
-def artery(conn, target):
-    if not conn.hp: return
-
-    limb = limbs.get(target)
-
-    if limb is not None:
-        conn.body[limb].arterial = True
-    else:
-        return "Usage: /artery (torso|head|arml|armr|legl|legr)"
+@player_only
+def artery(conn, target = None):
+    if conn.ingame():
+        if limb := limbs.get(target):
+            conn.body[limb].arterial = True
+        else:
+            return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
 def apply_script(protocol, connection, config):
     return protocol, connection

@@ -9,7 +9,7 @@ from pyspades.constants import CHAT_ALL
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 
-from piqueserver.commands import command
+from piqueserver.commands import command, player_only
 from piqueserver.config import config
 
 import milsim.blast as blast
@@ -37,16 +37,13 @@ class Boom:
         self.last  = -inf
 
     def alive(self):
-        return self.conn and self.conn.world_object and not self.conn.world_object.dead
+        return self.conn and self.conn.ingame()
 
     def start(self, fuse):
         if self.defer:
             return
 
         if not self.alive():
-            if self.conn and not self.conn.world_object:
-                return
-
             return choice(self.protection)
 
         if fuse < 0 or fuse > Option.max_fuse:
@@ -82,12 +79,16 @@ class Boom:
             self.conn.protocol.broadcast_contained(contained)
 
         r = self.conn.world_object.position
-        blast.effect(self.conn, r - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0)
+        blast.effect(
+            self.conn.protocol, self.conn.player_id,
+            r - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0
+        )
 
         if self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3)):
             blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
 
 @command('boom', 'a')
+@player_only
 def boom(conn, fuse = 0):
     """
     Detonates the explosive belt after a given number of seconds.

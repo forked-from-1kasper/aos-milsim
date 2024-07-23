@@ -12,22 +12,20 @@ from pyspades.common import Vertex3
 def dummy(*args, **kwargs):
     pass
 
-def effect(conn, position, velocity, fuse):
-    if conn.player_id not in conn.protocol.players: return
-
+def effect(protocol, player_id, position, velocity, fuse):
     contained           = GrenadePacket()
-    contained.player_id = conn.player_id
+    contained.player_id = player_id
     contained.value     = fuse
     contained.position  = position.get()
     contained.velocity  = velocity.get()
 
-    conn.protocol.broadcast_contained(contained)
+    protocol.broadcast_contained(contained)
 
-def damage(obj, pos, inner, outer):
-    if not obj.can_see(pos.x, pos.y, pos.z):
+def damage(o, pos, inner, outer):
+    if not o.can_see(pos.x, pos.y, pos.z):
         return 0
 
-    dist = distance_3d_vector(obj.position, pos)
+    dist = distance_3d_vector(o.position, pos)
 
     if dist >= outer: return 0
     if dist <= inner: return 100
@@ -57,13 +55,12 @@ def explode(inner, outer, conn, pos):
         conn.protocol.simulator.add(conn, pos, v, timestamp, Fragment())
 
     for player in conn.protocol.players.values():
-        if not player.hp or not player.world_object: return
+        if player.ingame():
+            D = damage(player.world_object, pos, inner, outer)
 
-        D = damage(player.world_object, pos, inner, outer)
+            if D <= 0: continue
 
-        if D <= 0: continue
-
-        player.hit(
-            D, limb = choice(player.body.keys()), venous = True,
-            hit_by = conn, kill_type = GRENADE_KILL
-        )
+            player.hit(
+                D, limb = choice(player.body.keys()), venous = True,
+                hit_by = conn, kill_type = GRENADE_KILL
+            )

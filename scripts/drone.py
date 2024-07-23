@@ -10,7 +10,7 @@ from pyspades.common import Vertex3
 from pyspades.world import Grenade
 from pyspades.team import Team
 
-from piqueserver.commands import command, get_player, CommandError
+from piqueserver.commands import command, player_only, get_player, CommandError
 from piqueserver.config import config
 
 import milsim.blast as blast
@@ -39,7 +39,7 @@ class Ghost:
         self.callback = None
         self.grenades = 0
 
-    def init(self, by_server=False):
+    def init(self, by_server = False):
         pass
 
     def report(self, msg):
@@ -66,12 +66,13 @@ class Drone:
     def __post_init__(self):
         self.init()
 
-    def init(self, by_server=False):
-        self.status   = Status.inflight
-        self.callback = None
-        self.target   = None
-        self.grenades = 0
-        self.passed   = 0
+    def init(self, by_server = False):
+        self.status    = Status.inflight
+        self.callback  = None
+        self.player_id = None
+        self.target_id = None
+        self.grenades  = 0
+        self.passed    = 0
 
         if by_server:
             self.callback = reactor.callLater(Option.phase, self.start)
@@ -98,29 +99,40 @@ class Drone:
         self.status = Status.awaiting
         self.report("Drone on the battlefield")
 
-    def track(self, client, target):
-        self.client = client
-        self.target = target
-        self.status = Status.inwork
-        self.passed = 0
+    def track(self, player, target):
+        self.player_id = player.player_id
+        self.target_id = target.player_id
+        self.status    = Status.inwork
+        self.passed    = 0
 
         self.report("Received. Watching for {}".format(target.name))
         self.callback = reactor.callLater(Option.rate, self.ping)
 
+    def free(self):
+        self.status    = Status.awaiting
+        self.passed    = 0
+        self.player_id = None
+        self.target_id = None
+
     def ping(self):
         self.passed += Option.rate
 
-        if self.passed > Option.timeout or self.target.world_object is None:
-            self.report("Don't see {}. Awaiting for further instructions".format(self.target.name))
-
-            self.status = Status.awaiting
-            self.passed = 0
-            self.target = None
-            self.client = None
-
+        if self.target_id not in self.protocol.players:
+            self.report("Don't see the target. Awaiting for further instructions")
+            self.free()
             return
 
-        x, y, z = self.target.world_object.position.get()
+        target = self.protocol.players[self.target_id]
+
+        if self.passed > Option.timeout:
+            self.report("Don't see {}. Awaiting for further instructions".format(target.name))
+            self.free()
+            return
+
+        if not target.ingame():
+            return
+
+        x, y, z = target.world_object.position.get()
         H = self.protocol.map.get_z(floor(x), floor(y))
 
         if z <= H:
@@ -129,18 +141,20 @@ class Drone:
             position = Vertex3(x, y, DROP_HEIGHT)
             velocity = Vertex3(0, 0, 0)
 
+            player = self.protocol.take_player(self.player_id)
+
             grenade = self.protocol.world.create_object(
-                Grenade, fuse, position, None, velocity, self.client.grenade_exploded
+                Grenade, fuse, position, None, velocity, player.grenade_exploded
             )
             grenade.name = 'grenade'
 
-            blast.effect(self.client, position, velocity, fuse)
+            blast.effect(self.protocol, player.player_id, position, velocity, fuse)
 
             self.grenades -= 1
 
-            self.passed = 0
-            self.target = None
-            self.client = None
+            self.passed    = 0
+            self.target_id = None
+            self.player_id = None
 
             if self.grenades > 0:
                 self.status   = Status.awaiting
@@ -161,13 +175,14 @@ class Drone:
             return None
 
 @command('drone', 'd')
+@player_only
 def drone(conn, nickname = None):
     """
     Commands the drone to follow the player
     /drone <player>
     """
 
-    if conn.player_id not in conn.protocol.players: return
+    if not conn.ingame(): return
 
     drone = conn.get_drone()
 

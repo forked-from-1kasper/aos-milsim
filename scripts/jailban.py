@@ -1,7 +1,7 @@
 from time import strftime, gmtime, time, monotonic
 from twisted.internet import reactor
 
-from piqueserver.commands import command, get_player
+from piqueserver.commands import command, player_only, get_player
 
 from pyspades.player import ServerConnection
 from pyspades import contained as loaders
@@ -46,6 +46,7 @@ def hardban(conn, nickname):
     player.disconnect(ERROR_BANNED)
 
 @command()
+@player_only
 def status(conn, nickname = None):
     """
     Print ban expiry date

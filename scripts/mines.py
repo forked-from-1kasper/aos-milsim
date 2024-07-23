@@ -11,8 +11,8 @@ from pyspades import contained as loaders
 from pyspades.world import cube_line
 from pyspades.common import Vertex3
 
+from piqueserver.commands import command, player_only
 from piqueserver.map import Map, MapNotFound
-from piqueserver.commands import command
 from piqueserver.config import config
 
 from milsim.vxl import VxlData, onDeleteQueue, deleteQueueClear
@@ -58,32 +58,24 @@ class Explosive(TileEntity):
     def explode(self):
         self.protocol.remove_tile_entity(*self.position)
 
-        if self.player_id not in self.protocol.players:
-            ids = list(self.protocol.players.keys())
-            if len(ids) > 0:
-                self.player_id = choice(ids)
-            else:
-                return
+        if player := self.protocol.take_player(self.player_id):
+            x, y, z = self.position
+            loc = Vertex3(x + 0.5, y + 0.5, z - 0.5)
 
-        player = self.protocol.players[self.player_id]
-
-        x, y, z = self.position
-        loc = Vertex3(x + 0.5, y + 0.5, z - 0.5)
-
-        player.grenade_explode(loc)
-        blast.effect(player, loc, Vertex3(0, 0, 0), 0)
+            player.grenade_explode(loc)
+            blast.effect(self.protocol, player.player_id, loc, Vertex3(0, 0, 0), 0)
 
 class Landmine(Explosive):
     on_pressure = Explosive.explode
     on_destroy  = Explosive.explode
 
 @command('mine', 'm')
+@player_only
 def mine(conn):
-    if not conn.world_object or conn.world_object.dead: return
+    if not conn.ingame(): return
 
     loc = conn.world_object.cast_ray(10)
-
-    if not loc: return "You can't place a mine so far away from yourself."
+    if loc is None: return "You can't place a mine so far away from yourself."
 
     x, y, z = loc
     if z >= 63: return "You can't place a mine on water"
@@ -103,14 +95,16 @@ def mine(conn):
         return "You do not have mines."
 
 @command('givemine', 'gm', admin_only = True)
+@player_only
 def givemine(conn):
     conn.mines += 1
     return "You got a mine."
 
 @command('checkmines', 'cm')
+@player_only
 def checkmines(conn):
-    if not conn.world_object or conn.world_object.dead: return
-    return "You have {} mine(s).".format(conn.mines)
+    if conn.ingame():
+        return "You have {} mine(s).".format(conn.mines)
 
 def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
