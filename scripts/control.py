@@ -90,13 +90,21 @@ def splint(conn):
             conn.splint -= 1
             return f"You put a splint on your {P.label}."
 
-def microseconds(T):
+def formatMicroseconds(T):
     if T <= 1e+3:
         return "{:.2f} us".format(T)
     elif T <= 1e+6:
         return "{:.2f} ms".format(T / 1e+3)
     else:
         return "{:.2f} s".format(T / 1e+6)
+
+def formatBytes(x):
+    if x <= 1024:
+        return "{} B".format(x)
+    elif x <= 1024 * 1024:
+        return "{:.2f} KiB".format(x / 1024)
+    else:
+        return "{:.2f} MiB".format(x / 1024 / 1024)
 
 class Engine:
     @staticmethod
@@ -119,11 +127,12 @@ class Engine:
 
     @staticmethod
     def stats(protocol, *w):
-        return "Total: {total}, alive: {alive}, lag: {lag}, peak: {peak}".format(
+        return "Total: {total}, alive: {alive}, lag: {lag}, peak: {peak}, usage: {usage}".format(
             total = protocol.simulator.total(),
             alive = protocol.simulator.alive(),
-            lag   = microseconds(protocol.simulator.lag()),
-            peak  = microseconds(protocol.simulator.peak()),
+            lag   = formatMicroseconds(protocol.simulator.lag()),
+            peak  = formatMicroseconds(protocol.simulator.peak()),
+            usage = formatBytes(protocol.simulator.usage())
         )
 
     @staticmethod

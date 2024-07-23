@@ -301,6 +301,12 @@ public:
     inline size_t alive() const { return objects.size(); }
     inline size_t total() const { return Object<T>::total(); }
 
+    // This is only the lower bound.
+    inline size_t usage() const {
+        constexpr size_t entrySize = sizeof(int) + sizeof(Voxel<T>);
+        return sizeof(decltype(voxels)) + entrySize * voxels.size();
+    }
+
 private:
     inline void trace(const uint64_t index, const Vector3<T> & r, const T value, bool origin) {
         if (onTrace != Py_None) {

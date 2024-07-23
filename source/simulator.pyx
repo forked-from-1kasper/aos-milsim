@@ -115,6 +115,7 @@ cdef extern from "Milsim/Engine.hxx":
         double peak()
         size_t alive()
         size_t total()
+        size_t usage()
 
 def ofMeters(float x): return c_ofMeters[double](x)
 def toMeters(float y): return c_toMeters[double](y)
@@ -186,6 +187,9 @@ cdef class Simulator:
 
     def total(self):
         return self.engine.total()
+
+    def usage(self):
+        return self.engine.usage()
 
     def update(self, E):
         o = E.weather
