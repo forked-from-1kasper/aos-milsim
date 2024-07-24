@@ -71,7 +71,7 @@ class Landmine(Explosive):
 
 @command('mine', 'm')
 @player_only
-def mine(conn):
+def set_mine(conn):
     if not conn.ingame(): return
 
     loc = conn.world_object.cast_ray(10)
@@ -107,7 +107,16 @@ def checkmines(conn):
         return "You have {} mine(s).".format(conn.mines)
 
 def apply_script(protocol, connection, config):
+    class MineGrenadeTool(protocol.GrenadeTool):
+        def on_rmb_press(self):
+            protocol.GrenadeTool.on_rmb_press(self)
+
+            if reply := set_mine(self.player):
+                self.player.send_chat(reply)
+
     class MineProtocol(protocol):
+        GrenadeTool = MineGrenadeTool
+
         def __init__(self, *w, **kw):
             self.tile_entities = {}
 

@@ -198,23 +198,37 @@ class Bomber:
             return None
 
 def apply_script(protocol, connection, config):
+    class AirstrikeWeaponTool(protocol.WeaponTool):
+        def on_rmb_press(self):
+            protocol.WeaponTool.on_rmb_press(self)
+
+            if self.player.world_object.sneak:
+                self.player.send_airstrike()
+
+        def on_rmb_release(self):
+            protocol.WeaponTool.on_rmb_release(self)
+
+            self.player.cancel_airstrike()
+
     class AirstrikeProtocol(protocol):
-        def __init__(self, *arg, **kw):
-            protocol.__init__(self, *arg, **kw)
+        WeaponTool = AirstrikeWeaponTool
+
+        def __init__(self, *w, **kw):
+            protocol.__init__(self, *w, **kw)
             self.bombers = {
                 self.team_spectator.id : Ghost(),
                 self.team_1.id         : Bomber("B-52",   self.team_1, self),
                 self.team_2.id         : Bomber("Tu-22M", self.team_2, self)
             }
 
-        def on_map_change(self, map):
+        def on_map_change(self, M):
             for bomber in self.bombers.values():
                 if bomber.preparation and bomber.preparation.active():
                     bomber.preparation.cancel()
                 bomber.stop()
-                bomber.init(by_server=True)
+                bomber.init(by_server = True)
 
-            return protocol.on_map_change(self, map)
+            return protocol.on_map_change(self, M)
 
     class AirstrikeConnection(connection):
         def get_bomber(self):
@@ -237,16 +251,6 @@ def apply_script(protocol, connection, config):
             if self.get_bomber().active() and (up or down or left or right):
                 self.cancel_airstrike()
             return connection.on_walk_update(self, up, down, left, right)
-
-        def on_secondary_fire_set(self, secondary):
-            if self.tool == WEAPON_TOOL:
-                if secondary:
-                    if self.world_object.sneak:
-                        self.send_airstrike()
-                else:
-                    self.cancel_airstrike()
-
-            return connection.on_secondary_fire_set(self, secondary)
 
         def on_animation_update(self, jump, crouch, sneak, sprint):
             if self.world_object.secondary_fire and self.tool == WEAPON_TOOL:

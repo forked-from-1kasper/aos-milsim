@@ -8,6 +8,9 @@ from milsim.simulator import Simulator
 from milsim.common import *
 
 class ABCSimulatorManager:
+    def __new__(Klass, *w, **kw):
+        raise NotImplementedError
+
     def __init__(self):
         self.environment = None
         self.simulator   = Simulator(self)

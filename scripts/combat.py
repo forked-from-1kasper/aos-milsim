@@ -11,7 +11,7 @@ from pyspades.constants import *
 import milsim.blast as blast
 
 from milsim.manager.simulator import ABCSimulatorManager
-from milsim.weapon import weapons
+from milsim.weapon import ABCWeapon
 from milsim.common import *
 
 WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"
@@ -39,16 +39,66 @@ def SetTool(conn):
 
     return contained
 
+class Rifle:
+    name        = "Rifle"
+    Ammo        = Magazines(6, 10)
+    round       = R762x54mm
+    delay       = 0.50
+    reload_time = 2.5
+
+class SMG:
+    name        = "SMG"
+    Ammo        = Magazines(5, 30)
+    round       = Parabellum
+    delay       = 0.11
+    reload_time = 2.5
+
+class Shotgun:
+    name        = "Shotgun"
+    Ammo        = Heap(6, 48)
+    round       = Buckshot1
+    delay       = 1.00
+    reload_time = 0.5
+
 def apply_script(protocol, connection, config):
     milsim_extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
     class CombatProtocol(protocol, ABCSimulatorManager):
+        __new__     = protocol.__new__
+        WeaponTool  = ABCWeapon
+        SpadeTool   = SpadeTool
+        BlockTool   = BlockTool
+        GrenadeTool = GrenadeTool
+
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             ABCSimulatorManager.__init__(self)
 
             self.available_proto_extensions.extend(milsim_extensions)
             self.team_spectator.kills = 0 # bugfix
+
+            self.Rifle   = type('Rifle',   (self.WeaponTool, Rifle),   dict())
+            self.SMG     = type('SMG',     (self.WeaponTool, SMG),     dict())
+            self.Shotgun = type('Shotgun', (self.WeaponTool, Shotgun), dict())
+
+        def get_weapon(self, weapon):
+            if weapon == RIFLE_WEAPON:
+                return self.Rifle
+
+            if weapon == SMG_WEAPON:
+                return self.SMG
+
+            if weapon == SHOTGUN_WEAPON:
+                return self.Shotgun
+
+        def take_player(self, player_id):
+            if player_id not in self.players:
+                ids = list(self.players.keys())
+
+                if len(ids) > 0:
+                    return self.players[choice(ids)]
+            else:
+                return self.players[player_id]
 
         def on_map_change(self, M):
             retval = protocol.on_map_change(self, M)
@@ -67,10 +117,7 @@ def apply_script(protocol, connection, config):
 
                     player.body.update(dt)
 
-                    moving = player.world_object.up or player.world_object.down or \
-                             player.world_object.left or player.world_object.right
-
-                    if moving:
+                    if player.moving():
                         for leg in player.body.legs():
                             if leg.fractured:
                                 if player.world_object.sprint:
@@ -86,10 +133,10 @@ def apply_script(protocol, connection, config):
 
                     if player.item_shown(t):
                         if player.world_object.primary_fire:
-                            player.tool_object.lmb(t, dt)
+                            player.tool_object.on_lmb_hold(t, dt)
 
                         if player.world_object.secondary_fire:
-                            player.tool_object.rmb(t, dt)
+                            player.tool_object.on_rmb_hold(t, dt)
 
                     hp = player.body.average()
                     if player.hp != hp:
@@ -102,29 +149,24 @@ def apply_script(protocol, connection, config):
 
             protocol.on_world_update(self)
 
-        def take_player(self, player_id):
-            if player_id not in self.players:
-                ids = list(self.players.keys())
-
-                if len(ids) > 0:
-                    return self.players[choice(ids)]
-            else:
-                return self.players[player_id]
-
     class CombatConnection(connection):
         def __init__(self, *w, **kw):
-            self.spade_object   = SpadeTool(self)
-            self.block_object   = BlockTool(self)
-            self.grenade_object = GrenadeTool(self)
+            connection.__init__(self, *w, **kw)
+
+            self.spade_object   = self.protocol.SpadeTool(self)
+            self.block_object   = self.protocol.BlockTool(self)
+            self.grenade_object = self.protocol.GrenadeTool(self)
 
             self.last_hp_update = -inf
             self.body = Body()
 
-            connection.__init__(self, *w, **kw)
-
         def ingame(self):
             return self.team is not None and not self.team.spectator and \
                    self.world_object is not None and not self.world_object.dead
+
+        def moving(self):
+            return self.world_object.up or self.world_object.down or \
+                   self.world_object.left or self.world_object.right
 
         def height(self):
             if o := self.world_object:
@@ -147,7 +189,6 @@ def apply_script(protocol, connection, config):
             return P and Q and R
 
         def set_tool(self, tool):
-            old_tool              = self.tool
             self.tool             = tool
             self.last_tool_update = reactor.seconds()
 
@@ -160,26 +201,13 @@ def apply_script(protocol, connection, config):
             if tool == GRENADE_TOOL:
                 self.tool_object = self.grenade_object
 
-            if old_tool == WEAPON_TOOL:
-                self.weapon_object.set_shoot(False)
-
-            if self.tool == WEAPON_TOOL:
-                self.on_shoot_set(self.world_object.primary_fire)
-                self.weapon_object.set_shoot(self.world_object.primary_fire)
-
-            self.world_object.set_weapon(self.tool == WEAPON_TOOL)
-            self.on_tool_changed(self.tool)
+            self.world_object.set_weapon(tool == WEAPON_TOOL)
+            self.on_tool_changed(tool)
 
             if self.filter_visibility_data or self.filter_animation_data:
                 return
 
             self.protocol.broadcast_contained(SetTool(self), save = True)
-
-        def reset_health(self):
-            self.last_hp_update = reactor.seconds()
-            self.hp             = 100
-
-            self.body.reset()
 
         def refill(self, local = False):
             for P in self.body.values():
@@ -199,18 +227,18 @@ def apply_script(protocol, connection, config):
 
             if not local:
                 self.send_contained(loaders.Restock())
-                self.update_hud()
+                self.sendWeaponReload()
 
                 hp = self.body.average()
                 if hp != 100: # loaders.Restock() reverts hp to 100
                     self.set_hp(hp, kill_type = MELEE_KILL)
 
-        def update_hud(self):
-            weapon_reload              = loaders.WeaponReload()
-            weapon_reload.player_id    = self.player_id
-            weapon_reload.clip_ammo    = self.weapon_object.ammo.current()
-            weapon_reload.reserve_ammo = self.weapon_object.ammo.reserved()
-            self.send_contained(weapon_reload)
+        def sendWeaponReload(self):
+            contained              = loaders.WeaponReload()
+            contained.player_id    = self.player_id
+            contained.clip_ammo    = self.weapon_object.ammo.current()
+            contained.reserve_ammo = self.weapon_object.ammo.reserved()
+            self.send_contained(contained)
 
         def hit(self, value, hit_by = None, kill_type = WEAPON_KILL, limb = Limb.torso,
                 venous = False, arterial = False, fractured = False):
@@ -264,24 +292,23 @@ def apply_script(protocol, connection, config):
             self.grenade_explode(grenade.position)
 
         def set_weapon(self, weapon, local = False, no_kill = False):
-            if weapon not in weapons: return
+            if weapon_class := self.protocol.get_weapon(weapon):
+                self.weapon        = weapon
+                self.weapon_object = weapon_class(self)
 
-            self.weapon        = weapon
-            self.weapon_object = weapons[weapon](self)
+                if not local:
+                    contained           = loaders.ChangeWeapon()
+                    contained.player_id = self.player_id
+                    contained.weapon    = weapon
 
-            if not local:
-                contained           = loaders.ChangeWeapon()
-                contained.player_id = self.player_id
-                contained.weapon    = weapon
-
-                self.protocol.broadcast_contained(contained, save=True)
-                if not no_kill: self.kill(kill_type=CLASS_CHANGE_KILL)
+                    self.protocol.broadcast_contained(contained, save=True)
+                    if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
 
         def _on_reload(self):
             if not self.weapon_object.ammo.continuous:
                 self.send_chat(self.weapon_object.ammo.info())
 
-            self.update_hud()
+            self.sendWeaponReload()
 
         def _on_fall(self, damage):
             if not self.hp: return
@@ -328,8 +355,11 @@ def apply_script(protocol, connection, config):
             self.last_sprint      = -inf
             self.last_tool_update = -inf
 
-            self.reset_health()
-            self.update_hud()
+            self.last_hp_update = reactor.seconds()
+            self.hp             = 100
+            self.body.reset()
+
+            self.sendWeaponReload()
 
             return connection.on_spawn(self, pos)
 
@@ -360,8 +390,6 @@ def apply_script(protocol, connection, config):
 
         def on_tool_set_attempt(self, tool):
             if self.body.arml.fractured or self.body.armr.fractured:
-                self.send_contained(SetTool(self))
-
                 return False
             else:
                 return connection.on_tool_set_attempt(self, tool)
@@ -401,9 +429,44 @@ def apply_script(protocol, connection, config):
             if not self.hp: return
 
             if self.on_tool_set_attempt(contained.value) == False:
+                # Reset it back for the player.
+                self.send_contained(SetTool(self))
+            else:
+                self.set_tool(contained.value)
+
+        @register_packet_handler(loaders.WeaponInput)
+        def on_weapon_input_recieved(self, contained):
+            if not self.hp: return
+
+            primary   = contained.primary
+            secondary = contained.secondary
+
+            if self.world_object.primary_fire != primary:
+                if primary:
+                    self.tool_object.on_lmb_press()
+                else:
+                    self.tool_object.on_lmb_release()
+
+                self.world_object.primary_fire = primary
+
+            if self.world_object.secondary_fire != secondary:
+                if secondary:
+                    self.tool_object.on_rmb_press()
+                else:
+                    self.tool_object.on_rmb_release()
+
+                if secondary and self.tool == BLOCK_TOOL:
+                    position = self.world_object.position
+                    self.line_build_start_pos = position.copy()
+                    self.on_line_build_start()
+
+                self.world_object.secondary_fire = secondary
+
+            if self.filter_weapon_input:
                 return
 
-            self.set_tool(contained.value)
+            contained.player_id = self.player_id
+            self.protocol.broadcast_contained(contained, sender = self)
 
         @register_packet_handler(loaders.ExistingPlayer)
         @register_packet_handler(loaders.ShortPlayerData)

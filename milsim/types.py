@@ -519,10 +519,22 @@ def Heap(capacity : int, stock : int) -> type:
     return Implementation
 
 class Tool:
-    def lmb(self, t, dt):
+    def on_lmb_press(self):
         pass
 
-    def rmb(self, t, dt):
+    def on_lmb_release(self):
+        pass
+
+    def on_rmb_press(self):
+        pass
+
+    def on_rmb_release(self):
+        pass
+
+    def on_lmb_hold(self, t, dt):
+        pass
+
+    def on_rmb_hold(self, t, dt):
         pass
 
 def dig(player, mu, dt, x, y, z):
@@ -545,14 +557,14 @@ class SpadeTool(Tool):
         return (not arml.fractured or arml.splint) and \
                (not armr.fractured or armr.splint)
 
-    def lmb(self, t, dt):
+    def on_lmb_hold(self, t, dt):
         if self.enabled():
             loc = self.player.world_object.cast_ray(4.0)
 
             if loc is not None:
                 dig(self.player, dt, 1.0, *loc)
 
-    def rmb(self, t, dt):
+    def on_rmb_hold(self, t, dt):
         if self.enabled():
             loc = self.player.world_object.cast_ray(4.0)
 
