@@ -407,8 +407,14 @@ def apply_script(protocol, connection, config):
 
             return connection.on_block_destroy(self, x, y, z, mode)
 
-        def on_flag_take(self):
+        def take_flag(self):
+            if not self.ingame(): return
+
             flag = self.team.other.flag
+
+            # If the flag is already taken.
+            if flag.player is not None:
+                return
 
             # You cannot take the flag while standing under it.
             if self.world_object.position.z >= flag.z:
@@ -418,7 +424,14 @@ def apply_script(protocol, connection, config):
             if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
                 return False
 
-            return connection.on_flag_take(self)
+            if self.on_flag_take() == False:
+                return
+
+            flag.player = self
+
+            contained           = loaders.IntelPickup()
+            contained.player_id = self.player_id
+            self.protocol.broadcast_contained(contained, save = True)
 
         def on_flag_capture(self):
             self.protocol.environment.on_flag_capture(self)
@@ -488,9 +501,7 @@ def apply_script(protocol, connection, config):
             if not self.hp: return
 
             if contained.value == MELEE and self.spade_object.enabled():
-                player = self.protocol.players.get(contained.player_id)
-
-                if player is not None:
+                if player := self.protocol.players.get(contained.player_id):
                     damage = floor(uniform(SHOVEL_GUARANTEED_DAMAGE, 100))
 
                     player.hit(

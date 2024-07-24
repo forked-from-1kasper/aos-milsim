@@ -119,17 +119,16 @@ class Drone:
 
         if self.target_id not in self.protocol.players:
             self.report("Don't see the target. Awaiting for further instructions")
-            self.free()
-            return
+            return self.free()
 
         target = self.protocol.players[self.target_id]
 
         if self.passed > Option.timeout:
             self.report("Don't see {}. Awaiting for further instructions".format(target.name))
-            self.free()
-            return
+            return self.free()
 
         if not target.ingame():
+            self.callback = reactor.callLater(Option.rate, self.ping)
             return
 
         x, y, z = target.world_object.position.get()

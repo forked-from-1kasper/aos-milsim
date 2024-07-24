@@ -1,5 +1,6 @@
 from piqueserver.commands import command, player_only
 from pyspades.constants import *
+
 from milsim.common import *
 
 yn = lambda b: "yes" if b else "no"
