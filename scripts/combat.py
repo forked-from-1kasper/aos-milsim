@@ -418,11 +418,11 @@ def apply_script(protocol, connection, config):
 
             # You cannot take the flag while standing under it.
             if self.world_object.position.z >= flag.z:
-                return False
+                return
 
             # You cannot take the flag without seeing it (for example, underground).
             if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
-                return False
+                return
 
             if self.on_flag_take() == False:
                 return
