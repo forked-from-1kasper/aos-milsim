@@ -16,27 +16,29 @@ class ABCSimulatorManager:
         self.simulator   = Simulator(self)
         self.time        = reactor.seconds()
 
-    def updateWeather(self):
+    def update_weather(self):
         self.simulator.update(self.environment)
         self.set_fog_color(self.environment.weather.fog())
 
-    def onWipe(self, o):
+    def on_map_change(self, M):
+        o = self.map_info.extensions.get('environment')
+
         self.simulator.wipe()
 
         if isinstance(o, Environment):
             self.environment = o
             o.apply(self.simulator)
-            self.updateWeather()
+            self.update_weather()
         else:
             raise TypeError("“environment” expected to be of the type milsim.types.Enviornment")
 
-    def onTick(self):
+    def on_world_update(self):
         t = reactor.seconds()
         dt = t - self.time
 
         if self.environment is not None:
             if self.environment.weather.update(dt):
-                self.updateWeather()
+                self.update_weather()
 
         self.simulator.step(self.time, t)
         self.time = t

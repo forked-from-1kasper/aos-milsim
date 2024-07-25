@@ -124,10 +124,10 @@ def apply_script(protocol, connection, config):
             self.clear_tile_entities()
 
             protocol.on_map_change(self, M)
-            self.onWipe(self.map_info.extensions.get('environment'))
+            ABCSimulatorManager.on_map_change(self, M)
 
         def on_world_update(self):
-            self.onTick()
+            ABCSimulatorManager.on_world_update(self)
 
             for x, y, z in islice(onDeleteQueue(), 50):
                 if e := self.get_tile_entity(x, y, z):
