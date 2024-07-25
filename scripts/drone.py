@@ -222,9 +222,9 @@ def apply_script(protocol, connection, config):
         def on_map_change(self, M):
             for drone in self.drones.values():
                 drone.stop()
-                drone.init(by_server=True)
+                drone.init(by_server = True)
 
-            return protocol.on_map_change(self, M)
+            protocol.on_map_change(self, M)
 
     class DroneConnection(connection):
         def get_drone(self):

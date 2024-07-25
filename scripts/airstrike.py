@@ -228,7 +228,7 @@ def apply_script(protocol, connection, config):
                 bomber.stop()
                 bomber.init(by_server = True)
 
-            return protocol.on_map_change(self, M)
+            protocol.on_map_change(self, M)
 
     class AirstrikeConnection(connection):
         def get_bomber(self):
@@ -244,26 +244,39 @@ def apply_script(protocol, connection, config):
             self.get_bomber().stop(player_id = self.player_id)
 
         def on_kill(self, killer, kill_type, grenade):
+            if connection.on_kill(self, killer, kill_type, grenade) is False:
+                return False
+
             self.cancel_airstrike()
-            return connection.on_kill(self, killer, kill_type, grenade)
 
         def on_walk_update(self, up, down, left, right):
+            retval = connection.on_walk_update(self, up, down, left, right)
+
+            if retval is not None:
+                up, down, left, right = retval
+
             if self.get_bomber().active() and (up or down or left or right):
                 self.cancel_airstrike()
-            return connection.on_walk_update(self, up, down, left, right)
+
+            return retval
 
         def on_animation_update(self, jump, crouch, sneak, sprint):
+            retval = connection.on_animation_update(self, jump, crouch, sneak, sprint)
+
+            if retval is not None:
+                jump, crouch, sneak, sprint = retval
+
             if self.world_object.secondary_fire and self.tool == WEAPON_TOOL:
                 if sneak and not self.get_bomber().active():
                     self.send_airstrike()
                 elif not sneak and self.get_bomber().active():
                     self.cancel_airstrike()
 
-            return connection.on_animation_update(self, jump, crouch, sneak, sprint)
+            return retval
 
         def on_tool_changed(self, tool):
             if tool != WEAPON_TOOL: self.cancel_airstrike()
 
-            return connection.on_tool_changed(self, tool)
+            connection.on_tool_changed(self, tool)
 
     return AirstrikeProtocol, AirstrikeConnection

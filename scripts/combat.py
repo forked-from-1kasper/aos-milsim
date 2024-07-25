@@ -123,10 +123,8 @@ def apply_script(protocol, connection, config):
             deleteQueueClear()
             self.clear_tile_entities()
 
-            retval = protocol.on_map_change(self, M)
+            protocol.on_map_change(self, M)
             self.onWipe(self.map_info.extensions.get('environment'))
-
-            return retval
 
         def on_world_update(self):
             self.onTick()
@@ -387,7 +385,7 @@ def apply_script(protocol, connection, config):
             self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
 
             self.protocol.simulator.build(x, y, z)
-            return connection.on_block_build(self, x, y, z)
+            connection.on_block_build(self, x, y, z)
 
         def on_line_build(self, points):
             self.blocks = 50
@@ -395,14 +393,14 @@ def apply_script(protocol, connection, config):
             for x, y, z in points:
                 self.protocol.simulator.build(x, y, z)
 
-            return connection.on_line_build(self, points)
+            connection.on_line_build(self, points)
 
         def on_block_removed(self, x, y, z):
             self.protocol.simulator.destroy(x, y, z)
             if e := self.protocol.get_tile_entity(x, y, z):
                 e.on_destroy()
 
-            return connection.on_block_removed(self, x, y, z)
+            connection.on_block_removed(self, x, y, z)
 
         def on_spawn(self, pos):
             self.previous_position = self.world_object.position.copy()
@@ -418,21 +416,27 @@ def apply_script(protocol, connection, config):
 
             self.sendWeaponReload()
 
-            return connection.on_spawn(self, pos)
+            connection.on_spawn(self, pos)
 
         def on_kill(self, killer, kill_type, grenade):
+            if connection.on_kill(self, killer, kill_type, grenade) is False:
+                return False
+
             if kill_type != TEAM_CHANGE_KILL and kill_type != CLASS_CHANGE_KILL:
                 self.send_chat(WARNING_ON_KILL)
 
             self.previous_position = None
 
-            return connection.on_kill(self, killer, kill_type, grenade)
-
         def on_animation_update(self, jump, crouch, sneak, sprint):
+            retval = connection.on_animation_update(self, jump, crouch, sneak, sprint)
+
+            if retval is not None:
+                jump, crouch, sneak, sprint = retval
+
             if self.world_object.sprint and not sprint:
                 self.last_sprint = reactor.seconds()
 
-            return connection.on_animation_update(self, jump, crouch, sneak, sprint)
+            return retval
 
         def on_orientation_update(self, x, y, z):
             retval = connection.on_orientation_update(self, x, y, z)
@@ -504,7 +508,7 @@ def apply_script(protocol, connection, config):
 
         def on_flag_capture(self):
             self.protocol.environment.on_flag_capture(self)
-            return connection.on_flag_capture(self)
+            connection.on_flag_capture(self)
 
         def on_position_update(self):
             if self.previous_position is not None:
@@ -522,7 +526,7 @@ def apply_script(protocol, connection, config):
 
                 self.previous_position = self.world_object.position.copy()
 
-            return connection.on_position_update(self)
+            connection.on_position_update(self)
 
         @register_packet_handler(loaders.SetTool)
         def on_tool_change_recieved(self, contained):

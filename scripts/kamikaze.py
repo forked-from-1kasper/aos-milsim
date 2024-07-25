@@ -113,10 +113,13 @@ def apply_script(protocol, connection, config):
 
         def on_spawn(self, pos):
             self.boom.stop()
-            return connection.on_spawn(self, pos)
+
+            connection.on_spawn(self, pos)
 
         def on_team_changed(self, old_team):
-            self.boom.stop() # Just to be sure
-            return connection.on_team_changed(self, old_team)
+            if self.team is None or self.team.spectator:
+                self.boom.stop()
+
+            connection.on_team_changed(self, old_team)
 
     return protocol, KamikazeConnection

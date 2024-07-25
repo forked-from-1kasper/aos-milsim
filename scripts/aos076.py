@@ -141,15 +141,17 @@ def apply_script(protocol, connection, config):
 
         def set_location(self, location = None):
             self.queued = True
-            return connection.set_location(self, location)
+
+            connection.set_location(self, location)
 
         def on_position_update(self):
             self.queued = True
-            return connection.on_position_update(self)
+
+            connection.on_position_update(self)
 
         def on_spawn(self, pos):
             self.queued = True
-            return connection.on_spawn(self, pos)
+            connection.on_spawn(self, pos)
 
         def on_orientation_update(self, x, y, z):
             retval = connection.on_orientation_update(self, x, y, z)

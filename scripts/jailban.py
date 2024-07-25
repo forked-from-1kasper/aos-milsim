@@ -108,7 +108,7 @@ def apply_script(protocol, connection, config):
 
                 return
 
-            return connection.on_command(self, command, parameters)
+            connection.on_command(self, command, parameters)
 
         def on_flag_take(self):
             if self.banned: return False
