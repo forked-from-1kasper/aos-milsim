@@ -581,3 +581,14 @@ class BlockTool(Tool):
 class GrenadeTool(Tool):
     def __init__(self, player):
         self.player = player
+
+class TileEntity:
+    def __init__(self, protocol, position):
+        self.protocol = protocol
+        self.position = position
+
+    def on_pressure(self):
+        pass
+
+    def on_destroy(self):
+        self.protocol.remove_tile_entity(*self.position)

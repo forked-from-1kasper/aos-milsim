@@ -1,3 +1,4 @@
+from itertools import product, islice
 from random import choice, uniform
 from math import floor, inf
 
@@ -5,14 +6,31 @@ from twisted.internet import reactor
 
 from pyspades.packet import register_packet_handler
 from pyspades import contained as loaders
+from pyspades.world import cube_line
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
+from piqueserver.map import Map, MapNotFound
+
 import milsim.blast as blast
 
+from milsim.manager.tile_entity import ABCTileEntityManager
 from milsim.manager.simulator import ABCSimulatorManager
+
+from milsim.vxl import VxlData, onDeleteQueue, deleteQueueClear
 from milsim.weapon import ABCWeapon
 from milsim.common import *
+
+def load_vxl(self, rot):
+    try:
+        fin = open(rot.get_map_filename(self.load_dir), 'rb')
+    except OSError:
+        raise MapNotFound(rot.name)
+
+    self.data = VxlData(fin)
+    fin.close()
+
+Map.load_vxl = load_vxl # is there any better way to override this?
 
 WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"
 
@@ -63,7 +81,7 @@ class Shotgun:
 def apply_script(protocol, connection, config):
     milsim_extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
 
-    class CombatProtocol(protocol, ABCSimulatorManager):
+    class CombatProtocol(protocol, ABCSimulatorManager, ABCTileEntityManager):
         __new__     = protocol.__new__
         WeaponTool  = ABCWeapon
         SpadeTool   = SpadeTool
@@ -73,6 +91,7 @@ def apply_script(protocol, connection, config):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             ABCSimulatorManager.__init__(self)
+            ABCTileEntityManager.__init__(self)
 
             self.available_proto_extensions.extend(milsim_extensions)
             self.team_spectator.kills = 0 # bugfix
@@ -101,6 +120,9 @@ def apply_script(protocol, connection, config):
                 return self.players[player_id]
 
         def on_map_change(self, M):
+            deleteQueueClear()
+            self.clear_tile_entities()
+
             retval = protocol.on_map_change(self, M)
             self.onWipe(self.map_info.extensions.get('environment'))
 
@@ -108,6 +130,10 @@ def apply_script(protocol, connection, config):
 
         def on_world_update(self):
             self.onTick()
+
+            for x, y, z in islice(onDeleteQueue(), 50):
+                if e := self.get_tile_entity(x, y, z):
+                    e.on_destroy()
 
             t = reactor.seconds()
 
@@ -149,9 +175,30 @@ def apply_script(protocol, connection, config):
 
             protocol.on_world_update(self)
 
+        def broadcast_contained(self, contained, unsequenced = False, sender = None, team = None, save = False, rule = None):
+            protocol.broadcast_contained(self, contained, unsequenced, sender, team, save, rule)
+
+            if isinstance(contained, loaders.BlockAction):
+                # This is intentionally not in `on_block_build`.
+                if contained.value == BUILD_BLOCK:
+                    if e := self.get_tile_entity(contained.x, contained.y, contained.z + 1):
+                        e.on_pressure()
+
+            if isinstance(contained, loaders.BlockLine):
+                locs = cube_line(
+                    contained.x1, contained.y1, contained.z1,
+                    contained.x2, contained.y2, contained.z2
+                )
+
+                for x, y, z in locs:
+                    if e := self.get_tile_entity(x, y, z + 1):
+                        e.on_pressure()
+
     class CombatConnection(connection):
         def __init__(self, *w, **kw):
             connection.__init__(self, *w, **kw)
+
+            self.previous_position = None
 
             self.spade_object   = self.protocol.SpadeTool(self)
             self.block_object   = self.protocol.BlockTool(self)
@@ -279,6 +326,9 @@ def apply_script(protocol, connection, config):
                 if self.protocol.simulator.smash(X, Y, Z, TNT(gram(60))):
                     self.protocol.onDestroy(self.player_id, X, Y, Z)
 
+                if e := self.protocol.get_tile_entity(X, Y, Z):
+                    e.on_destroy()
+
             return True
 
         def grenade_explode(self, r):
@@ -340,6 +390,8 @@ def apply_script(protocol, connection, config):
             return connection.on_block_build(self, x, y, z)
 
         def on_line_build(self, points):
+            self.blocks = 50
+
             for x, y, z in points:
                 self.protocol.simulator.build(x, y, z)
 
@@ -347,9 +399,14 @@ def apply_script(protocol, connection, config):
 
         def on_block_removed(self, x, y, z):
             self.protocol.simulator.destroy(x, y, z)
+            if e := self.protocol.get_tile_entity(x, y, z):
+                e.on_destroy()
+
             return connection.on_block_removed(self, x, y, z)
 
         def on_spawn(self, pos):
+            self.previous_position = self.world_object.position.copy()
+
             self.tool_object = self.weapon_object
 
             self.last_sprint      = -inf
@@ -366,6 +423,8 @@ def apply_script(protocol, connection, config):
         def on_kill(self, killer, kill_type, grenade):
             if kill_type != TEAM_CHANGE_KILL and kill_type != CLASS_CHANGE_KILL:
                 self.send_chat(WARNING_ON_KILL)
+
+            self.previous_position = None
 
             return connection.on_kill(self, killer, kill_type, grenade)
 
@@ -433,9 +492,37 @@ def apply_script(protocol, connection, config):
             contained.player_id = self.player_id
             self.protocol.broadcast_contained(contained, save = True)
 
+            self.on_flag_taken()
+
+        def on_flag_taken(self):
+            flag = self.team.other.flag
+            x, y, z = floor(flag.x), floor(flag.y), floor(flag.z)
+
+            for Δx, Δy in product(range(-1, 2), range(-1, 2)):
+                if e := self.protocol.get_tile_entity(x + Δx, y + Δy, z):
+                    e.on_pressure()
+
         def on_flag_capture(self):
             self.protocol.environment.on_flag_capture(self)
             return connection.on_flag_capture(self)
+
+        def on_position_update(self):
+            if self.previous_position is not None:
+                r1 = self.previous_position.get()
+                r2 = self.world_object.position.get()
+
+                M = self.protocol.map
+                for x, y, z in cube_line(*r1, *r2):
+                    for Δz in range(4):
+                        if M.get_solid(x, y, z + Δz):
+                            if e := self.protocol.get_tile_entity(x, y, z + Δz):
+                                e.on_pressure()
+
+                            break
+
+                self.previous_position = self.world_object.position.copy()
+
+            return connection.on_position_update(self)
 
         @register_packet_handler(loaders.SetTool)
         def on_tool_change_recieved(self, contained):
