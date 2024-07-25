@@ -96,19 +96,19 @@ def apply_script(protocol, connection, config):
             self.available_proto_extensions.extend(milsim_extensions)
             self.team_spectator.kills = 0 # bugfix
 
-            self.Rifle   = type('Rifle',   (self.WeaponTool, Rifle),   dict())
-            self.SMG     = type('SMG',     (self.WeaponTool, SMG),     dict())
-            self.Shotgun = type('Shotgun', (self.WeaponTool, Shotgun), dict())
+            self.rifle   = type('Rifle',   (self.WeaponTool, Rifle),   dict())
+            self.smg     = type('SMG',     (self.WeaponTool, SMG),     dict())
+            self.shotgun = type('Shotgun', (self.WeaponTool, Shotgun), dict())
 
         def get_weapon(self, weapon):
             if weapon == RIFLE_WEAPON:
-                return self.Rifle
+                return self.rifle
 
             if weapon == SMG_WEAPON:
-                return self.SMG
+                return self.smg
 
             if weapon == SHOTGUN_WEAPON:
-                return self.Shotgun
+                return self.shotgun
 
         def take_player(self, player_id):
             if player_id not in self.players:
