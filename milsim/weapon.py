@@ -8,6 +8,12 @@ from milsim.simulator import cone
 from milsim.common import *
 
 class ABCWeapon(Tool):
+    name        = NotImplemented
+    Ammo        = type(NotImplemented)
+    round       = NotImplemented
+    delay       = NotImplemented
+    reload_time = NotImplemented
+
     def __init__(self, player):
         self.player    = player
         self.last_shot = -inf
@@ -35,12 +41,15 @@ class ABCWeapon(Tool):
                 self.weapon_reload_start = t
                 self.reloading = self.ammo.reload()
 
-                self.player._on_reload()
+                self.player.on_reload_complete()
+                self.player.sendWeaponReload()
 
     def on_lmb_press(self):
         if self.ammo.continuous:
             self.reloading = False
-            self.player._on_reload()
+
+            self.player.on_reload_complete()
+            self.player.sendWeaponReload()
 
     def on_lmb_hold(self, t, dt):
         P = self.ammo.current() > 0

@@ -587,6 +587,9 @@ class TileEntity:
         self.protocol = protocol
         self.position = position
 
+    def on_explosion(self):
+        pass
+
     def on_pressure(self):
         pass
 

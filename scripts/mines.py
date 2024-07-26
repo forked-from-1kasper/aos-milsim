@@ -27,8 +27,9 @@ class Explosive(TileEntity):
 class Landmine(Explosive):
     Δz = -1.0
 
-    on_pressure = Explosive.explode
-    on_destroy  = Explosive.explode
+    on_pressure  = Explosive.explode
+    on_explosion = Explosive.explode
+    on_destroy   = Explosive.explode
 
 @command('mine', 'm')
 @player_only

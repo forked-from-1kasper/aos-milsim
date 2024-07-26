@@ -1,17 +1,13 @@
-from math import inf, fmod, tan, acos, pi, tau, degrees
 from itertools import product
 from random import randint
 from time import time
+from math import inf
 
 from piqueserver.commands import command, player_only, join_arguments
 from piqueserver.config import config
 
-from pyspades.common import Vertex3
 from pyspades import contained as loaders
 from pyspades.constants import *
-
-from milsim.common import dot, xOy, azimuth, needle
-from milsim.simulator import toMeters
 
 def edge(a, b):
     return range(min(a, b), max(a, b) + 1)
@@ -210,80 +206,11 @@ def mail(conn, *w):
         conn.lastmail = timestamp
         return "Message sent."
 
-@command()
-@player_only
-def rangefinder(conn):
-    """
-    Measures the distance between the player and a given point
-    /rangefinder
-    """
-
-    error = 2.0
-
-    if loc := cast_ray(conn, limit = 1024):
-        # this number is a little wrong, but anyway we’ll truncate the result
-        d = conn.world_object.position.distance(Vertex3(*loc))
-        m = toMeters(d)
-        M = m - fmod(m, error)
-
-        if m < error:
-            return "< %.0f m" % error
-        else:
-            return "%.0f m" % M
-    else:
-        return "Too far."
-
-@command()
-@player_only
-def protractor(conn):
-    """
-    Measures the angle between the player and two specified points
-    /protractor
-    """
-
-    if conn.ingame():
-        o = conn.world_object.orientation
-
-        if o.length() < 1e-4:
-            return
-
-        if conn.protractor is None:
-            conn.protractor = o.normal().copy()
-            return "Use /protractor again while facing the second point."
-        else:
-            t = dot(o.normal(), conn.protractor)
-            θ = degrees(acos(t))
-
-            conn.protractor = None
-            return "%.2f deg" % θ
-
-@command()
-@player_only
-def compass(conn):
-    """
-    Prints the current azimuth
-    /compass
-    """
-
-    if conn.ingame():
-        o = xOy(conn.world_object.orientation)
-        φ = azimuth(conn.protocol.environment, o)
-        θ = degrees(φ)
-        return "%.0f deg, %s" % (θ, needle(φ))
-
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
-        def __init__(self, *w, **kw):
-            connection.__init__(self, *w, **kw)
-            self.protractor = None
-
         def on_connect(self):
-            self.pos1 = None
-            self.pos2 = None
-
-            self.lastmail = -inf
-
             self.chat_limiter._seconds = 1
+            self.lastmail = -inf
 
             connection.on_connect(self)
 

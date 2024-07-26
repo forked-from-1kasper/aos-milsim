@@ -1,7 +1,13 @@
+from math import fmod, acos, degrees
+
 from piqueserver.commands import command, player_only
+from pyspades.common import Vertex3
 from pyspades.constants import *
 
+from milsim.simulator import toMeters
 from milsim.common import *
+
+WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"
 
 yn = lambda b: "yes" if b else "no"
 
@@ -225,5 +231,101 @@ def artery(conn, target = None):
         else:
             return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
+@command()
+@player_only
+def rangefinder(conn):
+    """
+    Measures the distance between the player and a given point
+    /rangefinder
+    """
+
+    error = 2.0
+
+    if conn.ingame():
+        if loc := conn.world_object.cast_ray(1024):
+            # this number is a little wrong, but anyway we’ll truncate the result
+            d = conn.world_object.position.distance(Vertex3(*loc))
+            m = toMeters(d)
+            M = m - fmod(m, error)
+
+            if m < error:
+                return "< {:.0f} m".format(error)
+            else:
+                return "{:.0f} m".format(M)
+        else:
+            return "Too far."
+
+@command()
+@player_only
+def protractor(conn):
+    """
+    Measures the angle between the player and two specified points
+    /protractor
+    """
+
+    if conn.ingame():
+        o = conn.world_object.orientation
+
+        if o.length() < 1e-4:
+            return
+
+        if conn.protractor is None:
+            conn.protractor = o.normal().copy()
+            return "Use /protractor again while facing the second point."
+        else:
+            t = dot(o.normal(), conn.protractor)
+            θ = degrees(acos(t))
+
+            conn.protractor = None
+            return "{:.2f} deg".format(θ)
+
+@command()
+@player_only
+def compass(conn):
+    """
+    Prints the current azimuth
+    /compass
+    """
+
+    if conn.ingame():
+        o = xOy(conn.world_object.orientation)
+        φ = azimuth(conn.protocol.environment, o)
+        θ = degrees(φ)
+        return "{:.0f} deg, {}".format(θ, needle(φ))
+
 def apply_script(protocol, connection, config):
-    return protocol, connection
+    class ControlConnection(connection):
+        def __init__(self, *w, **kw):
+            connection.__init__(self, *w, **kw)
+            self.protractor = None
+
+        def on_connect(self):
+            self.pos1 = None
+            self.pos2 = None
+
+            connection.on_connect(self)
+
+        def on_reload_complete(self):
+            if not self.weapon_object.ammo.continuous:
+                self.send_chat(self.weapon_object.ammo.info())
+
+            connection.on_reload_complete(self)
+
+        def on_flag_taken(self):
+            flag = self.team.other.flag
+            x, y, z = floor(flag.x), floor(flag.y), floor(flag.z)
+
+            for Δx, Δy in product(range(-1, 2), range(-1, 2)):
+                if e := self.protocol.get_tile_entity(x + Δx, y + Δy, z):
+                    e.on_pressure()
+
+            connection.on_flag_taken(self)
+
+        def on_kill(self, killer, kill_type, grenade):
+            if connection.on_kill(self, killer, kill_type, grenade) is False:
+                return False
+
+            if kill_type != TEAM_CHANGE_KILL and kill_type != CLASS_CHANGE_KILL:
+                self.send_chat(WARNING_ON_KILL)
+
+    return protocol, ControlConnection
