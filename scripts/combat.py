@@ -28,14 +28,11 @@ def load_vxl(self, rot):
 Map.load_vxl = load_vxl # is there any better way to override this?
 
 def apply_script(protocol, connection, config):
-    milsim_extensions = [(EXTENSION_TRACE_BULLETS, 1), (EXTENSION_HIT_EFFECTS, 1)]
-
     class CombatProtocol(MilsimProtocol, protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             MilsimProtocol.__init__(self, *w, **kw)
 
-            self.available_proto_extensions.extend(milsim_extensions)
             self.team_spectator.kills = 0 # bugfix
 
         def on_map_change(self, M):

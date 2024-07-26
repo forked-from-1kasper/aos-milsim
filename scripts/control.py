@@ -5,6 +5,7 @@ from pyspades.common import Vertex3
 from pyspades.constants import *
 
 from milsim.simulator import toMeters
+from milsim.constants import Limb
 from milsim.common import *
 
 WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"

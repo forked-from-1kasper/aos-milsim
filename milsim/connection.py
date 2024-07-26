@@ -4,12 +4,14 @@ from math import floor, inf
 from twisted.internet import reactor
 
 from pyspades.packet import register_packet_handler
+from pyspades.protocol import BaseConnection
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
-from milsim.types import Limb, Body, randbool, logistic
+from milsim.types import Body, randbool, logistic
 from milsim.common import grenade_zone, TNT, gram
+from milsim.constants import Limb
 import milsim.blast as blast
 
 GRENADE_LETHAL_RADIUS = 4
@@ -30,6 +32,8 @@ bleeding_warning = "You're bleeding."
 
 class MilsimConnection:
     def __init__(self, *w, **kw):
+        assert isinstance(self, BaseConnection)
+
         self.spade_object   = self.protocol.SpadeTool(self)
         self.block_object   = self.protocol.BlockTool(self)
         self.grenade_object = self.protocol.GrenadeTool(self)

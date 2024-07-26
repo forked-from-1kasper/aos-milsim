@@ -1,11 +1,18 @@
 from twisted.internet import reactor
 
+from pyspades.protocol import BaseProtocol
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
+from milsim.packets import (
+    TracerPacket, HitEffectPacket,
+    hasTraceExtension, hasHitEffects,
+    milsim_extensions
+)
 from milsim.simulator import Simulator
 from milsim.weapon import ABCWeapon
+from milsim.constants import Limb
 from milsim.common import *
 
 class Rifle:
@@ -36,6 +43,8 @@ class MilsimProtocol:
     GrenadeTool = GrenadeTool
 
     def __init__(self, *w, **kw):
+        assert isinstance(self, BaseProtocol)
+
         self.environment = None
         self.simulator   = Simulator(self)
         self.time        = reactor.seconds()
@@ -45,6 +54,8 @@ class MilsimProtocol:
         self.rifle   = type('Rifle',   (Rifle,   self.WeaponTool), dict())
         self.smg     = type('SMG',     (SMG,     self.WeaponTool), dict())
         self.shotgun = type('Shotgun', (Shotgun, self.WeaponTool), dict())
+
+        self.available_proto_extensions.extend(milsim_extensions)
 
     def get_weapon(self, weapon):
         if weapon == RIFLE_WEAPON:
