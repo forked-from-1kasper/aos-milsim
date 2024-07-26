@@ -100,7 +100,8 @@ def apply_script(protocol, connection, config):
             if isinstance(contained, loaders.BlockAction):
                 x, y, z = contained.x, contained.y, contained.z
 
-                # This is intentionally not in `on_block_build`.
+                # This is intentionally not in `connection.on_block_build`, so that `protocol.on_block_build`
+                # is called *after* the BlockAction packet has been sent.
                 if contained.value == BUILD_BLOCK:
                     self.on_block_build(x, y, z)
 

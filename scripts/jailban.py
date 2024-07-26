@@ -92,7 +92,7 @@ def apply_script(protocol, connection, config):
         def __init__(self, *w, **kw):
             self.banned = False
 
-            return connection.__init__(self, *w, **kw)
+            connection.__init__(self, *w, **kw)
 
         def on_connect(self):
             ServerConnection.on_connect(self)
