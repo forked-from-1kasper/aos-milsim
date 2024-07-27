@@ -5,7 +5,9 @@ from twisted.internet import reactor
 
 from pyspades.packet import register_packet_handler
 from pyspades.protocol import BaseConnection
+from pyspades.collision import collision_3d
 from pyspades import contained as loaders
+from pyspades.world import cube_line
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
@@ -109,6 +111,20 @@ class MilsimConnection:
             return
 
         self.protocol.broadcast_contained(self.newSetTool(), save = True)
+
+    def on_tool_rapid_hack(self, tool):
+        t1, t2 = self.last_block, reactor.seconds()
+
+        self.last_block = t2
+
+        if self.rapid_hack_detect and t1 is not None and t2 - t1 < TOOL_INTERVAL[tool]:
+            self.rapids.record_event(t2)
+
+            if self.rapids.above_limit():
+                self.on_hack_attempt('Rapid hack detected')
+                return True
+
+        return False
 
     def take_flag(self):
         if not self.ingame(): return
@@ -308,3 +324,70 @@ class MilsimConnection:
                     damage, limb = choice(player.body.keys()),
                     venous = True, hit_by = self, kill_type = MELEE_KILL
                 )
+
+    @register_packet_handler(loaders.BlockLine)
+    def on_block_line_recieved(self, contained):
+        if not self.ingame():
+            return
+
+        if self.line_build_start_pos is None:
+            return
+
+        if self.on_tool_rapid_hack(BLOCK_TOOL):
+            return
+
+        M = self.protocol.map
+
+        x1, y1, z1 = contained.x1, contained.y1, contained.z1
+        x2, y2, z2 = contained.x2, contained.y2, contained.z2
+
+        # Coordinates are out of bounds.
+        if not M.is_valid_position(x1, y1, z1):
+            return
+
+        if not M.is_valid_position(x2, y2, z2):
+            return
+
+        v1 = self.line_build_start_pos
+
+        # Ensure that the player was within tolerance of the location that the line build started at.
+        if not collision_3d(v1.x, v1.y, v1.z, x1, y1, z1, MAX_BLOCK_DISTANCE):
+            return
+
+        v2 = self.world_object.position
+
+        # Ensure that the player is currently within tolerance of the location that the line build ended at.
+        if not collision_3d(v2.x, v2.y, v2.z, x2, y2, z2, MAX_BLOCK_DISTANCE):
+            return
+
+        # Check if block can be placed in that location.
+        if not M.has_neighbors(x1, y1, z1):
+            return
+
+        if not M.has_neighbors(x2, y2, z2):
+            return
+
+        locs = [(x, y, z) for x, y, z in cube_line(x1, y1, z1, x2, y2, z2) if not M.get_solid(x, y, z)]
+
+        if locs is None:
+            return
+
+        if len(locs) > self.blocks + BUILD_TOLERANCE:
+            return
+
+        if self.on_line_build_attempt(locs) is False:
+            return
+
+        for x, y, z in locs:
+            if not M.build_point(x, y, z, self.color):
+                break
+
+        self.blocks -= len(locs)
+        self.on_line_build(locs)
+
+        contained.player_id = self.player_id
+        self.protocol.broadcast_contained(contained, save = True)
+        self.protocol.update_entities()
+
+        for x, y, z in locs:
+            self.protocol.on_block_build(x, y, z)

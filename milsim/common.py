@@ -1,4 +1,4 @@
-from math import atan, atan2, tau, floor, pi
+from math import atan, atan2, tau, floor
 from itertools import product
 
 from milsim.simulator import toMeters
@@ -15,7 +15,7 @@ inch  = lambda s: s * Inch
 pound = lambda m: m * Pound
 grain = lambda m: m * Pound / 7000
 TNT   = lambda m: m * 4.6e+6
-MOA   = lambda x: x * pi / 10800
+MOA   = lambda x: x * tau / 360 / 60
 
 isosceles = lambda H, d: atan(0.5 * d / H)
 

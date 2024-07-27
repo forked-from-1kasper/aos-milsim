@@ -113,13 +113,6 @@ def apply_script(protocol, connection, config):
                     for X, Y, Z in grenade_zone(x, y, z):
                         self.on_block_destroy(X, Y, Z)
 
-            if isinstance(contained, loaders.BlockLine):
-                x1, y1, z1 = contained.x1, contained.y1, contained.z1
-                x2, y2, z2 = contained.x2, contained.y2, contained.z2
-
-                for x, y, z in cube_line(x1, y1, z1, x2, y2, z2):
-                    self.on_block_build(x, y, z)
-
     class CombatConnection(MilsimConnection, connection):
         def __init__(self, *w, **kw):
             connection.__init__(self, *w, **kw)
@@ -229,6 +222,9 @@ def apply_script(protocol, connection, config):
         def on_block_action_recieved(self, contained):
             # Everything else is handled server-side.
             if contained.value == BUILD_BLOCK:
+                if self.protocol.map.get_solid(contained.x, contained.y, contained.z):
+                    return
+
                 connection.on_block_action_recieved(self, contained)
 
     return CombatProtocol, CombatConnection
