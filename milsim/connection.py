@@ -85,6 +85,15 @@ class MilsimConnection:
                 o.position.z + o.velocity.z * dt - self.height(),
             )
 
+    def floor(self):
+        if o := self.world_object:
+            Δz = 2 if o.crouch else 3
+            return (
+                floor(o.position.x),
+                floor(o.position.y),
+                floor(o.position.z) + Δz
+            )
+
     def item_shown(self, t):
         P = not self.world_object.sprint
         Q = t - self.last_sprint >= 0.5

@@ -118,7 +118,7 @@ def apply_script(protocol, connection, config):
             connection.__init__(self, *w, **kw)
             MilsimConnection.__init__(self, *w, **kw)
 
-            self.previous_position = None
+            self.previous_floor_position = None
 
         def on_block_build(self, x, y, z):
             self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
@@ -129,7 +129,7 @@ def apply_script(protocol, connection, config):
             connection.on_line_build(self, points)
 
         def on_spawn(self, pos):
-            self.previous_position = self.world_object.position.copy()
+            self.previous_floor_position = self.floor()
 
             self.tool_object = self.weapon_object
 
@@ -186,20 +186,16 @@ def apply_script(protocol, connection, config):
             connection.on_flag_capture(self)
 
         def on_position_update(self):
-            if self.previous_position is not None:
-                r1 = self.previous_position.get()
-                r2 = self.world_object.position.get()
+            if self.previous_floor_position is not None:
+                r1, r2 = self.previous_floor_position, self.floor()
 
                 M = self.protocol.map
                 for x, y, z in cube_line(*r1, *r2):
-                    for Δz in range(4):
-                        if M.get_solid(x, y, z + Δz):
-                            if e := self.protocol.get_tile_entity(x, y, z + Δz):
-                                e.on_pressure()
+                    if M.get_solid(x, y, z):
+                        if e := self.protocol.get_tile_entity(x, y, z):
+                            e.on_pressure()
 
-                            break
-
-                self.previous_position = self.world_object.position.copy()
+                self.previous_floor_position = r2
 
             connection.on_position_update(self)
 
