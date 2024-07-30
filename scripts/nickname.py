@@ -1,4 +1,4 @@
-from itertools import count
+from itertools import count, filterfalse
 
 TSV = lambda it: map(lambda x: tuple(x.rstrip("\n").split('\t')), it)
 ordinal = lambda k, v: (ord(k), v)
@@ -21,9 +21,6 @@ def apply_script(protocol, connection, config):
     class NicknameProtocol(protocol):
         def get_name(self, text):
             taken = set(player.name for player in self.players.values())
-
-            for name in candidates(clean(text)):
-                if name not in taken:
-                    return name
+            return next(filterfalse(taken.__contains__, candidates(clean(text))))
 
     return NicknameProtocol, connection
