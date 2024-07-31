@@ -19,10 +19,9 @@ BOOM_RADIUS = 40
 
 section = config.section("kamikaze")
 
-class Option:
-    message  = section.option("message", None).get()
-    max_fuse = section.option("max_fuse", 60).get()
-    delay    = section.option("delay", 15).get()
+kamikaze_message  = section.option("message", None).get()
+kamikaze_max_fuse = section.option("max_fuse", 60).get()
+kamikaze_delay    = section.option("delay", 15).get()
 
 class Boom:
     protection = [
@@ -46,13 +45,13 @@ class Boom:
         if not self.alive():
             return choice(self.protection)
 
-        if fuse < 0 or fuse > Option.max_fuse:
-            return "Delay should be non-negative and less than {}.".format(Option.max_fuse)
+        if fuse < 0 or fuse > kamikaze_max_fuse:
+            return "Delay should be non-negative and less than {}.".format(kamikaze_max_fuse)
 
         dt = reactor.seconds() - self.last
 
-        if dt < Option.delay:
-            return "Wait {:.1f} seconds.".format(Option.delay - dt)
+        if dt < kamikaze_delay:
+            return "Wait {:.1f} seconds.".format(kamikaze_delay - dt)
 
         self.defer = reactor.callLater(fuse, self.callback)
 
@@ -70,11 +69,11 @@ class Boom:
         self.last  = reactor.seconds()
         self.defer = None
 
-        if self.alive() and Option.message:
+        if self.alive() and kamikaze_message:
             contained           = loaders.ChatMessage()
             contained.player_id = self.conn.player_id
             contained.chat_type = CHAT_ALL
-            contained.value     = Option.message
+            contained.value     = kamikaze_message
 
             self.conn.protocol.broadcast_contained(contained)
 
