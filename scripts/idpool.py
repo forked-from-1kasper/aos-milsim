@@ -1,13 +1,11 @@
-from itertools import count
+from itertools import count, filterfalse
 
 class IDPool:
     def __init__(self, protocol):
         self.protocol = protocol
 
     def pop(self):
-        for player_id in count():
-            if player_id not in self.protocol.players:
-                return player_id
+        return next(filterfalse(self.protocol.players.__contains__, count()))
 
     def put_back(self, id):
         pass
