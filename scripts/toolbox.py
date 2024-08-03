@@ -19,8 +19,8 @@ def cube(u, v):
     return product(edge(x1, x2), edge(y1, y2), edge(z1, z2))
 
 def cast_ray(conn, limit = 128):
-    if not conn.world_object: return None
-    return conn.world_object.cast_ray(limit)
+    if o := conn.world_object:
+        return o.cast_ray(limit)
 
 @command('cast', admin_only = True)
 @player_only
