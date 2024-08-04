@@ -15,10 +15,9 @@ import milsim.blast as blast
 
 section = config.section("airstrike")
 
-class Option:
-    zoomv_time = section.option("zoomv_time", 2).get()
-    delay      = section.option("delay", 7 * 60).get()
-    phase      = section.option("phase", 120).get()
+airstrike_zoomv_time = section.option("zoomv_time", 2).get()
+airstrike_delay      = section.option("delay", 7 * 60).get()
+aitstrike_phase      = section.option("phase", 120).get()
 
 BOMBS_COUNT   = 7
 BOMBER_SPEED  = 10
@@ -152,13 +151,13 @@ class Bomber:
         self.ready       = False
 
         if by_server:
-            self.preparation = reactor.callLater(Option.phase, self.start)
+            self.preparation = reactor.callLater(aitstrike_phase, self.start)
 
     def point(self, conn):
         if not self.active() and self.ready:
             self.player_id = conn.player_id
             self.call = reactor.callLater(
-                Option.zoomv_time, do_airstrike, self.name, conn, self.restart
+                airstrike_zoomv_time, do_airstrike, self.name, conn, self.restart
             )
 
     def active(self):
@@ -183,12 +182,12 @@ class Bomber:
         self.stop()
 
         self.ready       = False
-        self.preparation = reactor.callLater(Option.delay, self.start)
+        self.preparation = reactor.callLater(airstrike_delay, self.start)
 
     def report(self, msg):
         self.protocol.broadcast_chat(
-            "<%s> %s. Over." % (self.name, msg),
-            global_message=False, team=self.team
+            "<{}> {}. Over.".format(self.name, msg),
+            global_message = False, team = self.team
         )
 
     def remaining(self):
