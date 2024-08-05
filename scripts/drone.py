@@ -17,12 +17,12 @@ import milsim.blast as blast
 
 section = config.section("drone")
 
-class Option:
-    phase    = section.option("phase", 90).get()
-    delay    = section.option("delay", 240).get()
-    rate     = section.option("rate", 1).get()
-    timeout  = section.option("timeout", 60).get()
-    teamkill = section.option("teamkill", False).get()
+drone_phase    = section.option("phase", 90).get()
+drone_delay    = section.option("delay", 240).get()
+drone_rate     = section.option("rate", 1).get()
+drone_timeout  = section.option("timeout", 60).get()
+drone_teamkill = section.option("teamkill", False).get()
+drone_grenades = section.option("grenades", 5).get()
 
 MIN_FUSE    = 1.2
 MAX_FUSE    = 3
@@ -75,7 +75,7 @@ class Drone:
         self.passed    = 0
 
         if by_server:
-            self.callback = reactor.callLater(Option.phase, self.start)
+            self.callback = reactor.callLater(drone_phase, self.start)
 
     def report(self, msg):
         self.protocol.broadcast_chat(
@@ -95,7 +95,7 @@ class Drone:
             self.callback = None
 
     def arrive(self):
-        self.grenades = 5
+        self.grenades = drone_grenades
         self.status = Status.awaiting
         self.report("Drone on the battlefield")
 
@@ -106,7 +106,7 @@ class Drone:
         self.passed    = 0
 
         self.report("Received. Watching for {}".format(target.name))
-        self.callback = reactor.callLater(Option.rate, self.ping)
+        self.callback = reactor.callLater(drone_rate, self.ping)
 
     def free(self):
         self.status    = Status.awaiting
@@ -115,7 +115,7 @@ class Drone:
         self.target_id = None
 
     def ping(self):
-        self.passed += Option.rate
+        self.passed += drone_rate
 
         if self.target_id not in self.protocol.players:
             self.report("Don't see the target. Awaiting for further instructions")
@@ -123,12 +123,12 @@ class Drone:
 
         target = self.protocol.players[self.target_id]
 
-        if self.passed > Option.timeout:
+        if self.passed > drone_timeout:
             self.report("Don't see {}. Awaiting for further instructions".format(target.name))
             return self.free()
 
         if not target.ingame():
-            self.callback = reactor.callLater(Option.rate, self.ping)
+            self.callback = reactor.callLater(drone_rate, self.ping)
             return
 
         x, y, z = target.world_object.position.get()
@@ -162,10 +162,10 @@ class Drone:
 
             else:
                 self.status   = Status.inflight
-                self.callback = reactor.callLater(Option.delay, self.arrive)
-                self.report("Bombed out. Will be ready in {} seconds".format(Option.delay))
+                self.callback = reactor.callLater(drone_delay, self.arrive)
+                self.report("Bombed out. Will be ready in {} seconds".format(drone_delay))
         else:
-            self.callback = reactor.callLater(Option.rate, self.ping)
+            self.callback = reactor.callLater(drone_rate, self.ping)
 
     def remaining(self):
         if self.callback:
@@ -204,7 +204,7 @@ def drone(conn, nickname = None):
     if drone.status == Status.awaiting:
         player = get_player(conn.protocol, nickname, spectators = False)
 
-        if player.team.id == conn.team.id and not Option.teamkill:
+        if player.team.id == conn.team.id and not drone_teamkill:
             raise CommandError("Expected enemy's nickname")
 
         drone.track(conn, player)
