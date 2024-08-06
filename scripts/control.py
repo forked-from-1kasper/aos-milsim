@@ -34,9 +34,8 @@ def weapon(conn):
     Print remaining ammo status
     /weapon
     """
-
-    if conn.weapon_object is not None:
-        return conn.weapon_object.ammo.info()
+    if o := conn.weapon_object:
+        return o.ammo.info()
 
 @command('bandage', 'b')
 @player_only
