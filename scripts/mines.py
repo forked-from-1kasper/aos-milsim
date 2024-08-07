@@ -34,6 +34,10 @@ class Landmine(Explosive):
 @command('mine', 'm')
 @player_only
 def set_mine(conn):
+    """
+    Puts a mine on the given block
+    /mine
+    """
     if not conn.ingame(): return
 
     loc = conn.world_object.cast_ray(10)
@@ -63,6 +67,10 @@ def givemine(conn):
 @command('checkmines', 'cm')
 @player_only
 def checkmines(conn):
+    """
+    Prints the number of available mines
+    /checkmines
+    """
     if conn.ingame():
         return "You have {} mine(s).".format(conn.mines)
 
