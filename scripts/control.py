@@ -207,6 +207,10 @@ limbs = {
 @command()
 @player_only
 def fracture(conn, target = None):
+    """
+    Breaks the specified limb (useful for debug).
+    /fracture
+    """
     if conn.ingame():
         if limb := limbs.get(target):
             conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
@@ -216,6 +220,10 @@ def fracture(conn, target = None):
 @command()
 @player_only
 def vein(conn, target = None):
+    """
+    Cuts a vein in the specified limb (useful for debug).
+    /vein
+    """
     if conn.ingame():
         if limb := limbs.get(target):
             conn.body[limb].venous = True
@@ -225,6 +233,10 @@ def vein(conn, target = None):
 @command()
 @player_only
 def artery(conn, target = None):
+    """
+    Cuts an artery in the specified limb (useful for debug).
+    /artery
+    """
     if conn.ingame():
         if limb := limbs.get(target):
             conn.body[limb].arterial = True
