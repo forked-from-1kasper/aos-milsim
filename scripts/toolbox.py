@@ -124,7 +124,7 @@ def elevate(conn):
 @player_only
 def get_z(conn):
     """
-    Returns the Z-coordiante of the first block underfoot
+    Returns the Z-coordinate of the first block underfoot
     /get_z
     """
     x, y, _ = conn.world_object.position.get()
