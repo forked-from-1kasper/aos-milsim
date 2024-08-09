@@ -25,12 +25,20 @@ def cast_ray(conn, limit = 128):
 @command('cast', admin_only = True)
 @player_only
 def cast(conn):
+    """
+    Prints the coordinates of the block under sight
+    /cast
+    """
     if loc := cast_ray(conn):
         return f"{loc}"
 
 @command('/pos1', admin_only = True)
 @player_only
 def pos1(conn):
+    """
+    Selects the first block
+    //pos1
+    """
     if loc := cast_ray(conn):
         conn.pos1 = loc
         return "First position set to {}".format(loc)
@@ -38,6 +46,10 @@ def pos1(conn):
 @command('/pos2', admin_only = True)
 @player_only
 def pos2(conn):
+    """
+    Selects the second block
+    //pos2
+    """
     if loc := cast_ray(conn):
         conn.pos2 = loc
         return "Second position set to {}".format(loc)
@@ -45,6 +57,10 @@ def pos2(conn):
 @command('/sel', admin_only = True)
 @player_only
 def sel(conn):
+    """
+    Prints the coordinates of the selected blocks
+    //sel
+    """
     if conn.pos1 and conn.pos2:
         return "{} -> {}".format(conn.pos1, conn.pos2)
     else:
@@ -81,6 +97,10 @@ def blockAction(conn, value, pos1, pos2):
 @command('/set', admin_only = True)
 @player_only
 def set_block(conn, action = "1"):
+    """
+    Destroys or builds in the selected region
+    //set (0|1)
+    """
     if not (conn.pos1 and conn.pos2): return
 
     value = DESTROY_BLOCK if action == "0" else BUILD_BLOCK
@@ -89,6 +109,10 @@ def set_block(conn, action = "1"):
 @command(admin_only = True)
 @player_only
 def elevate(conn):
+    """
+    Teleports to the maximum available height
+    /elevate
+    """
     if not conn.hp: return
 
     x, y, _ = conn.world_object.position.get()
@@ -99,6 +123,10 @@ def elevate(conn):
 @command(admin_only = True)
 @player_only
 def get_z(conn):
+    """
+    Returns the Z-coordiante of the first block underfoot
+    /get_z
+    """
     x, y, _ = conn.world_object.position.get()
     return f"z = {conn.protocol.map.get_z(x, y)}"
 
