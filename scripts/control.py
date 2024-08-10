@@ -42,6 +42,7 @@ def weapon(conn):
 def bandage(conn):
     """
     Put the bandage (used to stop venous bleeding)
+    /b or /bandage
     """
     if not conn.ingame(): return
 
@@ -151,7 +152,7 @@ class Engine:
 
         return "Removed {} object(s)".format(alive)
 
-@command('engine', admin_only=True)
+@command('engine', admin_only = True)
 def engine(conn, subcmd, *w):
     protocol = conn.protocol
 
