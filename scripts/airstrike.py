@@ -91,7 +91,7 @@ def gift(conn):
 @command('air')
 def air(conn):
     """
-    Report time before bomber's arrival.
+    Report time before bomber's arrival
     /air
     """
 

@@ -209,7 +209,7 @@ limbs = {
 @player_only
 def fracture(conn, target = None):
     """
-    Breaks the specified limb (useful for debug).
+    Breaks the specified limb (useful for debug)
     /fracture
     """
     if conn.ingame():
@@ -222,7 +222,7 @@ def fracture(conn, target = None):
 @player_only
 def vein(conn, target = None):
     """
-    Cuts a vein in the specified limb (useful for debug).
+    Cuts a vein in the specified limb (useful for debug)
     /vein
     """
     if conn.ingame():
@@ -235,7 +235,7 @@ def vein(conn, target = None):
 @player_only
 def artery(conn, target = None):
     """
-    Cuts an artery in the specified limb (useful for debug).
+    Cuts an artery in the specified limb (useful for debug)
     /artery
     """
     if conn.ingame():
