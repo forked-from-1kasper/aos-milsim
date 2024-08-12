@@ -24,7 +24,7 @@ whitelist = {
 @command(admin_only = True)
 def disconnect(conn, nickname):
     """
-    Silently disconnect a given player.
+    Silently disconnect a given player
     /disconnect <player>
     """
 
@@ -33,7 +33,7 @@ def disconnect(conn, nickname):
 @command(admin_only = True)
 def hardban(conn, nickname):
     """
-    Hardban a given player.
+    Hardban a given player
     /hardban <player>
     """
 
