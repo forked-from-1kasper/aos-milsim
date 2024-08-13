@@ -1,7 +1,9 @@
 from itertools import product, islice
 from math import floor, inf
+from time import monotonic
 
 from twisted.internet import reactor
+from twisted.logger import Logger
 
 from pyspades.packet import register_packet_handler
 from pyspades import contained as loaders
@@ -25,6 +27,8 @@ def load_vxl(self, rot):
     self.data = VxlData(fin)
     fin.close()
 
+log = Logger()
+
 Map.load_vxl = load_vxl # is there any better way to override this?
 
 def apply_script(protocol, connection, config):
@@ -41,8 +45,15 @@ def apply_script(protocol, connection, config):
 
             protocol.on_map_change(self, M)
 
+            t1 = monotonic()
+
             o = self.map_info.extensions.get('environment')
             MilsimProtocol.on_environment_change(self, o)
+
+            t2 = monotonic()
+
+            dt = t2 - t1
+            log.info("Environment loading took {duration:.2f} s", duration = dt)
 
         def on_world_update(self):
             MilsimProtocol.on_simulator_update(self)
