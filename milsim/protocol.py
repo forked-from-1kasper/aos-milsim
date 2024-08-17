@@ -1,4 +1,5 @@
 from twisted.internet import reactor
+from random import choice
 
 from pyspades.protocol import BaseProtocol
 from pyspades import contained as loaders
