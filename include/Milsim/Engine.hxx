@@ -348,9 +348,11 @@ private:
                                                                         : Terminal::penetration;
 
                 if (state != Terminal::flying) {
+                    constexpr T hitEffectThresholdEnergy = 5.0;
+
                     trace(o.index(), r, v.abs() / o.v0, false);
 
-                    if (onHitEffect != Py_None) {
+                    if (onHitEffect != Py_None && hitEffectThresholdEnergy <= o.energy()) {
                         PyObject_CallFunction(
                             onHitEffect, "fffiiii", r.x, r.y, r.z, X, Y, Z,
                             static_cast<uint8_t>(HitEffect::block)
