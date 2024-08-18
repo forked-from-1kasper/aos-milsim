@@ -1,7 +1,9 @@
 __pycache__
 bans.txt
+mailbox.txt
 config.toml
 /*.sh
+/nongithub
 /maps
 /logs
 /build
