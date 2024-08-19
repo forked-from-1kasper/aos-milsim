@@ -306,15 +306,6 @@ def compass(conn):
         θ = degrees(φ)
         return "{:.0f} deg, {}".format(θ, needle(φ))
 
-@command('eval', admin_only = True)
-def c_eval(conn, *w):
-    """
-    Evaluates arbitrary Python code
-    /eval <code>
-    """
-
-    return str(eval(' '.join(w), globals(), locals()))
-
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):
         def __init__(self, *w, **kw):

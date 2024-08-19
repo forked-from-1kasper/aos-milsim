@@ -234,6 +234,15 @@ def mail(conn, *w):
         conn.lastmail = timestamp
         return "Message sent."
 
+@command('eval', admin_only = True)
+def c_eval(conn, *w):
+    """
+    Evaluates arbitrary Python code
+    /eval <code>
+    """
+
+    return str(eval(' '.join(w), globals(), locals()))
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
