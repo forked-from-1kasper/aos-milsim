@@ -39,6 +39,11 @@ def apply_script(protocol, connection, config):
 
             self.team_spectator.kills = 0 # bugfix
 
+        def on_connect(self, peer):
+            log.info("{address} connected", address = peer.address)
+
+            protocol.on_connect(self, peer)
+
         def on_map_change(self, M):
             deleteQueueClear()
             self.clear_tile_entities()
