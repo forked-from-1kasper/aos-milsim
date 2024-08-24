@@ -179,16 +179,6 @@ class Ball(Round):
     def __post_init__(self):
         self.area = 0.25 * pi * self.diameter * self.diameter
 
-class Ammo:
-    def total(self):
-        raise NotImplementedError
-
-    def current(self):
-        raise NotImplementedError
-
-    def reserved(self):
-        return self.total() - self.current()
-
 @dataclass
 class Gun:
     name        : str   # Name
@@ -360,101 +350,96 @@ class Body:
             if P.venous:
                 P.hit(P.venous_rate * dt)
 
-def Magazines(magazines : int, capacity : int) -> type:
-    """
-    magazines: Number of magazines
-    capacity:  Number of rounds that fit in the weapon at once
-    """
+class Magazine:
+    capacity = NotImplemented
 
-    class Implementation(Ammo):
-        continuous = False
+    def total(self):
+        raise NotImplementedError
 
-        def __init__(self):
-            self.loaded = 0
-            self.restock()
+    def current(self):
+        raise NotImplementedError
 
-        def empty(self):
-            return all(map(lambda c: c <= 0, self.container))
+    def reserved(self):
+        return self.total() - self.current()
 
-        def next(self):
-            self.loaded += 1
-            self.loaded %= magazines
+    def can_reload(self):
+        return 0 < self.reserved() and self.current() < self.capacity
 
-        def reload(self):
-            if self.empty():
-                return False
+class BoxMagazine(Magazine):
+    continuous = False
+    magazines  = NotImplemented
 
+    def __init__(self):
+        self.loaded = 0
+        self.restock()
+
+    def empty(self):
+        return all(map(lambda c: c <= 0, self.container))
+
+    def next(self):
+        self.loaded += 1
+        self.loaded %= self.magazines
+
+    def reload(self):
+        if self.empty():
+            return False
+
+        self.next()
+        while self.container[self.loaded] <= 0:
             self.next()
-            while self.container[self.loaded] <= 0:
-                self.next()
 
-            return False
+        return False
 
-        def full(self):
-            return self.total() >= capacity * magazines
+    def current(self):
+        return self.container[self.loaded]
 
-        def current(self):
-            return self.container[self.loaded]
+    def total(self):
+        return sum(self.container)
 
-        def total(self):
-            return sum(self.container)
+    def shoot(self, amount):
+        avail = self.container[self.loaded]
+        self.container[self.loaded] = max(avail - amount, 0)
 
-        def shoot(self, amount):
-            avail = self.container[self.loaded]
-            self.container[self.loaded] = max(avail - amount, 0)
+    def restock(self):
+        self.container = [self.capacity] * self.magazines
 
-        def restock(self):
-            self.container = [capacity] * magazines
+    def info(self):
+        show = lambda w: str(w[1]) + ite(self.loaded == w[0], "*", "")
 
-        def info(self):
-            show = lambda w: str(w[1]) + ite(self.loaded == w[0], "*", "")
+        buff = ", ".join(map(show, enumerate(self.container)))
+        return f"{self.magazines} magazines: {buff}"
 
-            buff = ", ".join(map(show, enumerate(self.container)))
-            return f"{magazines} magazines: {buff}"
+class TubularMagazine(Magazine):
+    continuous = True
+    stock      = NotImplemented
 
-    return Implementation
+    def __init__(self):
+        self.loaded = self.capacity
+        self.restock()
 
-def Heap(capacity : int, stock : int) -> type:
-    """
-    capacity: Number of rounds that fit in the weapon at once
-    stock:    Total number of rounds
-    """
+    def reload(self):
+        if self.loaded < self.capacity and self.remaining > 0:
+            self.loaded    += 1
+            self.remaining -= 1
+            return True
 
-    class Implementation(Ammo):
-        continuous = True
+        return False
 
-        def __init__(self):
-            self.loaded = capacity
-            self.restock()
+    def current(self):
+        return self.loaded
 
-        def reload(self):
-            if self.loaded < capacity and self.remaining > 0:
-                self.loaded    += 1
-                self.remaining -= 1
-                return True
+    def total(self):
+        return self.remaining + self.loaded
 
-            return False
+    def shoot(self, amount):
+        self.loaded = max(self.loaded - amount, 0)
 
-        def full(self):
-            return self.total() >= stock
+    def restock(self):
+        self.remaining = self.stock - self.loaded
 
-        def current(self):
-            return self.loaded
-
-        def total(self):
-            return self.remaining + self.loaded
-
-        def shoot(self, amount):
-            self.loaded = max(self.loaded - amount, 0)
-
-        def restock(self):
-            self.remaining = stock - self.loaded
-
-        def info(self):
-            noun = "rounds" if self.remaining != 1 else "round"
-            return f"{self.remaining} {noun} in reserve"
-
-    return Implementation
+    def info(self):
+        noun = "rounds" if self.remaining != 1 else "round"
+        return f"{self.remaining} {noun} in reserve"
 
 class Tool:
     def on_lmb_press(self):

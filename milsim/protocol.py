@@ -16,23 +16,35 @@ from milsim.weapon import ABCWeapon
 from milsim.constants import Limb
 from milsim.common import *
 
+class RifleMagazine(BoxMagazine):
+    capacity  = 10
+    magazines = 7
+
 class Rifle:
     name        = "Rifle"
-    Ammo        = Magazines(6, 10)
+    Ammo        = RifleMagazine
     round       = R762x54mm
     delay       = 0.50
     reload_time = 2.5
 
+class SMGMagazine(BoxMagazine):
+    capacity    = 40
+    magazines   = 5
+
 class SMG:
     name        = "SMG"
-    Ammo        = Magazines(5, 30)
+    Ammo        = SMGMagazine
     round       = Parabellum
     delay       = 0.11
     reload_time = 2.5
 
+class ShotgunMagazine(TubularMagazine):
+    capacity    = 6
+    stock       = 76
+
 class Shotgun:
     name        = "Shotgun"
-    Ammo        = Heap(6, 48)
+    Ammo        = ShotgunMagazine
     round       = Buckshot1
     delay       = 1.00
     reload_time = 0.5

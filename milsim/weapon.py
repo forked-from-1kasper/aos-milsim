@@ -16,21 +16,18 @@ class ABCWeapon(Tool):
 
     def __init__(self, player):
         self.player    = player
-        self.last_shot = -inf
-        self.reloading = False
-        self.ammo      = self.Ammo()
-
         self.reset()
 
     def restock(self):
         self.ammo.restock()
 
     def reload(self):
-        if self.ammo.full() or self.reloading:
+        if self.reloading:
             return
 
-        self.weapon_reload_start = reactor.seconds()
-        self.reloading = True
+        if self.ammo.can_reload():
+            self.weapon_reload_start = reactor.seconds()
+            self.reloading = True
 
     def is_empty(self, tolerance = CLIP_TOLERANCE) -> bool:
         return self.ammo.current() <= 0
@@ -74,4 +71,6 @@ class ABCWeapon(Tool):
                 sim.add(self.player, r, u + cone(v, self.round.grouping), t, self.round)
 
     def reset(self):
-        pass
+        self.last_shot = -inf
+        self.reloading = False
+        self.ammo      = self.Ammo()

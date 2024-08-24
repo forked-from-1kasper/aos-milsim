@@ -199,7 +199,7 @@ class MilsimConnection:
                 contained.player_id = self.player_id
                 contained.weapon    = weapon
 
-                self.protocol.broadcast_contained(contained, save=True)
+                self.protocol.broadcast_contained(contained, save = True)
                 if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
 
     def refill(self, local = False):
