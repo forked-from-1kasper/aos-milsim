@@ -208,7 +208,7 @@ cdef class Simulator:
             Vector3[double](v.x, v.y, v.z),
             timestamp,
             params.grenade,
-            params.mass,
+            params.effmass,
             params.ballistic,
             params.model,
             params.area

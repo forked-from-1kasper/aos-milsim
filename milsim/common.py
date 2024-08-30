@@ -1,4 +1,4 @@
-from math import atan, atan2, tau, floor
+from math import degrees, acos, atan, atan2, tau, floor, fmod
 from itertools import product
 
 from milsim.simulator import toMeters
@@ -32,14 +32,14 @@ Plastic  = Material(name = "plastic",  ricochet = 0.1,  deflecting = 85, durabil
 Grass    = Material(name = "grass",    ricochet = 0.0,  deflecting = 0,  durability = 1.5,  strength = 100,    density = 50,   absorption = 1e+4,   crumbly = True)
 Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durability = 1e+6, strength = 1,      density = 1000, absorption = 1e+15,  crumbly = False)
 
-Buckshot1 = Ball(457.00, grain(82.000),  mm(9.65), 15, isosceles(yard(25), inch(40)), 0.10)
-Buckshot2 = Ball(396.24, grain(350.000), mm(8.38), 5,  isosceles(yard(25), inch(40)), 0.10)
-Bullet    = Ball(540.00, grain(109.375), mm(10.4), 1,  0,                             0.10)
+Buckshot1 = Shotshell(name = "Buckshot1", muzzle = 457.00, effmass = grain(82.000),  totmass = gram(150.00), grouping = isosceles(yard(25), inch(40)), deviation = 0.10, diameter = mm(9.65), pellets = 15)
+Buckshot2 = Shotshell(name = "Buckshot2", muzzle = 396.24, effmass = grain(350.000), totmass = gram(170.00), grouping = isosceles(yard(25), inch(40)), deviation = 0.10, diameter = mm(8.38), pellets = 5)
+Bullet    = Shotshell(name = "Bullet",    muzzle = 540.00, effmass = grain(109.375), totmass = gram(20.00),  grouping = 0,                             deviation = 0.10, diameter = mm(10.4), pellets = 1)
 
-R145x114mm = G1(1000, gram(67.00), 0.800, mm(14.50), MOA(0.7), 0.03)
-R127x108mm = G1(900,  gram(50.00), 0.732, mm(12.70), MOA(0.7), 0.03)
-R762x54mm  = G7(850,  gram(10.00), 0.187, mm(07.62), MOA(0.7), 0.03)
-Parabellum = G1(600,  gram(8.03),  0.212, mm(09.00), MOA(2.5), 0.05)
+R145x114mm = G1(name = "R145x114mm", muzzle = 1000, effmass = gram(67.00), totmass = gram(191.00), grouping = MOA(0.7), deviation = 0.03, BC = 0.800, caliber = mm(14.50))
+R127x108mm = G1(name = "R127x108mm", muzzle = 900,  effmass = gram(50.00), totmass = gram(130.00), grouping = MOA(0.7), deviation = 0.03, BC = 0.732, caliber = mm(12.70))
+R762x54mm  = G7(name = "R762x54mm",  muzzle = 850,  effmass = gram(10.00), totmass = gram(22.00),  grouping = MOA(0.7), deviation = 0.03, BC = 0.187, caliber = mm(07.62))
+Parabellum = G1(name = "Parabellum", muzzle = 600,  effmass = gram(8.03),  totmass = gram(12.00),  grouping = MOA(2.5), deviation = 0.05, BC = 0.212, caliber = mm(09.00))
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 
@@ -61,3 +61,108 @@ def needle(φ):
     Δφ    = tau / N
     t     = (φ + Δφ / 2) / Δφ
     return label[floor(t) % N]
+
+class Kettlebell(Item):
+    def __init__(self, mass):
+        Item.__init__(self)
+        self.mass = mass
+
+    def print(self):
+        return f"Kettlebell ({self.mass:.3f} kg)"
+
+class BandageItem(Item):
+    name = "Bandage"
+    mass = 0.250
+
+    def apply(self, player):
+        for P in player.body.values():
+            if P.arterial or P.venous:
+                player.inventory.remove(self)
+                P.venous = False
+
+                return f"You have bandaged your {P.label}"
+
+        return "You are not bleeding"
+
+class TourniquetItem(Item):
+    name = "Tourniquet"
+    mass = 0.050
+
+    def apply(self, player):
+        for P in player.body.values():
+            if P.arterial:
+                player.inventory.remove(self)
+                P.arterial = False
+
+                return f"You put a tourniquet on your {P.label}"
+
+        return "You are not bleeding"
+
+class SplintItem(Item):
+    name = "Splint"
+    mass = 0.160
+
+    def apply(self, player):
+        for P in player.body.values():
+            if P.fractured:
+                player.inventory.remove(self)
+                P.splint = True
+
+                return f"You put a splint on your {P.label}"
+
+        return "You have no fractures"
+
+class CompassItem(Item):
+    name = "Compass"
+    mass = 0.050
+
+    def apply(self, player):
+        o = xOy(player.world_object.orientation)
+        φ = azimuth(player.protocol.environment, o)
+        θ = degrees(φ)
+        return "{:.0f} deg, {}".format(θ, needle(φ))
+
+class ProtractorItem(Item):
+    name = "Protractor"
+    mass = 0.150
+
+    def __init__(self):
+        Item.__init__(self)
+        self.origin = None
+
+    def apply(self, player):
+        o = player.world_object.orientation
+
+        if o.length() < 1e-4:
+            return
+
+        if self.origin is None:
+            self.origin = o.normal().copy()
+            return "Use /protractor again while facing the second point."
+        else:
+            t = dot(o.normal(), self.origin)
+            θ = degrees(acos(t))
+
+            self.origin = None
+            return "{:.2f} deg".format(θ)
+
+class RangefinderItem(Item):
+    name  = "Rangefinder"
+    mass  = 0.300
+    error = 2.0
+
+    def apply(self, player):
+        wo = player.world_object
+
+        if loc := wo.cast_ray(1024):
+            # this number is a little wrong, but anyway we’ll truncate the result
+            d = wo.position.distance(Vertex3(*loc))
+            m = toMeters(d)
+            M = m - fmod(m, self.error)
+
+            if m < self.error:
+                return "< {:.0f} m".format(self.error)
+            else:
+                return "{:.0f} m".format(M)
+        else:
+            return "Too far."

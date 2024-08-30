@@ -2,7 +2,7 @@ from pyspades.common import Vertex3
 
 from piqueserver.commands import command, player_only
 
-from milsim.types import TileEntity
+from milsim.types import TileEntity, Item
 import milsim.blast as blast
 
 class Explosive(TileEntity):
@@ -31,6 +31,29 @@ class Landmine(Explosive):
     on_explosion = Explosive.explode
     on_destroy   = Explosive.explode
 
+class LandmineItem(Item):
+    name = "Landmine"
+    mass = 0.550
+
+    def apply(self, player):
+        if loc := player.world_object.cast_ray(10):
+            protocol = player.protocol
+
+            x, y, z = loc
+
+            if z >= 63: return "You can't place a mine on water"
+
+            player.inventory.remove(self)
+
+            if e := protocol.get_tile_entity(x, y, z):
+                e.on_pressure()
+                return
+
+            protocol.add_tile_entity(Landmine, protocol, loc, player.player_id)
+            return "Mine placed at {}".format(loc)
+        else:
+            return "You can't place a mine so far away from yourself"
+
 @command('mine', 'm')
 @player_only
 def set_mine(conn):
@@ -38,41 +61,18 @@ def set_mine(conn):
     Puts a mine on the given block
     /mine
     """
-    if not conn.ingame(): return
 
-    loc = conn.world_object.cast_ray(10)
-    if loc is None: return "You can't place a mine so far away from yourself."
-
-    x, y, z = loc
-    if z >= 63: return "You can't place a mine on water"
-
-    if conn.mines > 0:
-        conn.mines -= 1
-
-        if e := conn.protocol.get_tile_entity(x, y, z):
-            e.on_pressure()
-            return
-
-        conn.protocol.add_tile_entity(Landmine, conn.protocol, loc, conn.player_id)
-        return "Mine placed at {}".format(loc)
-    else:
-        return "You do not have mines."
+    if conn.ingame():
+        if o := conn.inventory.find(LandmineItem):
+            return o.apply(conn)
+        else:
+            return "You do not have mines"
 
 @command('givemine', 'gm', admin_only = True)
 @player_only
 def givemine(conn):
-    conn.mines += 1
-    return "You got a mine."
-
-@command('checkmines', 'cm')
-@player_only
-def checkmines(conn):
-    """
-    Prints the number of available mines
-    /checkmines
-    """
-    if conn.ingame():
-        return "You have {} mine(s).".format(conn.mines)
+    conn.inventory.push(LandmineItem())
+    return "You got a mine"
 
 def apply_script(protocol, connection, config):
     class MineGrenadeTool(protocol.GrenadeTool):
@@ -85,17 +85,17 @@ def apply_script(protocol, connection, config):
     class MineProtocol(protocol):
         GrenadeTool = MineGrenadeTool
 
+        def on_map_change(self, M):
+            protocol.on_map_change(self, M)
+
+            for i in self.team1_tent_inventory, self.team2_tent_inventory:
+                i.push(LandmineItem())
+
     class MineConnection(connection):
-        def __init__(self, *w, **kw):
-            self.mines = 0
-            return connection.__init__(self, *w, **kw)
-
         def on_spawn(self, pos):
-            self.mines = 2
-            return connection.on_spawn(self, pos)
+            connection.on_spawn(self, pos)
 
-        def refill(self, local = False):
-            self.mines = 2
-            return connection.refill(self, local)
+            for k in range(2):
+                self.inventory.push(LandmineItem()).mark_renewable()
 
     return MineProtocol, MineConnection

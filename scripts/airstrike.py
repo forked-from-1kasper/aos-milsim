@@ -1,6 +1,6 @@
 from random import randint, random
 from dataclasses import dataclass
-from math import floor
+from math import floor, inf
 
 from twisted.internet import reactor
 
@@ -11,13 +11,14 @@ from pyspades.common import Vertex3
 from pyspades.team import Team
 
 from piqueserver.commands import command, player_only
+from milsim.weapon import UnderbarrelItem
 import milsim.blast as blast
 
 section = config.section("airstrike")
 
 airstrike_zoomv_time = section.option("zoomv_time", 2).get()
 airstrike_delay      = section.option("delay", 7 * 60).get()
-aitstrike_phase      = section.option("phase", 120).get()
+aitstrike_phase      = section.option("phase", 30).get()
 
 BOMBS_COUNT   = 7
 BOMBER_SPEED  = 10
@@ -46,8 +47,8 @@ def airbomb_explode(protocol, player_id, pos):
             X, Y = shift(x), shift(y)
             Z = protocol.map.get_z(X, Y)
 
-            if player.grenade_destroy(X, Y, Z):
-                reactor.callLater(random(), blast.effect, protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
+            player.grenade_destroy(X, Y, Z)
+            reactor.callLater(random(), blast.effect, protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
 
 def drop_airbomb(protocol, player_id, x, y, vx, vy):
     pos = Vertex3(x, y, protocol.map.get_z(x, y) - 2)
@@ -104,6 +105,24 @@ def air(conn):
     else:
         bomber.report("Awaiting for coordinates")
 
+class Laser(UnderbarrelItem):
+    name = "Laser"
+    mass = 0.500
+
+    def __init__(self):
+        UnderbarrelItem.__init__(self)
+        self.timer = -inf
+
+    def on_press(self, player):
+        self.timer = 0
+
+    def on_hold(self, player, t, dt):
+        self.timer += dt
+
+        if self.timer > airstrike_zoomv_time:
+            self.timer = 0
+            player.get_bomber().point(player)
+
 class Ghost:
     def __init__(self):
         self.call = None
@@ -156,9 +175,7 @@ class Bomber:
     def point(self, conn):
         if not self.active() and self.ready:
             self.player_id = conn.player_id
-            self.call = reactor.callLater(
-                airstrike_zoomv_time, do_airstrike, self.name, conn, self.restart
-            )
+            do_airstrike(self.name, conn, self.restart)
 
     def active(self):
         return self.call and self.call.active()
@@ -197,21 +214,7 @@ class Bomber:
             return None
 
 def apply_script(protocol, connection, config):
-    class AirstrikeWeaponTool(protocol.WeaponTool):
-        def on_rmb_press(self):
-            protocol.WeaponTool.on_rmb_press(self)
-
-            if self.player.world_object.sneak:
-                self.player.send_airstrike()
-
-        def on_rmb_release(self):
-            protocol.WeaponTool.on_rmb_release(self)
-
-            self.player.cancel_airstrike()
-
     class AirstrikeProtocol(protocol):
-        WeaponTool = AirstrikeWeaponTool
-
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.bombers = {
@@ -233,49 +236,10 @@ def apply_script(protocol, connection, config):
         def get_bomber(self):
             return self.protocol.bombers[self.team.id]
 
-        def send_airstrike(self):
-            obj     = self.world_object
-            walking = obj.up or obj.down or obj.left or obj.right
+        def on_spawn(self, pos):
+            connection.on_spawn(self, pos)
 
-            if not walking: self.get_bomber().point(self)
-
-        def cancel_airstrike(self):
-            self.get_bomber().stop(player_id = self.player_id)
-
-        def on_kill(self, killer, kill_type, grenade):
-            if connection.on_kill(self, killer, kill_type, grenade) is False:
-                return False
-
-            self.cancel_airstrike()
-
-        def on_walk_update(self, up, down, left, right):
-            retval = connection.on_walk_update(self, up, down, left, right)
-
-            if retval is not None:
-                up, down, left, right = retval
-
-            if self.get_bomber().active() and (up or down or left or right):
-                self.cancel_airstrike()
-
-            return retval
-
-        def on_animation_update(self, jump, crouch, sneak, sprint):
-            retval = connection.on_animation_update(self, jump, crouch, sneak, sprint)
-
-            if retval is not None:
-                jump, crouch, sneak, sprint = retval
-
-            if self.world_object.secondary_fire and self.tool == WEAPON_TOOL:
-                if sneak and not self.get_bomber().active():
-                    self.send_airstrike()
-                elif not sneak and self.get_bomber().active():
-                    self.cancel_airstrike()
-
-            return retval
-
-        def on_tool_changed(self, tool):
-            if tool != WEAPON_TOOL: self.cancel_airstrike()
-
-            connection.on_tool_changed(self, tool)
+            self.weapon_object.item_underbarrel = Laser()
+            self.weapon_object.item_underbarrel.mark_renewable()
 
     return AirstrikeProtocol, AirstrikeConnection

@@ -1,6 +1,7 @@
 from typing import Dict, List, Callable, Tuple
 from dataclasses import dataclass, field
 from collections.abc import Iterable
+from collections import deque
 
 from math import pi, exp, log, inf, floor, prod
 from random import random, gauss
@@ -133,26 +134,29 @@ class Environment:
         for (x, y, z), M in self.defaults():
             sim.set(x, y, z, M)
 
-class Round:
-    pass
-
 @dataclass
-class Bullet(Round):
+class Cartridge:
+    name      : str
     muzzle    : float
-    mass      : float
-    BC        : float
-    caliber   : float
+    effmass   : float
+    totmass   : float
     grouping  : float
     deviation : float
 
     grenade = False
+
+@dataclass
+class Bullet(Cartridge):
+    BC      : float
+    caliber : float
+
     pellets = 1
 
     def __post_init__(self):
         self.area = 0.25 * pi * self.caliber * self.caliber
 
         # http://www.x-ballistics.eu/cms/ballistics/how-to-calculate-the-trajectory/
-        m = self.mass / Pound
+        m = self.effmass / Pound
         d = self.caliber / Inch
         i = m / (d * d)
         self.ballistic = i / self.BC
@@ -164,28 +168,15 @@ class G7(Bullet):
     model = 2
 
 @dataclass
-class Ball(Round):
-    muzzle    : float
-    mass      : float
-    diameter  : float
-    pellets   : int
-    grouping  : float
-    deviation : float
+class Shotshell(Cartridge):
+    diameter : float
+    pellets  : int
 
-    grenade   = False
     model     = 3
     ballistic = 0.0
 
     def __post_init__(self):
         self.area = 0.25 * pi * self.diameter * self.diameter
-
-@dataclass
-class Gun:
-    name        : str   # Name
-    ammo        : type  # Ammunition container constructor
-    round       : Round # Ammunition type used by weapon
-    delay       : float # Time between shots
-    reload_time : float # Time between reloading and being able to shoot again
 
 logit    = lambda t: -log(1 / t - 1)
 logistic = lambda t: 1 / (1 + exp(-t))
@@ -350,102 +341,258 @@ class Body:
             if P.venous:
                 P.hit(P.venous_rate * dt)
 
-class Magazine:
+def digits(n, base = 10):
+    if n == 0:
+        yield 0
+    while n > 0:
+        yield n % base
+        n //= base
+
+from string import ascii_uppercase
+
+def encode(n, key = ascii_uppercase):
+    return "".join(map(key.__getitem__, digits(n, base = len(key))))
+
+from itertools import count
+itemidpool = map(encode, count())
+
+class Item:
+    def __init__(self):
+        self.id = next(itemidpool)
+        self.persistent = True
+
+    def mark_renewable(self):
+        self.persistent = False
+
+    def apply(self, player):
+        pass
+
+    def mass(self):
+        raise NotImplementedError
+
+    def print(self):
+        return self.name
+
+class CartridgeBox(Item):
+    def __init__(self, o, capacity = 0):
+        Item.__init__(self)
+
+        self.object   = o
+        self.capacity = capacity
+
+    def pop(self):
+        if self.capacity > 0:
+            self.capacity -= 1
+            return self.object
+
+    @property
+    def mass(self):
+        return self.capacity * self.object.totmass
+
+    def print(self):
+        return f"{self.object.name} Box ({self.capacity})"
+
+class Inventory:
+    def __init__(self):
+        self.data = deque()
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __getitem__(self, ID):
+        return next(filter(lambda x: x.id == ID.upper(), self.data), None)
+
+    def find(self, typ):
+        return next(filter(lambda x: isinstance(x, typ), self.data), None)
+
+    def remove(self, o):
+        self.data.remove(o)
+
+    def remove_if(self, pred):
+        self.data = deque(filter(lambda o: not pred(o), self.data))
+
+    def pop(self, typ):
+        if o := self.find(typ):
+            self.data.remove(o)
+            return o
+
+    def clear(self):
+        self.data.clear()
+
+    def extend(self, it):
+        self.data.extend(it)
+
+    def push(self, o):
+        self.data.append(o)
+        return o
+
+    def empty(self):
+        return not bool(self.data)
+
+class ItemEntity(Inventory):
+    def __init__(self, protocol, x, y, z):
+        Inventory.__init__(self)
+
+        self.x, self.y, self.z = x, y, z
+        self.protocol = protocol
+
+    def remove_if_empty(self):
+        if self.empty():
+            self.protocol.remove_item_entity(
+                self.x, self.y, self.z
+            )
+
+    def remove(self, o):
+        Inventory.remove(self, o)
+        self.remove_if_empty()
+
+    def remove_if(self, pred):
+        Inventory.remove_if(self, pred)
+        self.remove_if_empty()
+
+    def pop(self, typ):
+        o = Inventory.remove(self, typ)
+        self.remove_if_empty()
+
+        return o
+
+    def clear(self, pred):
+        Inventory.clear(self)
+        self.remove_if_empty()
+
+class Magazine(Item):
     capacity = NotImplemented
 
-    def total(self):
+    @property
+    def mass(self):
         raise NotImplementedError
 
     def current(self):
         raise NotImplementedError
 
-    def reserved(self):
-        return self.total() - self.current()
+    def reserved(self, i):
+        raise NotImplementedError
 
-    def can_reload(self):
-        return 0 < self.reserved() and self.current() < self.capacity
+    def can_reload(self, i):
+        return 0 < self.reserved(i) and self.current() < self.capacity
+
+def icons(x, xs):
+    yield x
+    yield from xs
 
 class BoxMagazine(Magazine):
     continuous = False
-    magazines  = NotImplemented
+    cartridge  = NotImplemented
 
     def __init__(self):
-        self.loaded = 0
+        Magazine.__init__(self)
+
+        self._current = 0
         self.restock()
 
-    def empty(self):
-        return all(map(lambda c: c <= 0, self.container))
+    def reload(self, i):
+        if succ := i.pop(type(self)):
+            i.push(self) # TODO: skip empty magazines
+            return succ, False
 
-    def next(self):
-        self.loaded += 1
-        self.loaded %= self.magazines
-
-    def reload(self):
-        if self.empty():
-            return False
-
-        self.next()
-        while self.container[self.loaded] <= 0:
-            self.next()
-
-        return False
+        return self, False
 
     def current(self):
-        return self.container[self.loaded]
+        return self._current
 
-    def total(self):
-        return sum(self.container)
+    def reserved(self, i):
+        return sum(map(lambda o: o.current(), filter(lambda o: isinstance(o, type(self)), i)))
 
-    def shoot(self, amount):
-        avail = self.container[self.loaded]
-        self.container[self.loaded] = max(avail - amount, 0)
+    def eject(self):
+        if self._current > 0:
+            self._current -= 1
+            return self.cartridge
 
     def restock(self):
-        self.container = [self.capacity] * self.magazines
+        self._current = self.capacity
 
-    def info(self):
-        show = lambda w: str(w[1]) + ite(self.loaded == w[0], "*", "")
+    @property
+    def mass(self):
+        return self._mass + self._current * self.cartridge.totmass
 
-        buff = ", ".join(map(show, enumerate(self.container)))
-        return f"{self.magazines} magazines: {buff}"
+    def info(self, i):
+        res = filter(lambda o: isinstance(o, type(self)), i)
+        return "Magazines: " + ", ".join(icons(
+            str(self.current()) + "*",
+            map(lambda o: str(o.current()), res)
+        ))
+
+    def print(self):
+        return f"{self.name} ({self._current})"
 
 class TubularMagazine(Magazine):
     continuous = True
-    stock      = NotImplemented
+    cartridge  = NotImplemented
 
     def __init__(self):
-        self.loaded = self.capacity
-        self.restock()
+        Magazine.__init__(self)
 
-    def reload(self):
-        if self.loaded < self.capacity and self.remaining > 0:
-            self.loaded    += 1
-            self.remaining -= 1
-            return True
+        self.container = deque()
 
-        return False
+    def find(self, i):
+        it = filter(
+            lambda o: isinstance(o, CartridgeBox) and \
+                      isinstance(o.object, self.cartridge) and \
+                      o.capacity > 0,
+            i
+        )
+
+        return next(it, None)
+
+    def push(self, o):
+        self.container.appendleft(o)
+
+    def reload(self, i):
+        if self.capacity <= self.current():
+            return self, False
+
+        if o := self.find(i):
+            self.push(o.pop())
+            return self, True
+
+        return self, False
 
     def current(self):
-        return self.loaded
+        return len(self.container)
 
-    def total(self):
-        return self.remaining + self.loaded
+    def reserved(self, i):
+        return sum(map(
+            lambda o: o.capacity,
+            filter(lambda o: isinstance(o, CartridgeBox) and \
+                             isinstance(o.object, self.cartridge), i)
+        ))
 
-    def shoot(self, amount):
-        self.loaded = max(self.loaded - amount, 0)
+    def eject(self):
+        if bool(self.container):
+            return self.container.popleft()
 
     def restock(self):
-        self.remaining = self.stock - self.loaded
+        raise NotImplementedError
 
-    def info(self):
-        noun = "rounds" if self.remaining != 1 else "round"
-        return f"{self.remaining} {noun} in reserve"
+    @property
+    def mass(self):
+        return sum(map(lambda o: o.totmass, self.container))
+
+    def info(self, i):
+        rem = self.reserved(i)
+        return f"{rem} round(s) in reserve"
 
 class Tool:
     def on_lmb_press(self):
         pass
 
     def on_lmb_release(self):
+        pass
+
+    def on_sneak_press(self):
+        pass
+
+    def on_sneak_release(self):
         pass
 
     def on_rmb_press(self):
@@ -460,6 +607,9 @@ class Tool:
     def on_rmb_hold(self, t, dt):
         pass
 
+    def on_sneak_hold(self, t, dt):
+        pass
+
 def dig(player, mu, dt, x, y, z):
     if not player.world_object or player.world_object.dead: return
 
@@ -472,6 +622,8 @@ def dig(player, mu, dt, x, y, z):
         protocol.onDestroy(player.player_id, x, y, z)
 
 class SpadeTool(Tool):
+    mass = 0.750
+
     def __init__(self, player):
         self.player = player
 
@@ -494,12 +646,18 @@ class SpadeTool(Tool):
                 dig(self.player, dt, 0.7, x, y, z + 1)
 
 class BlockTool(Tool):
+    mass = 0
+
     def __init__(self, player):
         self.player = player
 
 class GrenadeTool(Tool):
     def __init__(self, player):
         self.player = player
+
+    @property
+    def mass(self):
+        return 0.600 * self.player.grenades
 
 class TileEntity:
     def __init__(self, protocol, position):

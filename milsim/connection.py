@@ -1,18 +1,19 @@
 from random import choice, uniform
+from itertools import product
 from math import floor, inf
 
 from twisted.internet import reactor
 
+from pyspades.collision import collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
 from pyspades.protocol import BaseConnection
-from pyspades.collision import collision_3d
 from pyspades import contained as loaders
 from pyspades.world import cube_line
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
-from milsim.types import Body, randbool, logistic
-from milsim.common import grenade_zone, TNT, gram
+from milsim.common import grenade_zone, TNT, gram, BandageItem, TourniquetItem, SplintItem
+from milsim.types import Inventory, Body, randbool, logistic
 from milsim.constants import Limb
 import milsim.blast as blast
 
@@ -41,6 +42,7 @@ class MilsimConnection:
         self.grenade_object = self.protocol.GrenadeTool(self)
 
         self.last_hp_update = -inf
+        self.inventory      = Inventory()
         self.body           = Body()
 
     def on_reload_complete(self):
@@ -59,8 +61,8 @@ class MilsimConnection:
     def sendWeaponReload(self):
         contained              = loaders.WeaponReload()
         contained.player_id    = self.player_id
-        contained.clip_ammo    = self.weapon_object.ammo.current()
-        contained.reserve_ammo = self.weapon_object.ammo.reserved()
+        contained.clip_ammo    = self.weapon_object.magazine.current()
+        contained.reserve_ammo = self.weapon_object.magazine.reserved(self.inventory)
         self.send_contained(contained)
 
     def ingame(self):
@@ -93,6 +95,58 @@ class MilsimConnection:
                 floor(o.position.y),
                 floor(o.position.z) + Δz
             )
+
+    def get_drop_inventory(self):
+        if wo := self.world_object:
+            x = floor(wo.position.x)
+            y = floor(wo.position.y)
+            z = floor(wo.position.z)
+
+            return self.protocol.new_item_entity(
+                x, y, self.protocol.map.get_z(x, y, z)
+            )
+
+    def get_available_inventory(self):
+        if wo := self.world_object:
+            x = floor(wo.position.x)
+            y = floor(wo.position.y)
+            z = floor(wo.position.z)
+
+            for X, Y in product(range(x - 1, x + 2), range(y - 1, y + 2)):
+                for Z in range(z, z + 4):
+                    if self.protocol.map.get_solid(X, Y, Z):
+                        if i := self.protocol.get_item_entity(X, Y, Z):
+                            yield i
+
+                        break
+
+            if vector_collision(wo.position, self.protocol.team_1.base):
+                yield self.protocol.team1_tent_inventory
+
+            if vector_collision(wo.position, self.protocol.team_2.base):
+                yield self.protocol.team2_tent_inventory
+
+    def drop(self, ID):
+        if o := self.inventory[ID]:
+            if o.persistent:
+                self.get_drop_inventory().push(o)
+
+            self.inventory.remove(o)
+            self.sendWeaponReload()
+
+    def drop_all(self):
+        self.get_drop_inventory().extend(
+            filter(lambda o: o.persistent, self.inventory)
+        )
+
+        self.inventory.clear()
+
+    def packload(self):
+        return (
+            sum(map(lambda o: o.mass, self.inventory)) +
+            self.spade_object.mass + self.block_object.mass +
+            self.weapon_object.mass + self.grenade_object.mass
+        )
 
     def item_shown(self, t):
         P = not self.world_object.sprint
@@ -180,14 +234,29 @@ class MilsimConnection:
         return True
 
     def grenade_explode(self, r):
-        if self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z)):
-            blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
+        self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z))
+        blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
 
     def grenade_exploded(self, grenade):
         if self.name is None:
             return
 
         self.grenade_explode(grenade.position)
+
+    def flashbang_exploded(self, grenade):
+        if self.name is None:
+            return
+
+        for i in range(50):
+            # TODO: remove callLater
+            r = grenade.position.copy()
+            r.x += uniform(-3.0, 3.0)
+            r.y += uniform(-3.0, 3.0)
+            r.z += uniform(-3.0, 3.0)
+
+            reactor.callLater(uniform(0.1, 7.0),
+                blast.effect, self.protocol, self.player_id, r, Vertex3(0, 0, 0), 0.0
+            )
 
     def set_weapon(self, weapon, local = False, no_kill = False):
         if weapon_class := self.protocol.get_weapon(weapon):
@@ -210,13 +279,20 @@ class MilsimConnection:
             P.arterial = False
             P.venous   = False
 
-        self.grenades   = 3
-        self.blocks     = 50
-        self.bandage    = 3
-        self.tourniquet = 2
-        self.splint     = 1
+        self.grenades = 3
+        self.blocks   = 50
 
-        self.weapon_object.restock()
+        self.inventory.remove_if(lambda o: not o.persistent)
+
+        for k in range(3):
+            self.inventory.push(BandageItem()).mark_renewable()
+
+        for k in range(2):
+            self.inventory.push(TourniquetItem()).mark_renewable()
+
+        self.inventory.push(SplintItem()).mark_renewable()
+
+        self.weapon_object.refill()
 
         if not local:
             self.send_contained(loaders.Restock())

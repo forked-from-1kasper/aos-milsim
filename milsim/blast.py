@@ -38,7 +38,7 @@ class Fragment:
     model   = 0
 
     def __init__(self):
-        self.mass      = uniform(1 / 1000, 5 / 1000)
+        self.effmass   = uniform(1 / 1000, 5 / 1000)
         self.area      = 0.01 * 0.01
         self.ballistic = 1.0
 

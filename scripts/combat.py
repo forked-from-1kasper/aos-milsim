@@ -15,6 +15,7 @@ from piqueserver.map import Map, MapNotFound
 from milsim.connection import MilsimConnection
 from milsim.protocol import MilsimProtocol
 
+from milsim.weapon import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.vxl import VxlData, onDeleteQueue, deleteQueueClear
 from milsim.common import *
 
@@ -46,9 +47,27 @@ def apply_script(protocol, connection, config):
 
         def on_map_change(self, M):
             deleteQueueClear()
-            self.clear_tile_entities()
 
+            self.clear_entities()
             protocol.on_map_change(self, M)
+
+            for i in self.team1_tent_inventory, self.team2_tent_inventory:
+                i.push(Kettlebell(1))
+                i.push(Kettlebell(5))
+                i.push(Kettlebell(10))
+                i.push(Kettlebell(15))
+                i.push(Kettlebell(30))
+                i.push(Kettlebell(50))
+
+                for k in range(10):
+                    i.push(GrenadeLauncher())
+                    i.push(GrenadeItem())
+                    i.push(GrenadeItem())
+                    i.push(GrenadeItem())
+                    i.push(FlashbangItem())
+                    i.push(CompassItem())
+                    i.push(ProtractorItem())
+                    i.push(RangefinderItem())
 
             t1 = monotonic()
 
@@ -66,6 +85,8 @@ def apply_script(protocol, connection, config):
             for x, y, z in islice(onDeleteQueue(), 50):
                 if e := self.get_tile_entity(x, y, z):
                     e.on_destroy()
+
+                self.drop_item_entity(x, y, z)
 
             t = reactor.seconds()
 
@@ -95,6 +116,9 @@ def apply_script(protocol, connection, config):
 
                         if player.world_object.secondary_fire:
                             player.tool_object.on_rmb_hold(t, dt)
+
+                        if player.world_object.sneak:
+                            player.tool_object.on_sneak_hold(t, dt)
 
                     hp = player.body.average()
                     if player.hp != hp:
@@ -153,12 +177,18 @@ def apply_script(protocol, connection, config):
             self.last_tool_update = -inf
 
             self.last_hp_update = reactor.seconds()
-            self.hp             = 100
             self.body.reset()
+            self.hp = 100
 
             self.sendWeaponReload()
 
             connection.on_spawn(self, pos)
+
+        def on_kill(self, killer, kill_type, grenade):
+            if connection.on_kill(self, killer, kill_type, grenade) is False:
+                return False
+
+            self.drop_all()
 
         def on_animation_update(self, jump, crouch, sneak, sprint):
             retval = connection.on_animation_update(self, jump, crouch, sneak, sprint)
@@ -168,6 +198,12 @@ def apply_script(protocol, connection, config):
 
             if self.world_object.sprint and not sprint:
                 self.last_sprint = reactor.seconds()
+
+            if self.world_object.sneak != sneak:
+                if sneak:
+                    self.tool_object.on_sneak_press()
+                else:
+                    self.tool_object.on_sneak_release()
 
             return retval
 

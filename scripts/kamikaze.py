@@ -83,8 +83,8 @@ class Boom:
             r - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0
         )
 
-        if self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3)):
-            blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
+        self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3))
+        blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
 
 @command('boom', 'a')
 @player_only

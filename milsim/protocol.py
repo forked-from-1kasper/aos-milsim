@@ -16,38 +16,69 @@ from milsim.weapon import ABCWeapon
 from milsim.constants import Limb
 from milsim.common import *
 
-class RifleMagazine(BoxMagazine):
-    capacity  = 10
-    magazines = 7
+class DetachableMagazineItem:
+    def restock(self):
+        self.magazine = self.default_magazine()
 
-class Rifle:
-    name        = "Rifle"
-    Ammo        = RifleMagazine
-    round       = R762x54mm
-    delay       = 0.50
-    reload_time = 2.5
+        self.magazine.mark_renewable()
+
+    def refill(self):
+        i = self.player.inventory
+        for k in range(self.default_magazine_count):
+            i.push(self.default_magazine()).mark_renewable()
+
+class IntegralMagazineItem:
+    def restock(self):
+        self.magazine = self.default_magazine()
+        self.magazine.mark_renewable()
+
+        for k in range(self.magazine.capacity):
+            self.magazine.push(self.default_cartridge)
+
+    def refill(self):
+        i = self.player.inventory
+        i.push(CartridgeBox(self.default_cartridge, self.default_reserve)).mark_renewable()
+
+class RifleMagazine(BoxMagazine):
+    _mass     = 0.227
+    name      = "AA762R02"
+    capacity  = 10
+    cartridge = R762x54mm
+
+class Rifle(DetachableMagazineItem):
+    _mass                  = 4.220
+    name                   = "Rifle"
+    delay                  = 0.50
+    reload_time            = 2.5
+    default_magazine       = RifleMagazine
+    default_magazine_count = 6
 
 class SMGMagazine(BoxMagazine):
-    capacity    = 40
-    magazines   = 5
+    _mass     = 0.265
+    name      = "HK251770"
+    capacity  = 30
+    cartridge = Parabellum
 
-class SMG:
-    name        = "SMG"
-    Ammo        = SMGMagazine
-    round       = Parabellum
-    delay       = 0.11
-    reload_time = 2.5
+class SMG(DetachableMagazineItem):
+    _mass                  = 3.850
+    name                   = "SMG"
+    delay                  = 0.11
+    reload_time            = 2.5
+    default_magazine       = SMGMagazine
+    default_magazine_count = 4
 
 class ShotgunMagazine(TubularMagazine):
-    capacity    = 6
-    stock       = 76
+    capacity  = 6
+    cartridge = Shotshell
 
-class Shotgun:
-    name        = "Shotgun"
-    Ammo        = ShotgunMagazine
-    round       = Buckshot1
-    delay       = 1.00
-    reload_time = 0.5
+class Shotgun(IntegralMagazineItem):
+    _mass             = 3.600
+    name              = "Shotgun"
+    delay             = 1.00
+    reload_time       = 0.5
+    default_magazine  = ShotgunMagazine
+    default_cartridge = Buckshot1
+    default_reserve   = 70
 
 class MilsimProtocol:
     WeaponTool  = ABCWeapon
@@ -63,6 +94,10 @@ class MilsimProtocol:
         self.time        = reactor.seconds()
 
         self.tile_entities = {}
+        self.item_entities = {}
+
+        self.team1_tent_inventory = Inventory()
+        self.team2_tent_inventory = Inventory()
 
         self.rifle   = type('Rifle',   (Rifle,   self.WeaponTool), dict())
         self.smg     = type('SMG',     (SMG,     self.WeaponTool), dict())
@@ -101,8 +136,35 @@ class MilsimProtocol:
     def remove_tile_entity(self, x, y, z):
         self.tile_entities.pop((x, y, z))
 
-    def clear_tile_entities(self):
+    def get_item_entity(self, x, y, z):
+        return self.item_entities.get((x, y, z))
+
+    def remove_item_entity(self, x, y, z):
+        self.item_entities.pop((x, y, z))
+
+    def new_item_entity(self, x, y, z):
+        if o := self.item_entities.get((x, y, z)):
+            return o
+        else:
+            o = ItemEntity(self, x, y, z)
+            self.item_entities[(x, y, z)] = o
+
+            return o
+
+    def drop_item_entity(self, x, y, z1):
+        if o := self.get_item_entity(x, y, z1):
+            z2 = self.map.get_z(x, y, z1)
+            if z1 == z2: return
+
+            self.new_item_entity(x, y, z2).extend(o)
+            self.remove_item_entity(x, y, z1)
+
+    def clear_entities(self):
         self.tile_entities.clear()
+        self.item_entities.clear()
+
+        self.team1_tent_inventory.clear()
+        self.team2_tent_inventory.clear()
 
     def update_weather(self):
         self.simulator.update(self.environment)
@@ -152,6 +214,8 @@ class MilsimProtocol:
 
         if e := self.get_tile_entity(x, y, z):
             e.on_destroy()
+
+        self.drop_item_entity(x, y, z)
 
     def onDestroy(self, pid, x, y, z):
         if pid not in self.players:

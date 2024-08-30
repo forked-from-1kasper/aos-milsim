@@ -1,4 +1,5 @@
-from math import fmod, acos, degrees
+from math import floor, fmod, acos, degrees
+from itertools import product
 
 from piqueserver.commands import command, player_only
 from pyspades.common import Vertex3
@@ -35,7 +36,7 @@ def weapon(conn):
     /weapon
     """
     if o := conn.weapon_object:
-        return o.ammo.info()
+        return o.magazine.info(conn.inventory)
 
 @command('bandage', 'b')
 @player_only
@@ -44,19 +45,11 @@ def bandage(conn):
     Put the bandage (used to stop venous bleeding)
     /b or /bandage
     """
-    if not conn.ingame(): return
-
-    if not conn.body.bleeding():
-        return "You are not bleeding."
-
-    if conn.bandage <= 0:
-        return "You do not have a bandage."
-
-    for P in conn.body.values():
-        if P.arterial or P.venous:
-            P.venous = False
-            conn.bandage -= 1
-            return f"You have bandaged your {P.label}."
+    if conn.ingame():
+        if o := conn.inventory.find(BandageItem):
+            return o.apply(conn)
+        else:
+            return "You do not have a bandage."
 
 @command('tourniquet', 't')
 @player_only
@@ -65,19 +58,11 @@ def tourniquet(conn):
     Put the tourniquet (used to stop arterial bleeding)
     /t or /tourniquet
     """
-    if not conn.ingame(): return
-
-    if not conn.body.bleeding():
-        return "You are not bleeding."
-
-    if conn.tourniquet <= 0:
-        return "You do not have a tourniquet."
-
-    for P in conn.body.values():
-        if P.arterial:
-            P.arterial = False
-            conn.tourniquet -= 1
-            return f"You put a tourniquet on your {P.label}."
+    if conn.ingame():
+        if o := conn.inventory.find(TourniquetItem):
+            return o.apply(conn)
+        else:
+            return "You do not have a tourniquet."
 
 @command('splint', 's')
 @player_only
@@ -86,19 +71,11 @@ def splint(conn):
     Splint a broken limb
     /s or /splint
     """
-    if not conn.ingame(): return
-
-    if not conn.body.fractured():
-        return "You have no fractures."
-
-    if conn.splint <= 0:
-        return "You do not have a split."
-
-    for P in conn.body.values():
-        if P.fractured:
-            P.splint = True
-            conn.splint -= 1
-            return f"You put a splint on your {P.label}."
+    if conn.ingame():
+        if o := conn.inventory.find(SplintItem):
+            return o.apply(conn)
+        else:
+            return "You do not have a splint."
 
 def formatMicroseconds(T):
     if T <= 1e+3:
@@ -244,29 +221,18 @@ def artery(conn, target = None):
         else:
             return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
-@command()
+@command('rangefinder', 'rf')
 @player_only
 def rangefinder(conn):
     """
     Measures the distance between the player and a given point
     /rangefinder
     """
-
-    error = 2.0
-
     if conn.ingame():
-        if loc := conn.world_object.cast_ray(1024):
-            # this number is a little wrong, but anyway we’ll truncate the result
-            d = conn.world_object.position.distance(Vertex3(*loc))
-            m = toMeters(d)
-            M = m - fmod(m, error)
-
-            if m < error:
-                return "< {:.0f} m".format(error)
-            else:
-                return "{:.0f} m".format(M)
+        if o := conn.inventory.find(RangefinderItem):
+            return o.apply(conn)
         else:
-            return "Too far."
+            return "You do not have a rangefinder."
 
 @command()
 @player_only
@@ -275,22 +241,11 @@ def protractor(conn):
     Measures the angle between the player and two specified points
     /protractor
     """
-
     if conn.ingame():
-        o = conn.world_object.orientation
-
-        if o.length() < 1e-4:
-            return
-
-        if conn.protractor is None:
-            conn.protractor = o.normal().copy()
-            return "Use /protractor again while facing the second point."
+        if o := conn.inventory.find(ProtractorItem):
+            return o.apply(conn)
         else:
-            t = dot(o.normal(), conn.protractor)
-            θ = degrees(acos(t))
-
-            conn.protractor = None
-            return "{:.2f} deg".format(θ)
+            return "You do not have a protractor."
 
 @command()
 @player_only
@@ -299,12 +254,52 @@ def compass(conn):
     Prints the current azimuth
     /compass
     """
-
     if conn.ingame():
-        o = xOy(conn.world_object.orientation)
-        φ = azimuth(conn.protocol.environment, o)
-        θ = degrees(φ)
-        return "{:.0f} deg, {}".format(θ, needle(φ))
+        if o := conn.inventory.find(CompassItem):
+            return o.apply(conn)
+        else:
+            return "You do not have a compass."
+
+def invprint(i): # TODO
+    return ", ".join(map(lambda o: "[" + o.id + "] " + o.print(), i))
+
+@command('invlist', 'il')
+@player_only
+def invlist(conn):
+    if conn.ingame():
+        return invprint(conn.inventory)
+
+@command('invfind', 'if')
+@player_only
+def invfind(conn):
+    if conn.ingame():
+        for i in conn.get_available_inventory():
+            conn.send_chat(invprint(i))
+
+@command()
+@player_only
+def take(conn, ID):
+    if conn.ingame():
+        for i in conn.get_available_inventory():
+            if o := i[ID]:
+                i.remove(o)
+                conn.inventory.push(o)
+                conn.sendWeaponReload()
+
+                return
+
+@command()
+@player_only
+def drop(conn, ID):
+    if conn.ingame():
+        conn.drop(ID)
+
+@command('use', 'u')
+@player_only
+def use(conn, ID):
+    if conn.ingame():
+        if o := conn.inventory[ID]:
+            return o.apply(conn)
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):
@@ -319,8 +314,8 @@ def apply_script(protocol, connection, config):
             connection.on_connect(self)
 
         def on_reload_complete(self):
-            if not self.weapon_object.ammo.continuous:
-                self.send_chat(self.weapon_object.ammo.info())
+            if not self.weapon_object.magazine.continuous:
+                self.send_chat(self.weapon_object.magazine.info(self.inventory))
 
             connection.on_reload_complete(self)
 
