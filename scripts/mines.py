@@ -3,6 +3,7 @@ from pyspades.common import Vertex3
 from piqueserver.commands import command, player_only
 
 from milsim.types import TileEntity, Item
+from milsim.common import alive_only
 import milsim.blast as blast
 
 class Explosive(TileEntity):
@@ -55,18 +56,16 @@ class LandmineItem(Item):
             return "You can't place a mine so far away from yourself"
 
 @command('mine', 'm')
-@player_only
+@alive_only
 def set_mine(conn):
     """
     Puts a mine on the given block
     /mine
     """
-
-    if conn.ingame():
-        if o := conn.inventory.find(LandmineItem):
-            return o.apply(conn)
-        else:
-            return "You do not have mines"
+    if o := conn.inventory.find(LandmineItem):
+        return o.apply(conn)
+    else:
+        return "You do not have mines"
 
 @command('givemine', 'gm', admin_only = True)
 @player_only

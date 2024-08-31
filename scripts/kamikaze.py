@@ -36,7 +36,7 @@ class Boom:
         self.last  = -inf
 
     def alive(self):
-        return self.conn and self.conn.ingame()
+        return self.conn and self.conn.alive()
 
     def start(self, fuse):
         if self.defer:

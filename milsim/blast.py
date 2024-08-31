@@ -54,11 +54,10 @@ def explode(inner, outer, conn, pos):
         v = Vertex3(sin(α) * cos(β), sin(α) * sin(β), cos(α)) * speed
         conn.protocol.simulator.add(conn, pos, v, timestamp, Fragment())
 
-    for player in conn.protocol.players.values():
-        if player.ingame():
-            D = damage(player.world_object, pos, inner, outer)
-            if D > 0:
-                player.hit(
-                    D, limb = choice(player.body.keys()), venous = True,
-                    hit_by = conn, kill_type = GRENADE_KILL
-                )
+    for player in conn.protocol.living():
+        D = damage(player.world_object, pos, inner, outer)
+        if D > 0:
+            player.hit(
+                D, limb = choice(player.body.keys()), venous = True,
+                hit_by = conn, kill_type = GRENADE_KILL
+            )

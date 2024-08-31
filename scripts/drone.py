@@ -13,6 +13,7 @@ from pyspades.team import Team
 from piqueserver.commands import command, player_only, get_player, CommandError
 from piqueserver.config import config
 
+from milsim.common import alive_only
 import milsim.blast as blast
 
 section = config.section("drone")
@@ -127,7 +128,7 @@ class Drone:
             self.report("Don't see {}. Awaiting for further instructions".format(target.name))
             return self.free()
 
-        if not target.ingame():
+        if not target.alive():
             self.callback = reactor.callLater(drone_rate, self.ping)
             return
 
@@ -174,14 +175,12 @@ class Drone:
             return None
 
 @command('drone', 'd')
-@player_only
+@alive_only
 def drone(conn, nickname = None):
     """
     Commands the drone to follow the player
     /drone <player>
     """
-
-    if not conn.ingame(): return
 
     drone = conn.get_drone()
 

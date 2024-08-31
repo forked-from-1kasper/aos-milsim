@@ -130,16 +130,6 @@ def get_z(conn):
     x, y, _ = conn.world_object.position.get()
     return f"z = {conn.protocol.map.get_z(x, y)}"
 
-@command('position', 'pos')
-@player_only
-def position(conn):
-    """
-    Print the current position on the map
-    /position
-    """
-    if conn.ingame():
-        return str(conn.world_object.position)
-
 @command()
 @player_only
 def printcolor(conn):

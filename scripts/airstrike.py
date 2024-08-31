@@ -18,7 +18,7 @@ section = config.section("airstrike")
 
 airstrike_zoomv_time = section.option("zoomv_time", 2).get()
 airstrike_delay      = section.option("delay", 7 * 60).get()
-aitstrike_phase      = section.option("phase", 30).get()
+aitstrike_phase      = section.option("phase", 120).get()
 
 BOMBS_COUNT   = 7
 BOMBER_SPEED  = 10

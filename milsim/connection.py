@@ -65,7 +65,7 @@ class MilsimConnection:
         contained.reserve_ammo = self.weapon_object.magazine.reserved(self.inventory)
         self.send_contained(contained)
 
-    def ingame(self):
+    def alive(self):
         return self.team is not None and not self.team.spectator and \
                self.world_object is not None and not self.world_object.dead
 
@@ -190,7 +190,7 @@ class MilsimConnection:
         return False
 
     def take_flag(self):
-        if not self.ingame(): return
+        if not self.alive(): return
 
         flag = self.team.other.flag
 
@@ -412,7 +412,7 @@ class MilsimConnection:
 
     @register_packet_handler(loaders.BlockLine)
     def on_block_line_recieved(self, contained):
-        if not self.ingame():
+        if not self.alive():
             return
 
         if self.line_build_start_pos is None:

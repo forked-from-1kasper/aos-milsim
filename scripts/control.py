@@ -1,5 +1,5 @@
 from math import floor, fmod, acos, degrees
-from itertools import product
+from itertools import product, islice
 
 from piqueserver.commands import command, player_only
 from pyspades.common import Vertex3
@@ -18,18 +18,26 @@ def ppBodyPart(P):
     suffix = ite(P.venous, "*", "") + ite(P.arterial, "**", "")
     return f"{label}{suffix}: {P.hp:.2f}"
 
+@command('position', 'pos')
+@alive_only
+def position(conn):
+    """
+    Print the current position on the map
+    /position
+    """
+    return str(conn.world_object.position)
+
 @command()
-@player_only
+@alive_only
 def health(conn):
     """
     Report health status
     /health
     """
-    if conn.ingame():
-        return " ".join(map(ppBodyPart, conn.body.values()))
+    return " ".join(map(ppBodyPart, conn.body.values()))
 
 @command()
-@player_only
+@alive_only
 def weapon(conn):
     """
     Print remaining ammo status
@@ -39,43 +47,40 @@ def weapon(conn):
         return o.magazine.info(conn.inventory)
 
 @command('bandage', 'b')
-@player_only
+@alive_only
 def bandage(conn):
     """
     Put the bandage (used to stop venous bleeding)
     /b or /bandage
     """
-    if conn.ingame():
-        if o := conn.inventory.find(BandageItem):
-            return o.apply(conn)
-        else:
-            return "You do not have a bandage."
+    if o := conn.inventory.find(BandageItem):
+        return o.apply(conn)
+    else:
+        return "You do not have a bandage."
 
 @command('tourniquet', 't')
-@player_only
+@alive_only
 def tourniquet(conn):
     """
     Put the tourniquet (used to stop arterial bleeding)
     /t or /tourniquet
     """
-    if conn.ingame():
-        if o := conn.inventory.find(TourniquetItem):
-            return o.apply(conn)
-        else:
-            return "You do not have a tourniquet."
+    if o := conn.inventory.find(TourniquetItem):
+        return o.apply(conn)
+    else:
+        return "You do not have a tourniquet."
 
 @command('splint', 's')
-@player_only
+@alive_only
 def splint(conn):
     """
     Splint a broken limb
     /s or /splint
     """
-    if conn.ingame():
-        if o := conn.inventory.find(SplintItem):
-            return o.apply(conn)
-        else:
-            return "You do not have a splint."
+    if o := conn.inventory.find(SplintItem):
+        return o.apply(conn)
+    else:
+        return "You do not have a splint."
 
 def formatMicroseconds(T):
     if T <= 1e+3:
@@ -183,123 +188,127 @@ limbs = {
 }
 
 @command()
-@player_only
+@alive_only
 def fracture(conn, target = None):
     """
     Breaks the specified limb (useful for debug)
     /fracture
     """
-    if conn.ingame():
-        if limb := limbs.get(target):
-            conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
-        else:
-            return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
+    if limb := limbs.get(target):
+        conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
+    else:
+        return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
 
 @command()
-@player_only
+@alive_only
 def vein(conn, target = None):
     """
     Cuts a vein in the specified limb (useful for debug)
     /vein
     """
-    if conn.ingame():
-        if limb := limbs.get(target):
-            conn.body[limb].venous = True
-        else:
-            return "Usage: /vein (torso|head|arml|armr|legl|legr)"
+    if limb := limbs.get(target):
+        conn.body[limb].venous = True
+    else:
+        return "Usage: /vein (torso|head|arml|armr|legl|legr)"
 
 @command()
-@player_only
+@alive_only
 def artery(conn, target = None):
     """
     Cuts an artery in the specified limb (useful for debug)
     /artery
     """
-    if conn.ingame():
-        if limb := limbs.get(target):
-            conn.body[limb].arterial = True
-        else:
-            return "Usage: /artery (torso|head|arml|armr|legl|legr)"
+    if limb := limbs.get(target):
+        conn.body[limb].arterial = True
+    else:
+        return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
 @command('rangefinder', 'rf')
-@player_only
+@alive_only
 def rangefinder(conn):
     """
     Measures the distance between the player and a given point
     /rangefinder
     """
-    if conn.ingame():
-        if o := conn.inventory.find(RangefinderItem):
-            return o.apply(conn)
-        else:
-            return "You do not have a rangefinder."
+    if o := conn.inventory.find(RangefinderItem):
+        return o.apply(conn)
+    else:
+        return "You do not have a rangefinder."
 
 @command()
-@player_only
+@alive_only
 def protractor(conn):
     """
     Measures the angle between the player and two specified points
     /protractor
     """
-    if conn.ingame():
-        if o := conn.inventory.find(ProtractorItem):
-            return o.apply(conn)
-        else:
-            return "You do not have a protractor."
+    if o := conn.inventory.find(ProtractorItem):
+        return o.apply(conn)
+    else:
+        return "You do not have a protractor."
 
 @command()
-@player_only
+@alive_only
 def compass(conn):
     """
     Prints the current azimuth
     /compass
     """
-    if conn.ingame():
-        if o := conn.inventory.find(CompassItem):
-            return o.apply(conn)
-        else:
-            return "You do not have a compass."
+    if o := conn.inventory.find(CompassItem):
+        return o.apply(conn)
+    else:
+        return "You do not have a compass."
+
+@command()
+@alive_only
+def packload(conn):
+    L = conn.packload()
+    return f"{L:.3f} kg"
 
 def invprint(i): # TODO
     return ", ".join(map(lambda o: "[" + o.id + "] " + o.print(), i))
 
 @command('invlist', 'il')
-@player_only
-def invlist(conn):
-    if conn.ingame():
-        return invprint(conn.inventory)
+@alive_only
+def invlist(conn, nskip = 1):
+    nskip = int(nskip)
+
+    it = islice(conn.inventory, 3 * (nskip - 1), 3 * nskip)
+    return invprint(it)
+
+def available(player):
+    for i in player.get_available_inventory():
+        yield from i
 
 @command('invfind', 'if')
-@player_only
-def invfind(conn):
-    if conn.ingame():
-        for i in conn.get_available_inventory():
-            conn.send_chat(invprint(i))
+@alive_only
+def invfind(conn, nskip = 1):
+    nskip = int(nskip)
+
+    it = islice(available(conn), 3 * (nskip - 1), 3 * nskip)
+    return invprint(it)
 
 @command()
-@player_only
+@alive_only
 def take(conn, ID):
-    if conn.ingame():
-        for i in conn.get_available_inventory():
-            if o := i[ID]:
-                i.remove(o)
-                conn.inventory.push(o)
-                conn.sendWeaponReload()
+    for i in conn.get_available_inventory():
+        if o := i[ID]:
+            i.remove(o)
+            conn.inventory.push(o)
+            conn.sendWeaponReload()
 
-                return
+            return
 
 @command()
-@player_only
+@alive_only
 def drop(conn, ID):
-    if conn.ingame():
-        conn.drop(ID)
+    conn.drop(ID)
 
 @command('use', 'u')
-@player_only
+@alive_only
 def use(conn, ID):
-    if conn.ingame():
-        if o := conn.inventory[ID]:
-            return o.apply(conn)
+    if o := conn.inventory[ID]:
+        return o.apply(conn)
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):

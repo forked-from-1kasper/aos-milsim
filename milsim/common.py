@@ -1,10 +1,24 @@
 from math import degrees, acos, atan, atan2, tau, floor, fmod
 from itertools import product
+import functools
+
+from piqueserver.commands import CommandError
 
 from milsim.simulator import toMeters
 from milsim.types import *
 
 from milsim.constants import Pound, Yard, Inch
+
+def alive_only(func):
+    @functools.wraps(func)
+    def _decorated(connection, *w, **kw):
+        if connection not in connection.protocol.players.values():
+            raise CommandError("only players can use this command")
+
+        if connection.alive():
+            return func(connection, *w, **kw)
+
+    return _decorated
 
 toMeters3 = lambda v: Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 

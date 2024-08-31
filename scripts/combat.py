@@ -90,42 +90,41 @@ def apply_script(protocol, connection, config):
 
             t = reactor.seconds()
 
-            for player in self.players.values():
-                if player.ingame():
-                    dt = t - player.last_hp_update
+            for player in self.living():
+                dt = t - player.last_hp_update
 
-                    player.body.update(dt)
+                player.body.update(dt)
 
-                    if player.moving():
-                        for leg in player.body.legs():
-                            if leg.fractured:
-                                if player.world_object.sprint:
-                                    leg.hit(leg.sprint_damage_rate * dt)
-                                elif not leg.splint:
-                                    leg.hit(leg.walk_damage_rate * dt)
+                if player.moving():
+                    for leg in player.body.legs():
+                        if leg.fractured:
+                            if player.world_object.sprint:
+                                leg.hit(leg.sprint_damage_rate * dt)
+                            elif not leg.splint:
+                                leg.hit(leg.walk_damage_rate * dt)
 
-                    for arm in player.body.arms():
-                        if player.world_object.primary_fire and arm.fractured:
-                            arm.hit(arm.action_damage_rate * dt)
+                for arm in player.body.arms():
+                    if player.world_object.primary_fire and arm.fractured:
+                        arm.hit(arm.action_damage_rate * dt)
 
-                    player.weapon_object.update(t)
+                player.weapon_object.update(t)
 
-                    if player.item_shown(t):
-                        if player.world_object.primary_fire:
-                            player.tool_object.on_lmb_hold(t, dt)
+                if player.item_shown(t):
+                    if player.world_object.primary_fire:
+                        player.tool_object.on_lmb_hold(t, dt)
 
-                        if player.world_object.secondary_fire:
-                            player.tool_object.on_rmb_hold(t, dt)
+                    if player.world_object.secondary_fire:
+                        player.tool_object.on_rmb_hold(t, dt)
 
-                        if player.world_object.sneak:
-                            player.tool_object.on_sneak_hold(t, dt)
+                    if player.world_object.sneak:
+                        player.tool_object.on_sneak_hold(t, dt)
 
-                    hp = player.body.average()
-                    if player.hp != hp:
-                        player.set_hp(hp, kill_type = MELEE_KILL)
+                hp = player.body.average()
+                if player.hp != hp:
+                    player.set_hp(hp, kill_type = MELEE_KILL)
 
-                    if not self.environment.size.inside(player.world_object.position):
-                        player.kill()
+                if not self.environment.size.inside(player.world_object.position):
+                    player.kill()
 
                 player.last_hp_update = t
 

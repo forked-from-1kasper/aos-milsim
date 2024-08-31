@@ -115,6 +115,11 @@ class MilsimProtocol:
         if weapon == SHOTGUN_WEAPON:
             return self.shotgun
 
+    def living(self):
+        for player in self.players.values():
+            if player.alive():
+                yield player
+
     def take_player(self, player_id):
         if player_id not in self.players:
             ids = list(self.players.keys())
