@@ -271,6 +271,15 @@ class MilsimConnection:
                 self.protocol.broadcast_contained(contained, save = True)
                 if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
 
+    def on_refill(self):
+        for k in range(3):
+            self.inventory.append(BandageItem().mark_renewable())
+
+        for k in range(2):
+            self.inventory.append(TourniquetItem().mark_renewable())
+
+        self.inventory.append(SplintItem().mark_renewable())
+
     def refill(self, local = False):
         for P in self.body.values():
             if P.fractured:
@@ -283,16 +292,8 @@ class MilsimConnection:
         self.blocks   = 50
 
         self.inventory.remove_if(lambda o: not o.persistent)
-
-        for k in range(3):
-            self.inventory.push(BandageItem()).mark_renewable()
-
-        for k in range(2):
-            self.inventory.push(TourniquetItem()).mark_renewable()
-
-        self.inventory.push(SplintItem()).mark_renewable()
-
         self.weapon_object.refill()
+        self.on_refill()
 
         if not local:
             self.send_contained(loaders.Restock())

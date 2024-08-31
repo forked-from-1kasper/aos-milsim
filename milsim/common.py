@@ -81,8 +81,9 @@ class Kettlebell(Item):
         Item.__init__(self)
         self.mass = mass
 
-    def print(self):
-        return f"Kettlebell ({self.mass:.3f} kg)"
+    @property
+    def name(self):
+        return f"Kettlebell ({self.mass:.0f} kg)"
 
 class BandageItem(Item):
     name = "Bandage"

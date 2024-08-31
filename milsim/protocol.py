@@ -19,13 +19,12 @@ from milsim.common import *
 class DetachableMagazineItem:
     def restock(self):
         self.magazine = self.default_magazine()
-
         self.magazine.mark_renewable()
 
     def refill(self):
         i = self.player.inventory
         for k in range(self.default_magazine_count):
-            i.push(self.default_magazine()).mark_renewable()
+            i.append(self.default_magazine().mark_renewable())
 
 class IntegralMagazineItem:
     def restock(self):
@@ -37,11 +36,11 @@ class IntegralMagazineItem:
 
     def refill(self):
         i = self.player.inventory
-        i.push(CartridgeBox(self.default_cartridge, self.default_reserve)).mark_renewable()
+        i.append(CartridgeBox(self.default_cartridge, self.default_reserve).mark_renewable())
 
 class RifleMagazine(BoxMagazine):
     _mass     = 0.227
-    name      = "AA762R02"
+    _name     = "AA762R02"
     capacity  = 10
     cartridge = R762x54mm
 
@@ -55,7 +54,7 @@ class Rifle(DetachableMagazineItem):
 
 class SMGMagazine(BoxMagazine):
     _mass     = 0.265
-    name      = "HK251770"
+    _name     = "HK251770"
     capacity  = 30
     cartridge = Parabellum
 

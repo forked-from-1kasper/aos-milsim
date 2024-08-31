@@ -53,21 +53,28 @@ def apply_script(protocol, connection, config):
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
                 for k in range(50):
-                    i.push(GrenadeLauncher())
-                    i.push(GrenadeItem())
-                    i.push(GrenadeItem())
-                    i.push(GrenadeItem())
-                    i.push(FlashbangItem())
-                    i.push(CompassItem())
-                    i.push(ProtractorItem())
-                    i.push(RangefinderItem())
+                    i.append(
+                        GrenadeLauncher(),
+                        GrenadeItem(),
+                        GrenadeItem(),
+                        GrenadeItem(),
+                        FlashbangItem(),
+                        CompassItem(),
+                        ProtractorItem(),
+                        RangefinderItem(),
+                        CartridgeBox(Bullet, 60),
+                        CartridgeBox(Buckshot1, 60),
+                        CartridgeBox(Buckshot2, 60)
+                    )
 
-                i.push(Kettlebell(1))
-                i.push(Kettlebell(5))
-                i.push(Kettlebell(10))
-                i.push(Kettlebell(15))
-                i.push(Kettlebell(30))
-                i.push(Kettlebell(50))
+                i.append(
+                    Kettlebell(1),
+                    Kettlebell(5),
+                    Kettlebell(10),
+                    Kettlebell(15),
+                    Kettlebell(30),
+                    Kettlebell(50)
+                )
 
             t1 = monotonic()
 

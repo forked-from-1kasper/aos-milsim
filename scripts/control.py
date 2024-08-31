@@ -265,28 +265,60 @@ def packload(conn):
     L = conn.packload()
     return f"{L:.3f} kg"
 
-def invprint(i): # TODO
-    return ", ".join(map(lambda o: "[" + o.id + "] " + o.print(), i))
+def format_item(o):
+    if o.persistent:
+        return "[{}] {}".format(o.id, o.name)
+    else:
+        return "{{{}}} {}".format(o.id, o.name)
 
-@command('invlist', 'il')
+def format_items(pagenum, it):
+    return "{}) {}".format(pagenum, ", ".join(map(format_item, it)))
+
+def find(target, it):
+    for i, o in enumerate(it):
+        if target.lower() in o.name.lower():
+            return i // 3 + 1
+
+@command('backpack', 'bp')
 @alive_only
-def invlist(conn, nskip = 1):
-    nskip = int(nskip)
+def c_backpack(conn, argval = None):
+    if argval is None:
+        page = 1
+    elif argval.isdigit():
+        page = int(argval)
+    else:
+        page = find(argval, conn.inventory)
 
-    it = islice(conn.inventory, 3 * (nskip - 1), 3 * nskip)
-    return invprint(it)
+    it = islice(conn.inventory, 3 * (page - 1), 3 * page)
+    return format_items(page, it)
 
 def available(player):
     for i in player.get_available_inventory():
         yield from i
 
-@command('invfind', 'if')
-@alive_only
-def invfind(conn, nskip = 1):
-    nskip = int(nskip)
+def succpage(player, argval, direction):
+    if argval is None:
+        return max(1, player.page + direction)
+    elif argval.isdigit():
+        return max(1, int(argval))
+    else:
+        return find(argval, available(player)) or max(1, player.page)
 
-    it = islice(available(conn), 3 * (nskip - 1), 3 * nskip)
-    return invprint(it)
+@command('next', 'n')
+@alive_only
+def c_next(conn, argval = None):
+    conn.page = succpage(conn, argval, +1)
+
+    it = islice(available(conn), 3 * (conn.page - 1), 3 * conn.page)
+    return format_items(conn.page, it)
+
+@command('prev', 'p')
+@alive_only
+def c_prev(conn, argval = None):
+    conn.page = succpage(conn, argval, -1)
+
+    it = islice(available(conn), 3 * (conn.page - 1), 3 * conn.page)
+    return format_items(conn.page, it)
 
 @command()
 @alive_only
@@ -313,7 +345,12 @@ def use(conn, ID):
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):
         def __init__(self, *w, **kw):
+            self.page = 0
             connection.__init__(self, *w, **kw)
+
+        def on_position_update(self):
+            self.page = 0
+            connection.on_position_update(self)
 
         def on_reload_complete(self):
             if not self.weapon_object.magazine.continuous:

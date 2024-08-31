@@ -88,13 +88,14 @@ def apply_script(protocol, connection, config):
             protocol.on_map_change(self, M)
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
-                i.push(LandmineItem())
+                for k in range(30):
+                    i.append(LandmineItem())
 
     class MineConnection(connection):
-        def on_spawn(self, pos):
-            connection.on_spawn(self, pos)
+        def on_refill(self):
+            connection.on_refill(self)
 
             for k in range(2):
-                self.inventory.push(LandmineItem()).mark_renewable()
+                self.inventory.append(LandmineItem().mark_renewable())
 
     return MineProtocol, MineConnection

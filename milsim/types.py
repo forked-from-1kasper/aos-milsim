@@ -364,14 +364,17 @@ class Item:
     def mark_renewable(self):
         self.persistent = False
 
+        return self
+
     def apply(self, player):
         pass
 
     def mass(self):
         raise NotImplementedError
 
-    def print(self):
-        return self.name
+    @property
+    def name(self):
+        raise NotImplementedError
 
 class CartridgeBox(Item):
     def __init__(self, o, capacity = 0):
@@ -389,7 +392,8 @@ class CartridgeBox(Item):
     def mass(self):
         return self.capacity * self.object.totmass
 
-    def print(self):
+    @property
+    def name(self):
         return f"{self.object.name} Box ({self.capacity})"
 
 class Inventory:
@@ -402,19 +406,11 @@ class Inventory:
     def __getitem__(self, ID):
         return next(filter(lambda x: x.id == ID.upper(), self.data), None)
 
-    def find(self, typ):
-        return next(filter(lambda x: isinstance(x, typ), self.data), None)
-
     def remove(self, o):
         self.data.remove(o)
 
     def remove_if(self, pred):
         self.data = deque(filter(lambda o: not pred(o), self.data))
-
-    def pop(self, typ):
-        if o := self.find(typ):
-            self.data.remove(o)
-            return o
 
     def clear(self):
         self.data.clear()
@@ -423,11 +419,17 @@ class Inventory:
         self.data.extend(it)
 
     def push(self, o):
-        self.data.append(o)
+        self.data.appendleft(o)
         return o
+
+    def append(self, *w):
+        self.data.extend(w)
 
     def empty(self):
         return not bool(self.data)
+
+    def find(self, typ):
+        return next(filter(lambda o: isinstance(o, typ), self.data), None)
 
 class ItemEntity(Inventory):
     def __init__(self, protocol, x, y, z):
@@ -449,12 +451,6 @@ class ItemEntity(Inventory):
     def remove_if(self, pred):
         Inventory.remove_if(self, pred)
         self.remove_if_empty()
-
-    def pop(self, typ):
-        o = Inventory.remove(self, typ)
-        self.remove_if_empty()
-
-        return o
 
     def clear(self, pred):
         Inventory.clear(self)
@@ -491,8 +487,11 @@ class BoxMagazine(Magazine):
         self.restock()
 
     def reload(self, i):
-        if succ := i.pop(type(self)):
-            i.push(self) # TODO: skip empty magazines
+        it = filter(lambda o: isinstance(o, type(self)) and o.current() > 0, i)
+
+        if succ := next(it, None):
+            i.remove(succ)
+            i.append(self)
             return succ, False
 
         return self, False
@@ -522,8 +521,9 @@ class BoxMagazine(Magazine):
             map(lambda o: str(o.current()), res)
         ))
 
-    def print(self):
-        return f"{self.name} ({self._current})"
+    @property
+    def name(self):
+        return f"{self._name} ({self._current})"
 
 class TubularMagazine(Magazine):
     continuous = True
@@ -534,16 +534,6 @@ class TubularMagazine(Magazine):
 
         self.container = deque()
 
-    def find(self, i):
-        it = filter(
-            lambda o: isinstance(o, CartridgeBox) and \
-                      isinstance(o.object, self.cartridge) and \
-                      o.capacity > 0,
-            i
-        )
-
-        return next(it, None)
-
     def push(self, o):
         self.container.appendleft(o)
 
@@ -551,7 +541,14 @@ class TubularMagazine(Magazine):
         if self.capacity <= self.current():
             return self, False
 
-        if o := self.find(i):
+        it = filter(
+            lambda o: isinstance(o, CartridgeBox) and \
+                      isinstance(o.object, self.cartridge) and \
+                      o.capacity > 0,
+            i
+        )
+
+        if o := next(it, None):
             self.push(o.pop())
             return self, True
 
