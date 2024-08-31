@@ -236,8 +236,12 @@ def c_eval(conn, *w):
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
-            self.chat_limiter._seconds = 1
             self.lastmail = -inf
+
+            self.chat_limiter._seconds = 1
+
+            self.pos1 = None
+            self.pos2 = None
 
             connection.on_connect(self)
 

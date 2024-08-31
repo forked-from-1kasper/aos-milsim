@@ -314,13 +314,6 @@ def apply_script(protocol, connection, config):
     class ControlConnection(connection):
         def __init__(self, *w, **kw):
             connection.__init__(self, *w, **kw)
-            self.protractor = None
-
-        def on_connect(self):
-            self.pos1 = None
-            self.pos2 = None
-
-            connection.on_connect(self)
 
         def on_reload_complete(self):
             if not self.weapon_object.magazine.continuous:

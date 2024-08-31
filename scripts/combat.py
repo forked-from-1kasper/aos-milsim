@@ -52,14 +52,7 @@ def apply_script(protocol, connection, config):
             protocol.on_map_change(self, M)
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
-                i.push(Kettlebell(1))
-                i.push(Kettlebell(5))
-                i.push(Kettlebell(10))
-                i.push(Kettlebell(15))
-                i.push(Kettlebell(30))
-                i.push(Kettlebell(50))
-
-                for k in range(10):
+                for k in range(50):
                     i.push(GrenadeLauncher())
                     i.push(GrenadeItem())
                     i.push(GrenadeItem())
@@ -68,6 +61,13 @@ def apply_script(protocol, connection, config):
                     i.push(CompassItem())
                     i.push(ProtractorItem())
                     i.push(RangefinderItem())
+
+                i.push(Kettlebell(1))
+                i.push(Kettlebell(5))
+                i.push(Kettlebell(10))
+                i.push(Kettlebell(15))
+                i.push(Kettlebell(30))
+                i.push(Kettlebell(50))
 
             t1 = monotonic()
 
