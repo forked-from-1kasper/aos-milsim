@@ -20,6 +20,14 @@ def alive_only(func):
 
     return _decorated
 
+def apply_item(klass, player, errmsg = None):
+    it = filter(lambda o: isinstance(o, klass), player.inventory)
+
+    if o := next(it, None):
+        return o.apply(player)
+    else:
+        return errmsg
+
 toMeters3 = lambda v: Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 
 mm    = lambda s: s / 1000

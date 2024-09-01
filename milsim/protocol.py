@@ -53,13 +53,13 @@ class Rifle(DetachableMagazineItem):
     default_magazine_count = 6
 
 class SMGMagazine(BoxMagazine):
-    _mass     = 0.265
-    _name     = "HK251770"
+    _mass     = 0.160
+    _name     = "MP5MAG30"
     capacity  = 30
     cartridge = Parabellum
 
 class SMG(DetachableMagazineItem):
-    _mass                  = 3.850
+    _mass                  = 3.600
     name                   = "SMG"
     delay                  = 0.11
     reload_time            = 2.5

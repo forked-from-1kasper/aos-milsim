@@ -2,8 +2,8 @@ from pyspades.common import Vertex3
 
 from piqueserver.commands import command, player_only
 
+from milsim.common import alive_only, apply_item
 from milsim.types import TileEntity, Item
-from milsim.common import alive_only
 import milsim.blast as blast
 
 class Explosive(TileEntity):
@@ -57,15 +57,12 @@ class LandmineItem(Item):
 
 @command('mine', 'm')
 @alive_only
-def set_mine(conn):
+def use_landmine(conn):
     """
     Puts a mine on the given block
     /mine
     """
-    if o := conn.inventory.find(LandmineItem):
-        return o.apply(conn)
-    else:
-        return "You do not have mines"
+    return apply_item(LandmineItem, conn, errmsg = "You do not have mines")
 
 @command('givemine', 'gm', admin_only = True)
 @player_only
@@ -78,7 +75,7 @@ def apply_script(protocol, connection, config):
         def on_rmb_press(self):
             protocol.GrenadeTool.on_rmb_press(self)
 
-            if reply := set_mine(self.player):
+            if reply := use_landmine(self.player):
                 self.player.send_chat(reply)
 
     class MineProtocol(protocol):

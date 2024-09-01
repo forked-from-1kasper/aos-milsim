@@ -121,7 +121,7 @@ class ABCWeapon(Tool):
                 self.magazine, self.reloading = self.magazine.reload(self.player.inventory)
 
                 self.player.on_reload_complete()
-                self.player.sendWeaponReload()
+                self.player.sendWeaponReloadPacket()
 
     def on_sneak_press(self):
         if self.player.world_object.secondary_fire:
@@ -151,7 +151,7 @@ class ABCWeapon(Tool):
             self.reloading = False
 
             self.player.on_reload_complete()
-            self.player.sendWeaponReload()
+            self.player.sendWeaponReloadPacket()
 
     def on_lmb_hold(self, t, dt):
         P = self.is_empty()
@@ -175,7 +175,7 @@ class ABCWeapon(Tool):
                 v = n * gauss(mu = cartridge.muzzle, sigma = cartridge.muzzle * cartridge.deviation)
                 sim.add(self.player, r, u + cone(v, cartridge.grouping), t, cartridge)
 
-            self.player.sendWeaponReload()
+            self.player.sendWeaponReloadPacket()
 
     def reset(self):
         if o := self.item_underbarrel:

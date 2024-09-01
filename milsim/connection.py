@@ -58,7 +58,7 @@ class MilsimConnection:
 
         return contained
 
-    def sendWeaponReload(self):
+    def sendWeaponReloadPacket(self):
         contained              = loaders.WeaponReload()
         contained.player_id    = self.player_id
         contained.clip_ammo    = self.weapon_object.magazine.current()
@@ -132,7 +132,7 @@ class MilsimConnection:
                 self.get_drop_inventory().push(o)
 
             self.inventory.remove(o)
-            self.sendWeaponReload()
+            self.sendWeaponReloadPacket()
 
     def drop_all(self):
         self.get_drop_inventory().extend(
@@ -297,7 +297,7 @@ class MilsimConnection:
 
         if not local:
             self.send_contained(loaders.Restock())
-            self.sendWeaponReload()
+            self.sendWeaponReloadPacket()
 
             hp = self.body.average()
             if hp != 100: # loaders.Restock() reverts hp to 100

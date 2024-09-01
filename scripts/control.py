@@ -46,42 +46,6 @@ def weapon(conn):
     if o := conn.weapon_object:
         return o.magazine.info(conn.inventory)
 
-@command('bandage', 'b')
-@alive_only
-def bandage(conn):
-    """
-    Put the bandage (used to stop venous bleeding)
-    /b or /bandage
-    """
-    if o := conn.inventory.find(BandageItem):
-        return o.apply(conn)
-    else:
-        return "You do not have a bandage."
-
-@command('tourniquet', 't')
-@alive_only
-def tourniquet(conn):
-    """
-    Put the tourniquet (used to stop arterial bleeding)
-    /t or /tourniquet
-    """
-    if o := conn.inventory.find(TourniquetItem):
-        return o.apply(conn)
-    else:
-        return "You do not have a tourniquet."
-
-@command('splint', 's')
-@alive_only
-def splint(conn):
-    """
-    Splint a broken limb
-    /s or /splint
-    """
-    if o := conn.inventory.find(SplintItem):
-        return o.apply(conn)
-    else:
-        return "You do not have a splint."
-
 def formatMicroseconds(T):
     if T <= 1e+3:
         return "{:.2f} us".format(T)
@@ -223,6 +187,33 @@ def artery(conn, target = None):
     else:
         return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
+@command('bandage', 'b')
+@alive_only
+def bandage(conn):
+    """
+    Put the bandage (used to stop venous bleeding)
+    /b or /bandage
+    """
+    return apply_item(BandageItem, conn, errmsg = "You do not have a bandage")
+
+@command('tourniquet', 't')
+@alive_only
+def tourniquet(conn):
+    """
+    Put the tourniquet (used to stop arterial bleeding)
+    /t or /tourniquet
+    """
+    return apply_item(TourniquetItem, conn, errmsg = "You do not have a tourniquet")
+
+@command('splint', 's')
+@alive_only
+def splint(conn):
+    """
+    Splint a broken limb
+    /s or /splint
+    """
+    return apply_item(SplintItem, conn, errmsg = "You do not have a splint")
+
 @command('rangefinder', 'rf')
 @alive_only
 def rangefinder(conn):
@@ -230,10 +221,7 @@ def rangefinder(conn):
     Measures the distance between the player and a given point
     /rangefinder
     """
-    if o := conn.inventory.find(RangefinderItem):
-        return o.apply(conn)
-    else:
-        return "You do not have a rangefinder."
+    return apply_item(RangefinderItem, conn, errmsg = "You do not have a rangefinder")
 
 @command()
 @alive_only
@@ -242,10 +230,7 @@ def protractor(conn):
     Measures the angle between the player and two specified points
     /protractor
     """
-    if o := conn.inventory.find(ProtractorItem):
-        return o.apply(conn)
-    else:
-        return "You do not have a protractor."
+    return apply_item(ProtractorItem, conn, errmsg = "You do not have a protractor")
 
 @command()
 @alive_only
@@ -254,10 +239,7 @@ def compass(conn):
     Prints the current azimuth
     /compass
     """
-    if o := conn.inventory.find(CompassItem):
-        return o.apply(conn)
-    else:
-        return "You do not have a compass."
+    return apply_item(CompassItem, conn, errmsg = "You do not have a compass")
 
 @command()
 @alive_only
@@ -327,7 +309,7 @@ def take(conn, ID):
         if o := i[ID]:
             i.remove(o)
             conn.inventory.push(o)
-            conn.sendWeaponReload()
+            conn.sendWeaponReloadPacket()
 
             return
 

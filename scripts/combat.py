@@ -186,7 +186,7 @@ def apply_script(protocol, connection, config):
             self.body.reset()
             self.hp = 100
 
-            self.sendWeaponReload()
+            self.sendWeaponReloadPacket()
 
             connection.on_spawn(self, pos)
 

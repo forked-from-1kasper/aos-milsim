@@ -342,19 +342,18 @@ class Body:
                 P.hit(P.venous_rate * dt)
 
 def digits(n, base = 10):
-    if n == 0:
-        yield 0
     while n > 0:
-        yield n % base
-        n //= base
+        rem = (n - 1) % base
+        n = (n - rem) // base
+        yield rem
 
 from string import ascii_uppercase
-
 def encode(n, key = ascii_uppercase):
-    return "".join(map(key.__getitem__, digits(n, base = len(key))))
+    ds = digits(n, base = len(key))
+    return "".join(map(key.__getitem__, ds))[::-1]
 
 from itertools import count
-itemidpool = map(encode, count())
+itemidpool = map(encode, count(1))
 
 class Item:
     def __init__(self):
@@ -427,9 +426,6 @@ class Inventory:
 
     def empty(self):
         return not bool(self.data)
-
-    def find(self, typ):
-        return next(filter(lambda o: isinstance(o, typ), self.data), None)
 
 class ItemEntity(Inventory):
     def __init__(self, protocol, x, y, z):
