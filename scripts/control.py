@@ -244,8 +244,7 @@ def compass(conn):
 @command()
 @alive_only
 def packload(conn):
-    L = conn.packload()
-    return f"{L:.3f} kg"
+    return "{:.3f} kg".format(conn.packload())
 
 def format_item(o):
     if o.persistent:
@@ -253,58 +252,72 @@ def format_item(o):
     else:
         return "{{{}}} {}".format(o.id, o.name)
 
-def format_items(pagenum, it):
+items_per_page = 3
+
+def format_page(pagenum, i):
+    it = islice(i, items_per_page * (pagenum - 1), items_per_page * pagenum)
     return "{}) {}".format(pagenum, ", ".join(map(format_item, it)))
 
-def find(target, it):
+def query(target, it):
     for i, o in enumerate(it):
         if target.lower() in o.name.lower():
-            return i // 3 + 1
-
-@command('backpack', 'bp')
-@alive_only
-def c_backpack(conn, argval = None):
-    if argval is None:
-        page = 1
-    elif argval.isdigit():
-        page = int(argval)
-    else:
-        page = find(argval, conn.inventory)
-
-    it = islice(conn.inventory, 3 * (page - 1), 3 * page)
-    return format_items(page, it)
+            return i // items_per_page + 1
 
 def available(player):
     for i in player.get_available_inventory():
         yield from i
 
-def succpage(player, argval, direction):
+def scroll(player, argval = None, direction = 0):
     if argval is None:
         return max(1, player.page + direction)
     elif argval.isdigit():
         return max(1, int(argval))
     else:
-        return find(argval, available(player)) or max(1, player.page)
+        return query(argval, available(player)) or max(1, player.page)
 
 @command('next', 'n')
 @alive_only
 def c_next(conn, argval = None):
-    conn.page = succpage(conn, argval, +1)
-
-    it = islice(available(conn), 3 * (conn.page - 1), 3 * conn.page)
-    return format_items(conn.page, it)
+    """
+    Scrolls to the next or specified page
+    /n [page number | search query] or /next
+    """
+    conn.page = scroll(conn, argval, +1)
+    return format_page(conn.page, available(conn))
 
 @command('prev', 'p')
 @alive_only
 def c_prev(conn, argval = None):
-    conn.page = succpage(conn, argval, -1)
+    """
+    Scrolls to the previous or specified page
+    /p [page number | search qeury] or /prev
+    """
+    conn.page = scroll(conn, argval, -1)
+    return format_page(conn.page, available(conn))
 
-    it = islice(available(conn), 3 * (conn.page - 1), 3 * conn.page)
-    return format_items(conn.page, it)
+@command('backpack', 'bp')
+@alive_only
+def c_backpack(conn, argval = None):
+    """
+    Prints specified page in the player's inventory
+    /bp [page number | search query] or /backpack
+    """
+    if argval is None:
+        page = 1
+    elif argval.isdigit():
+        page = int(argval)
+    else:
+        page = query(argval, conn.inventory)
+
+    return format_page(page, conn.inventory)
 
 @command()
 @alive_only
 def take(conn, ID):
+    """
+    Takes an item with the given ID to the inventory
+    /take (ID)
+    """
     for i in conn.get_available_inventory():
         if o := i[ID]:
             i.remove(o)
@@ -316,22 +329,39 @@ def take(conn, ID):
 @command()
 @alive_only
 def drop(conn, ID):
+    """
+    Drops an item with the given ID from the inventory
+    /drop (ID)
+    """
     conn.drop(ID)
 
 @command('use', 'u')
 @alive_only
 def use(conn, ID):
+    """
+    Uses an item from the inventory with the given ID
+    /u (ID) or /use
+    """
     if o := conn.inventory[ID]:
         return o.apply(conn)
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):
         def __init__(self, *w, **kw):
+            self.previous_grid_position = None
             self.page = 0
+
             connection.__init__(self, *w, **kw)
 
         def on_position_update(self):
-            self.page = 0
+            r = self.world_object.position
+            grid_position = (floor(r.x), floor(r.y), floor(r.z))
+
+            if grid_position != self.previous_grid_position:
+                self.page = 0
+
+            self.previous_grid_position = grid_position
+
             connection.on_position_update(self)
 
         def on_reload_complete(self):
