@@ -12,7 +12,7 @@ from pyspades.common import Vertex3
 from piqueserver.commands import command, player_only
 from piqueserver.config import config
 
-import milsim.blast as blast
+from milsim.blast import sendGrenadePacket, explode
 
 BOOM_GUARANTEED_KILL_RADIUS = 17
 BOOM_RADIUS = 40
@@ -78,13 +78,13 @@ class Boom:
             self.conn.protocol.broadcast_contained(contained)
 
         r = self.conn.world_object.position
-        blast.effect(
+        sendGrenadePacket(
             self.conn.protocol, self.conn.player_id,
             r - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0
         )
 
         self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3))
-        blast.explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
+        explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
 
 @command('boom', 'a')
 @player_only

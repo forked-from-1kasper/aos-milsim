@@ -4,7 +4,7 @@ from piqueserver.commands import command, player_only
 
 from milsim.common import alive_only, apply_item
 from milsim.types import TileEntity, Item
-import milsim.blast as blast
+from milsim.blast import sendGrenadePacket
 
 class Explosive(TileEntity):
     Δx = +0.5
@@ -23,7 +23,7 @@ class Explosive(TileEntity):
             loc = Vertex3(x + self.Δx, y + self.Δy, z + self.Δz)
 
             player.grenade_explode(loc)
-            blast.effect(self.protocol, player.player_id, loc, Vertex3(0, 0, 0), 0)
+            sendGrenadePacket(self.protocol, player.player_id, loc, Vertex3(0, 0, 0), 0)
 
 class Landmine(Explosive):
     Δz = -1.0

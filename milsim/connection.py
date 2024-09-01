@@ -13,9 +13,9 @@ from pyspades.common import Vertex3
 from pyspades.constants import *
 
 from milsim.common import grenade_zone, TNT, gram, BandageItem, TourniquetItem, SplintItem
+from milsim.blast import sendGrenadePacket, explode, flashbang_effect
 from milsim.types import Inventory, Body, randbool, logistic
 from milsim.constants import Limb
-import milsim.blast as blast
 
 GRENADE_LETHAL_RADIUS = 4
 GRENADE_SAFETY_RADIUS = 30
@@ -235,7 +235,7 @@ class MilsimConnection:
 
     def grenade_explode(self, r):
         self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z))
-        blast.explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
+        explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
 
     def grenade_exploded(self, grenade):
         if self.name is None:
@@ -247,16 +247,9 @@ class MilsimConnection:
         if self.name is None:
             return
 
-        for i in range(50):
-            # TODO: remove callLater
-            r = grenade.position.copy()
-            r.x += uniform(-3.0, 3.0)
-            r.y += uniform(-3.0, 3.0)
-            r.z += uniform(-3.0, 3.0)
-
-            reactor.callLater(uniform(0.1, 7.0),
-                blast.effect, self.protocol, self.player_id, r, Vertex3(0, 0, 0), 0.0
-            )
+        reactor.callInThread(
+            flashbang_effect, self.protocol, self.player_id, grenade.position.copy()
+        )
 
     def set_weapon(self, weapon, local = False, no_kill = False):
         if weapon_class := self.protocol.get_weapon(weapon):
@@ -272,13 +265,14 @@ class MilsimConnection:
                 if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
 
     def on_refill(self):
-        for k in range(3):
-            self.inventory.append(BandageItem().mark_renewable())
-
-        for k in range(2):
-            self.inventory.append(TourniquetItem().mark_renewable())
-
-        self.inventory.append(SplintItem().mark_renewable())
+        self.inventory.append(
+            BandageItem().mark_renewable(),
+            BandageItem().mark_renewable(),
+            BandageItem().mark_renewable(),
+            TourniquetItem().mark_renewable(),
+            TourniquetItem().mark_renewable(),
+            SplintItem().mark_renewable()
+        )
 
     def refill(self, local = False):
         for P in self.body.values():

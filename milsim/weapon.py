@@ -5,8 +5,8 @@ from twisted.internet import reactor
 from pyspades.world import Grenade
 from pyspades.constants import *
 
+from milsim.blast import sendGrenadePacket
 from milsim.simulator import cone
-import milsim.blast as blast
 from milsim.common import *
 
 class UnderbarrelItem(Item):
@@ -53,7 +53,7 @@ class GrenadeLauncher(UnderbarrelItem):
             player.protocol.world.create_object(
                 Grenade, fuse, r, None, v, o.on_explosion(player)
             )
-            blast.effect(player.protocol, player.player_id, r, v, fuse)
+            sendGrenadePacket(player.protocol, player.player_id, r, v, fuse)
 
     @property
     def mass(self):

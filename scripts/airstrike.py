@@ -11,8 +11,8 @@ from pyspades.common import Vertex3
 from pyspades.team import Team
 
 from piqueserver.commands import command, player_only
+from milsim.blast import sendGrenadePacket, explode
 from milsim.weapon import UnderbarrelItem
-import milsim.blast as blast
 
 section = config.section("airstrike")
 
@@ -41,14 +41,14 @@ def airbomb_explode(protocol, player_id, pos):
     if player := protocol.take_player(player_id):
         x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
 
-        blast.explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, player, pos)
+        explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, player, pos)
 
         for i in range(AIRSTRIKE_PASSES):
             X, Y = shift(x), shift(y)
             Z = protocol.map.get_z(X, Y)
 
             player.grenade_destroy(X, Y, Z)
-            reactor.callLater(random(), blast.effect, protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
+            reactor.callLater(random(), sendGrenadePacket, protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
 
 def drop_airbomb(protocol, player_id, x, y, vx, vy):
     pos = Vertex3(x, y, protocol.map.get_z(x, y) - 2)

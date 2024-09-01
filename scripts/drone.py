@@ -13,8 +13,8 @@ from pyspades.team import Team
 from piqueserver.commands import command, player_only, get_player, CommandError
 from piqueserver.config import config
 
+from milsim.blast import sendGrenadePacket
 from milsim.common import alive_only
-import milsim.blast as blast
 
 section = config.section("drone")
 
@@ -148,7 +148,7 @@ class Drone:
             )
             grenade.name = 'grenade'
 
-            blast.effect(self.protocol, player.player_id, position, velocity, fuse)
+            sendGrenadePacket(self.protocol, player.player_id, position, velocity, fuse)
 
             self.grenades -= 1
 

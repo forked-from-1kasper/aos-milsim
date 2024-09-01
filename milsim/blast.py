@@ -1,5 +1,6 @@
 from math import sqrt, pi, sin, cos
 from random import choice, uniform
+from time import sleep
 
 from twisted.internet import reactor
 
@@ -9,10 +10,7 @@ from pyspades.constants import GRENADE_KILL
 from pyspades.contained import GrenadePacket
 from pyspades.common import Vertex3
 
-def dummy(*args, **kwargs):
-    pass
-
-def effect(protocol, player_id, position, velocity, fuse):
+def sendGrenadePacket(protocol, player_id, position, velocity, fuse):
     contained           = GrenadePacket()
     contained.player_id = player_id
     contained.value     = fuse
@@ -20,6 +18,17 @@ def effect(protocol, player_id, position, velocity, fuse):
     contained.velocity  = velocity.get()
 
     protocol.broadcast_contained(contained)
+
+def flashbang_effect(protocol, player_id, position):
+    for i in range(50):
+        sleep(uniform(0.05, 0.25))
+
+        r = position.copy()
+        r.x += uniform(-5.0, 5.0)
+        r.y += uniform(-5.0, 5.0)
+        r.z += uniform(-5.0, 5.0)
+
+        sendGrenadePacket(protocol, player_id, r, Vertex3(0, 0, 0), 0.0)
 
 def damage(o, pos, inner, outer):
     if not o.can_see(pos.x, pos.y, pos.z):
