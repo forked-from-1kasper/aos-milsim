@@ -136,19 +136,19 @@ class Environment:
 
 @dataclass
 class Cartridge:
-    name      : str
-    muzzle    : float
-    effmass   : float
-    totmass   : float
-    grouping  : float
-    deviation : float
+    name      : str   # Projectile name
+    muzzle    : float # Muzzle velocity (m/s)
+    effmass   : float # Mass of the bullet (kg)
+    totmass   : float # Mass of the cartridge (kg)
+    grouping  : float # Standard deviation of the group size (rad)
+    deviation : float # Standard deviation of the bullet speed in fractions of the muzzle velocity
 
     grenade = False
 
 @dataclass
 class Bullet(Cartridge):
-    BC      : float
-    caliber : float
+    BC      : float # Ballistic coefficient
+    caliber : float # Caliber (m)
 
     pellets = 1
 
@@ -169,8 +169,8 @@ class G7(Bullet):
 
 @dataclass
 class Shotshell(Cartridge):
-    diameter : float
-    pellets  : int
+    diameter : float # Pellet diameter (m)
+    pellets  : int   # Number of pellets in the single shell
 
     model     = 3
     ballistic = 0.0
@@ -538,8 +538,8 @@ class TubularMagazine(Magazine):
             return self, False
 
         it = filter(
-            lambda o: isinstance(o, CartridgeBox) and \
-                      isinstance(o.object, self.cartridge) and \
+            lambda o: isinstance(o, CartridgeBox) and
+                      isinstance(o.object, self.cartridge) and
                       o.capacity > 0,
             i
         )
@@ -554,11 +554,13 @@ class TubularMagazine(Magazine):
         return len(self.container)
 
     def reserved(self, i):
-        return sum(map(
-            lambda o: o.capacity,
-            filter(lambda o: isinstance(o, CartridgeBox) and \
-                             isinstance(o.object, self.cartridge), i)
-        ))
+        it = filter(
+            lambda o: isinstance(o, CartridgeBox) and
+                      isinstance(o.object, self.cartridge),
+            i
+        )
+
+        return sum(map(lambda o: o.capacity, it))
 
     def eject(self):
         if bool(self.container):

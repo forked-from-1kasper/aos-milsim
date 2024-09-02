@@ -155,7 +155,7 @@ limbs = {
 @alive_only
 def fracture(conn, target = None):
     """
-    Breaks the specified limb (useful for debug)
+    Break the specified limb (useful for debug)
     /fracture
     """
     if limb := limbs.get(target):
@@ -167,7 +167,7 @@ def fracture(conn, target = None):
 @alive_only
 def vein(conn, target = None):
     """
-    Cuts a vein in the specified limb (useful for debug)
+    Cut a vein in the specified limb (useful for debug)
     /vein
     """
     if limb := limbs.get(target):
@@ -179,7 +179,7 @@ def vein(conn, target = None):
 @alive_only
 def artery(conn, target = None):
     """
-    Cuts an artery in the specified limb (useful for debug)
+    Cut an artery in the specified limb (useful for debug)
     /artery
     """
     if limb := limbs.get(target):
@@ -218,7 +218,7 @@ def splint(conn):
 @alive_only
 def rangefinder(conn):
     """
-    Measures the distance between the player and a given point
+    Measure the distance between the player and a given point
     /rangefinder
     """
     return apply_item(RangefinderItem, conn, errmsg = "You do not have a rangefinder")
@@ -227,7 +227,7 @@ def rangefinder(conn):
 @alive_only
 def protractor(conn):
     """
-    Measures the angle between the player and two specified points
+    Measure the angle between the player and two specified points
     /protractor
     """
     return apply_item(ProtractorItem, conn, errmsg = "You do not have a protractor")
@@ -236,7 +236,7 @@ def protractor(conn):
 @alive_only
 def compass(conn):
     """
-    Prints the current azimuth
+    Print the current azimuth
     /compass
     """
     return apply_item(CompassItem, conn, errmsg = "You do not have a compass")
@@ -244,7 +244,7 @@ def compass(conn):
 @command()
 @alive_only
 def packload(conn):
-    return "{:.3f} kg".format(conn.packload())
+    return "{:.3f} kg".format(conn.gear_mass())
 
 def format_item(o):
     if o.persistent:
@@ -258,10 +258,10 @@ def format_page(pagenum, i):
     it = islice(i, items_per_page * (pagenum - 1), items_per_page * pagenum)
     return "{}) {}".format(pagenum, ", ".join(map(format_item, it)))
 
-def query(target, it):
-    for i, o in enumerate(it):
+def query(target, i):
+    for k, o in enumerate(i):
         if target.lower() in o.name.lower():
-            return i // items_per_page + 1
+            return k // items_per_page + 1
 
 def available(player):
     for i in player.get_available_inventory():
@@ -279,7 +279,7 @@ def scroll(player, argval = None, direction = 0):
 @alive_only
 def c_next(conn, argval = None):
     """
-    Scrolls to the next or specified page
+    Scroll to the next or specified page
     /n [page number | search query] or /next
     """
     conn.page = scroll(conn, argval, +1)
@@ -289,7 +289,7 @@ def c_next(conn, argval = None):
 @alive_only
 def c_prev(conn, argval = None):
     """
-    Scrolls to the previous or specified page
+    Scroll to the previous or specified page
     /p [page number | search qeury] or /prev
     """
     conn.page = scroll(conn, argval, -1)
@@ -299,7 +299,7 @@ def c_prev(conn, argval = None):
 @alive_only
 def c_backpack(conn, argval = None):
     """
-    Prints specified page in the player's inventory
+    Print specified page in the player's inventory
     /bp [page number | search query] or /backpack
     """
     if argval is None:
@@ -315,7 +315,7 @@ def c_backpack(conn, argval = None):
 @alive_only
 def take(conn, ID):
     """
-    Takes an item with the given ID to the inventory
+    Take an item with the given ID to the inventory
     /take (ID)
     """
     for i in conn.get_available_inventory():
@@ -330,7 +330,7 @@ def take(conn, ID):
 @alive_only
 def drop(conn, ID):
     """
-    Drops an item with the given ID from the inventory
+    Drop an item with the given ID from the inventory
     /drop (ID)
     """
     conn.drop(ID)
@@ -339,11 +339,21 @@ def drop(conn, ID):
 @alive_only
 def use(conn, ID):
     """
-    Uses an item from the inventory with the given ID
+    Use an item from the inventory with the given ID
     /u (ID) or /use
     """
     if o := conn.inventory[ID]:
         return o.apply(conn)
+
+@command('prioritize', 'pr')
+def prioritize(conn, ID):
+    """
+    Give the highest priority to an item with the given ID
+    /pr (ID) or /priority
+    """
+    if o := conn.inventory[ID]:
+        conn.inventory.remove(o)
+        conn.inventory.push(o)
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):

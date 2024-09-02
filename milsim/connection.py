@@ -34,6 +34,8 @@ fracture_warning = {
 bleeding_warning = "You're bleeding."
 
 class MilsimConnection:
+    body_mass      = 70
+
     def __init__(self, *w, **kw):
         assert isinstance(self, BaseConnection)
 
@@ -141,7 +143,7 @@ class MilsimConnection:
 
         self.inventory.clear()
 
-    def packload(self):
+    def gear_mass(self):
         return (
             sum(map(lambda o: o.mass, self.inventory)) +
             self.spade_object.mass + self.block_object.mass +
