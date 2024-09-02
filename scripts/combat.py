@@ -1,5 +1,5 @@
 from itertools import product, islice
-from math import floor, inf
+from math import floor, inf, hypot
 from time import monotonic
 
 from twisted.internet import reactor
@@ -52,7 +52,7 @@ def apply_script(protocol, connection, config):
             protocol.on_map_change(self, M)
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
-                for k in range(50):
+                for k in range(90):
                     i.append(
                         GrenadeLauncher(),
                         GrenadeItem(),
@@ -189,6 +189,11 @@ def apply_script(protocol, connection, config):
             self.sendWeaponReloadPacket()
 
             connection.on_spawn(self, pos)
+
+        def on_disconnect(self):
+            self.drop_all()
+
+            connection.on_disconnect(self)
 
         def on_kill(self, killer, kill_type, grenade):
             if connection.on_kill(self, killer, kill_type, grenade) is False:

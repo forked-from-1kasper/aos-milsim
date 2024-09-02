@@ -181,7 +181,7 @@ def apply_script(protocol, connection, config):
             protocol.on_map_change(self, M)
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
-                for k in range(30):
+                for k in range(100):
                     i.append(LandmineItem())
                     i.append(DetonatorItem())
                     i.append(ChargeItem())

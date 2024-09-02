@@ -141,9 +141,10 @@ class MilsimConnection:
             self.sendWeaponReloadPacket()
 
     def drop_all(self):
-        self.get_drop_inventory().extend(
-            filter(lambda o: o.persistent, self.inventory)
-        )
+        if self.world_object is not None:
+            self.get_drop_inventory().extend(
+                filter(lambda o: o.persistent, self.inventory)
+            )
 
         self.inventory.clear()
 
