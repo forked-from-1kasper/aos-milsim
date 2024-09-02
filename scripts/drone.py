@@ -1,7 +1,6 @@
 from dataclasses import dataclass
+from math import floor, sqrt
 from enum import Enum, auto
-from random import uniform
-from math import floor
 
 from twisted.internet import reactor
 
@@ -24,10 +23,6 @@ drone_rate     = section.option("rate", 1).get()
 drone_timeout  = section.option("timeout", 60).get()
 drone_teamkill = section.option("teamkill", False).get()
 drone_grenades = section.option("grenades", 5).get()
-
-MIN_FUSE    = 1.2
-MAX_FUSE    = 3
-DROP_HEIGHT = 15
 
 class Status(Enum):
     inflight = auto()
@@ -136,9 +131,9 @@ class Drone:
         H = self.protocol.map.get_z(floor(x), floor(y))
 
         if z <= H:
-            fuse = uniform(MIN_FUSE, MAX_FUSE)
+            fuse = sqrt(z) / 4
 
-            position = Vertex3(x, y, DROP_HEIGHT)
+            position = Vertex3(x, y, 0)
             velocity = Vertex3(0, 0, 0)
 
             player = self.protocol.take_player(self.player_id)
