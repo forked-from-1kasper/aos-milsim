@@ -5,6 +5,7 @@ from piqueserver.commands import command, player_only
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
+from milsim.weapon import GrenadeLauncher, GrenadeItem
 from milsim.simulator import toMeters
 from milsim.constants import Limb
 from milsim.common import *
@@ -240,6 +241,31 @@ def compass(conn):
     /compass
     """
     return apply_item(CompassItem, conn, errmsg = "You do not have a compass")
+
+@command('grenade', 'gr')
+def grenade(conn):
+    """
+    Load a grenade into a grenade launcher
+    /gr or /grenade
+    """
+    return apply_item(GrenadeItem, conn, errmsg = "You do not have a grenade")
+
+@command('takegrenade', 'tg')
+def takegrenade(conn, n):
+    """
+    Try to take a given number of grenades and a grenade launcher
+    /tg [n] or /takegrenade
+    """
+    n = int(n)
+
+    if n <= 0: return "Invalid number of grenades"
+
+    iu = conn.weapon_object.item_underbarrel
+
+    if not isinstance(iu, GrenadeLauncher) and not has_item(conn, GrenadeLauncher):
+       take_item(conn, GrenadeLauncher)
+
+    take_items(conn, GrenadeItem, n, 5)
 
 @command()
 @alive_only

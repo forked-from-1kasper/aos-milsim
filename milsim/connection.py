@@ -128,6 +128,10 @@ class MilsimConnection:
             if vector_collision(wo.position, self.protocol.team_2.base):
                 yield self.protocol.team2_tent_inventory
 
+    def get_available_items(self):
+        for i in self.get_available_inventory():
+            for o in i: yield i, o
+
     def drop(self, ID):
         if o := self.inventory[ID]:
             if o.persistent:

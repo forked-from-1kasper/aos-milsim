@@ -1,8 +1,10 @@
+from collections import deque
+
 from pyspades.common import Vertex3
 
 from piqueserver.commands import command, player_only
 
-from milsim.common import alive_only, apply_item
+from milsim.common import alive_only, apply_item, has_item, take_item, take_items
 from milsim.types import TileEntity, Item
 from milsim.blast import sendGrenadePacket
 
@@ -89,7 +91,7 @@ class DetonatorItem(Item):
         self.targets.append((x, y, z))
 
     def available(self):
-        return len(self.targets) <= self.limit
+        return len(self.targets) < self.limit
 
     def apply(self, player):
         protocol = player.protocol
@@ -147,6 +149,22 @@ def use_detonator(conn):
     /de or /detonate
     """
     return apply_item(DetonatorItem, conn, errmsg = "You do not have a detonator")
+
+@command('takecharge', 'tc')
+@alive_only
+def take_charge(conn, n):
+    """
+    Try to take a given number of charges and a detonator
+    /tc [n] or /takecharge
+    """
+    n = int(n)
+
+    if n <= 0: return "Invalid number of charges"
+
+    if not has_item(conn, DetonatorItem):
+        take_item(conn, DetonatorItem)
+
+    take_items(conn, ChargeItem, n, 5)
 
 def apply_script(protocol, connection, config):
     class MineGrenadeTool(protocol.GrenadeTool):

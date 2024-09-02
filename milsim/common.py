@@ -28,6 +28,23 @@ def apply_item(klass, player, errmsg = None):
     else:
         return errmsg
 
+def has_item(player, klass):
+    return any(map(lambda o: isinstance(o, klass), player.inventory))
+
+def take_item(player, klass):
+    for i, o in player.get_available_items():
+        if isinstance(o, klass):
+            i.remove(o)
+            player.inventory.push(o)
+
+            return
+
+def take_items(player, klass, n, nmax):
+    navail = sum(map(lambda o: isinstance(o, klass), player.inventory))
+
+    if nmax <= n + navail: return
+    for k in range(n): take_item(player, klass)
+
 toMeters3 = lambda v: Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 
 mm    = lambda s: s / 1000
