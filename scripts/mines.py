@@ -182,10 +182,12 @@ def apply_script(protocol, connection, config):
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
                 for k in range(100):
-                    i.append(LandmineItem())
-                    i.append(DetonatorItem())
-                    i.append(ChargeItem())
-                    i.append(ChargeItem())
+                    i.append(
+                        LandmineItem(),
+                        DetonatorItem(),
+                        ChargeItem(),
+                        ChargeItem()
+                    )
 
     class MineConnection(connection):
         def on_refill(self):

@@ -250,6 +250,14 @@ def grenade(conn):
     """
     return apply_item(GrenadeItem, conn, errmsg = "You do not have a grenade")
 
+@command('launcher', 'gl')
+def grenade(conn):
+    """
+    Equip a grenade launcher
+    /gl or /launcher
+    """
+    return apply_item(GrenadeLauncher, conn, errmsg = "You do not have a grenade launcher")
+
 @command('takegrenade', 'tg')
 def takegrenade(conn, n):
     """
