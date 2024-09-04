@@ -11,12 +11,24 @@ from milsim.packets import (
     hasTraceExtension, hasHitEffects,
     milsim_extensions
 )
+
+from milsim.blast import sendGrenadePacket, explode
+from milsim.constants import Limb, HitEffect
 from milsim.simulator import Simulator
 from milsim.weapon import ABCWeapon
-from milsim.constants import Limb
 from milsim.common import *
 
+def icons(x, xs):
+    yield x
+    yield from xs
+
 class DetachableMagazineItem:
+    def reserve(self):
+        return filter(
+            lambda o: isinstance(o, self.magazine_class),
+            self.player.inventory
+        )
+
     def restock(self):
         self.magazine = self.default_magazine()
         self.magazine.mark_renewable()
@@ -26,7 +38,22 @@ class DetachableMagazineItem:
         for k in range(self.default_magazine_count):
             i.append(self.default_magazine().mark_renewable())
 
+    def format_ammo(self):
+        it = icons(
+            "{}*".format(self.magazine.current()),
+            map(lambda o: "{}".format(o.current()), self.reserve())
+        )
+
+        return "Magazines: {}".format(", ".join(it))
+
 class IntegralMagazineItem:
+    def reserve(self):
+        return filter(
+            lambda o: isinstance(o, CartridgeBox) and
+                      isinstance(o.object, self.cartridge_class),
+            self.player.inventory
+        )
+
     def restock(self):
         self.magazine = self.default_magazine()
         self.magazine.mark_renewable()
@@ -38,21 +65,59 @@ class IntegralMagazineItem:
         i = self.player.inventory
         i.append(CartridgeBox(self.default_cartridge, self.default_reserve).mark_renewable())
 
+Buckshot1 = Shotshell(name = "0000 Buckshot", muzzle = 457.00, effmass = grain(82.000),  totmass = gram(150.00), grouping = isosceles(yard(25), inch(40)), deviation = 0.10, diameter = mm(9.65), pellets = 15)
+Buckshot2 = Shotshell(name = "00 Buckshot",   muzzle = 396.24, effmass = grain(350.000), totmass = gram(170.00), grouping = isosceles(yard(25), inch(40)), deviation = 0.10, diameter = mm(8.38), pellets = 5)
+Bullet    = Shotshell(name = "Bullet",        muzzle = 540.00, effmass = grain(109.375), totmass = gram(20.00),  grouping = 0,                             deviation = 0.10, diameter = mm(10.4), pellets = 1)
+
+class G7HEI(G7):
+    def explode(self, protocol, player_id, r):
+        if player := protocol.players.get(player_id):
+            sendGrenadePacket(protocol, player_id, r, Vertex3(1, 0, 0), -1)
+            explode(4, 20, player, r)
+
+            return True
+
+    def on_block_hit(self, protocol, r, v, X, Y, Z, thrower, E, A):
+        return self.explode(protocol, thrower, r)
+
+    def on_player_hit(self, protocol, r, v, X, Y, Z, thrower, E, A, target, limb_index):
+        return self.explode(protocol, thrower, r)
+
+R145x114mm = G1(name = "R145x114mm", muzzle = 1000, effmass = gram(67.00), totmass = gram(191.00), grouping = MOA(0.7), deviation = 0.03, BC = 0.800, caliber = mm(14.50))
+R127x108mm = G1(name = "R127x108mm", muzzle = 900,  effmass = gram(50.00), totmass = gram(130.00), grouping = MOA(0.7), deviation = 0.03, BC = 0.732, caliber = mm(12.70))
+R762x54mm  = G7(name = "R762x54mm",  muzzle = 850,  effmass = gram(10.00), totmass = gram(22.00),  grouping = MOA(0.7), deviation = 0.03, BC = 0.187, caliber = mm(07.62))
+Parabellum = G1(name = "Parabellum", muzzle = 600,  effmass = gram(8.03),  totmass = gram(12.00),  grouping = MOA(2.5), deviation = 0.05, BC = 0.212, caliber = mm(09.00))
+
+HEI762x54mm = G7HEI(name = "HEI762x54mm", muzzle = 820, effmass = gram(160.00), totmass = gram(250.00), grouping = MOA(2.0), deviation = 0.07, BC = 0.190, caliber = mm(07.62))
+
 class RifleMagazine(BoxMagazine):
+    pass
+
+class R762Magazine(RifleMagazine):
     _mass     = 0.227
     _name     = "AA762R02"
     capacity  = 10
     cartridge = R762x54mm
+
+class HEIMagazine(RifleMagazine):
+    _mass     = 0.150
+    _name     = "AA762HEI"
+    capacity  = 5
+    cartridge = HEI762x54mm
 
 class Rifle(DetachableMagazineItem):
     _mass                  = 4.220
     name                   = "Rifle"
     delay                  = 0.50
     reload_time            = 2.5
-    default_magazine       = RifleMagazine
-    default_magazine_count = 6
+    magazine_class         = RifleMagazine
+    default_magazine       = HEIMagazine
+    default_magazine_count = 5
 
 class SMGMagazine(BoxMagazine):
+    pass
+
+class ParabellumMagazine(SMGMagazine):
     _mass     = 0.160
     _name     = "MP5MAG30"
     capacity  = 30
@@ -63,18 +128,19 @@ class SMG(DetachableMagazineItem):
     name                   = "SMG"
     delay                  = 0.11
     reload_time            = 2.5
-    default_magazine       = SMGMagazine
+    magazine_class         = SMGMagazine
+    default_magazine       = ParabellumMagazine
     default_magazine_count = 4
 
 class ShotgunMagazine(TubularMagazine):
-    capacity  = 6
-    cartridge = Shotshell
+    capacity = 6
 
 class Shotgun(IntegralMagazineItem):
     _mass             = 3.600
     name              = "Shotgun"
     delay             = 1.00
     reload_time       = 0.5
+    cartridge_class   = Shotshell
     default_magazine  = ShotgunMagazine
     default_cartridge = Buckshot1
     default_reserve   = 70
@@ -195,18 +261,6 @@ class MilsimProtocol:
         self.simulator.step(self.time, t)
         self.time = t
 
-    def onTrace(self, index, x, y, z, value, origin):
-        self.broadcast_contained(
-            TracerPacket(index, Vertex3(x, y, z), value, origin = origin),
-            rule = hasTraceExtension
-        )
-
-    def onHitEffect(self, x, y, z, X, Y, Z, target):
-        self.broadcast_contained(
-            HitEffectPacket(Vertex3(x, y, z), X, Y, Z, target),
-            rule = hasHitEffects
-        )
-
     def on_block_build(self, x, y, z):
         self.simulator.build(x, y, z)
 
@@ -220,6 +274,12 @@ class MilsimProtocol:
             e.on_destroy()
 
         self.drop_item_entity(x, y, z)
+
+    def onTrace(self, index, x, y, z, value, origin):
+        self.broadcast_contained(
+            TracerPacket(index, Vertex3(x, y, z), value, origin = origin),
+            rule = hasTraceExtension
+        )
 
     def onDestroy(self, pid, x, y, z):
         if pid not in self.players:
@@ -243,14 +303,22 @@ class MilsimProtocol:
             player.on_block_removed(x, y, z)
             player.total_blocks_removed += count
 
-    def onHit(self, thrower, target, index, E, A, grenade):
-        if target not in self.players:
-            return
+    def onBlockHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower, E, A):
+        self.broadcast_contained(
+            HitEffectPacket(x, y, z, X, Y, Z, HitEffect.block),
+            rule = hasHitEffects
+        )
 
-        player    = self.players[target]
+        if callable(o.on_block_hit):
+            return o.on_block_hit(self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A)
+
+    def onPlayerHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower, E, A, target, limb_index):
+        player    = self.players.get(target)
         hit_by    = self.players.get(thrower, player)
-        limb      = Limb(index)
-        kill_type = GRENADE_KILL if grenade else HEADSHOT_KILL if limb == Limb.head else WEAPON_KILL
+        limb      = Limb(limb_index)
+        kill_type = GRENADE_KILL if o.grenade else HEADSHOT_KILL if limb == Limb.head else WEAPON_KILL
+
+        if player is None: return
 
         damage, venous, arterial, fractured = player.body[limb].ofEnergyAndArea(E, A)
 
@@ -259,3 +327,13 @@ class MilsimProtocol:
                 damage, limb = limb, hit_by = hit_by, kill_type = kill_type,
                 venous = venous, arterial = arterial, fractured = fractured,
             )
+
+            self.broadcast_contained(
+                HitEffectPacket(x, y, z, X, Y, Z, HitEffect.headshot if limb == Limb.head else HitEffect.player),
+                rule = hasHitEffects
+            )
+
+            if callable(o.on_player_hit):
+                return o.on_player_hit(self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A, target, limb)
+
+        return True

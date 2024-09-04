@@ -11,3 +11,8 @@ class Limb(Enum):
     armr  = 3
     legl  = 4
     legr  = 5
+
+class HitEffect:
+    block    = 0
+    headshot = 1
+    player   = 2

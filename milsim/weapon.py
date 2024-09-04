@@ -98,27 +98,49 @@ class ABCWeapon(Tool):
 
         self.reset()
 
+    def reserve(self):
+        raise NotImplementedError
+
+    def restock(self):
+        raise NotImplementedError
+
+    def refill(self):
+        raise NotImplementedError
+
     @property
     def mass(self):
         return self._mass + self.magazine.mass + getattr(self.item_underbarrel, 'mass', 0)
+
+    def is_empty(self, tolerance = 0):
+        return self.magazine.current() <= 0
+
+    def reserved(self):
+        return sum(map(lambda o: o.current(), self.reserve()))
+
+    def can_reload(self):
+        return 0 < self.reserved() and self.magazine.current() < self.magazine.capacity
 
     def reload(self):
         if self.reloading:
             return
 
-        if self.magazine.can_reload(self.player.inventory):
+        if self.can_reload():
             self.weapon_reload_timer = reactor.seconds()
             self.reloading = True
-
-    def is_empty(self, tolerance = 0):
-        return self.magazine.current() <= 0
 
     def update(self, t):
         if self.reloading:
             if t - self.weapon_reload_timer >= self.reload_time:
                 self.weapon_reload_timer = t
 
-                self.magazine, self.reloading = self.magazine.reload(self.player.inventory)
+                succ, self.reloading = self.magazine.reload(self.reserve())
+
+                if succ is not None:
+                    i = self.player.inventory
+                    i.remove(succ)
+                    i.append(self.magazine)
+
+                    self.magazine = succ
 
                 self.player.on_reload_complete()
                 self.player.sendWeaponReloadPacket()
@@ -187,3 +209,6 @@ class ABCWeapon(Tool):
         self.last_shot = -inf
         self.reloading = False
         self.restock()
+
+    def format_ammo(self):
+        return None

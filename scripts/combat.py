@@ -12,8 +12,8 @@ from pyspades.constants import *
 
 from piqueserver.map import Map, MapNotFound
 
+from milsim.protocol import MilsimProtocol, HEIMagazine, Buckshot1, Buckshot2, Bullet
 from milsim.connection import MilsimConnection
-from milsim.protocol import MilsimProtocol
 
 from milsim.weapon import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.vxl import VxlData, onDeleteQueue, deleteQueueClear
@@ -62,9 +62,10 @@ def apply_script(protocol, connection, config):
                         CompassItem(),
                         ProtractorItem(),
                         RangefinderItem(),
-                        CartridgeBox(Bullet, 60),
+                        CartridgeBox(Bullet, 50),
                         CartridgeBox(Buckshot1, 60),
-                        CartridgeBox(Buckshot2, 60)
+                        CartridgeBox(Buckshot2, 60),
+                        HEIMagazine()
                     )
 
                 i.append(

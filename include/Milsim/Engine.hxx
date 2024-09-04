@@ -52,21 +52,22 @@ private:
     static uint64_t gidx; uint64_t _index;
 
 public:
-    bool grenade; T mass, ballistic, area; uint32_t model;
+    PyObject * object; T mass, ballistic, area; uint32_t model;
 
     int thrower; T timestamp, v0;
 
     Vector3<T> position, velocity;
 
     Object(
+        PyObject * object,
         const int i, const Vector3<T> & r, const Vector3<T> & v,
-        const T timestamp, bool grenade, const T m,
-        const T ballistic, const uint32_t model, const T A
-    ) : thrower(i), timestamp(timestamp), position(r), velocity(v),
-        grenade(grenade), mass(m), ballistic(ballistic), model(model), area(A)
-    { v0 = v.abs(); _index = gidx; gidx++; }
+        const T timestamp, const T m, const T ballistic,
+        const uint32_t model, const T A
+    ) : object(object), thrower(i), timestamp(timestamp), position(r), velocity(v),
+        mass(m), ballistic(ballistic), model(model), area(A)
+    { Py_INCREF(object); v0 = v.abs(); _index = gidx; gidx++; }
 
-    ~Object() {}
+    ~Object() { Py_DECREF(object); }
 
     inline static void flush() { gidx = 0; }
 
@@ -108,7 +109,7 @@ private:
     std::map<int, Voxel<T>> voxels;
     std::list<Object<T>> objects;
 
-    MapData * map; PyObject * onTrace, * onHitEffect, * onHit, * onDestroy;
+    MapData * map; PyObject * onTrace, * onBlockHit, * onPlayerHit, * onDestroy;
 
     double _lag, _peak;
 
@@ -147,10 +148,10 @@ public:
 
     Voxel<T> water; size_t defaultMaterial, buildMaterial;
 
-    Engine() : onTrace(Py_None), onHitEffect(Py_None), onHit(Py_None), onDestroy(Py_None)
+    Engine() : onTrace(Py_None), onBlockHit(Py_None), onPlayerHit(Py_None), onDestroy(Py_None)
     { srand(time(NULL)); players.reserve(32); _lag = _peak = 0.0; }
 
-    ~Engine() { Py_XDECREF(onTrace); }
+    ~Engine() { Py_XDECREF(onPlayerHit); Py_XDECREF(onBlockHit); Py_XDECREF(onTrace); Py_XDECREF(onDestroy); }
 
     Voxel<T> & get(int x, int y, int z) {
         if (z == 63) return water;
@@ -274,8 +275,8 @@ public:
     inline void destroy(int x, int y, int z)
     { voxels.erase(get_pos(x, y, z)); }
 
-    inline void invokeOnHit(PyObject * obj)       { retain(onHit, obj); }
-    inline void invokeOnHitEffect(PyObject * obj) { retain(onHitEffect, obj); }
+    inline void invokeOnPlayerHit(PyObject * obj) { retain(onPlayerHit, obj); }
+    inline void invokeOnBlockHit(PyObject * obj)  { retain(onBlockHit, obj); }
     inline void invokeOnTrace(PyObject * obj)     { retain(onTrace, obj); }
     inline void invokeOnDestroy(PyObject * obj)   { retain(onDestroy, obj); }
 
@@ -352,11 +353,13 @@ private:
 
                     trace(o.index(), r, v.abs() / o.v0, false);
 
-                    if (onHitEffect != Py_None && hitEffectThresholdEnergy <= o.energy()) {
-                        PyObject_CallFunction(
-                            onHitEffect, "fffiiii", r.x, r.y, r.z, X, Y, Z,
-                            static_cast<uint8_t>(HitEffect::block)
+                    if (onBlockHit != Py_None && hitEffectThresholdEnergy <= o.energy()) {
+                        auto retval = PyObject_CallFunction(onBlockHit, "Offffffiiiidd",
+                            o.object, r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
+                            o.thrower, o.energy(), o.area
                         );
+
+                        stuck = retval == Py_True;
                     }
                 }
 
@@ -485,23 +488,16 @@ private:
             }
 
             if (target >= 0) {
-                if (onHit != Py_None) {
-                    PyObject_CallFunction(onHit, "iiiddO",
-                        o.thrower, target, hit, o.energy(), o.area,
-                        o.grenade ? Py_True : Py_False
-                    );
-                }
-
-                if (onHitEffect != Py_None) {
+                if (onPlayerHit != Py_None) {
                     Vector3<T> w = r + dr * dist;
 
-                    PyObject_CallFunction(
-                        onHitEffect, "fffiiii", w.x, w.y, w.z, X, Y, Z,
-                        static_cast<uint8_t>(effectOfLimb(hit))
+                    auto retval = PyObject_CallFunction(onPlayerHit, "Offffffiiiiddii",
+                        o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
+                        o.thrower, o.energy(), o.area, target, hit
                     );
-                }
 
-                stuck = true;
+                    stuck = retval == Py_True;
+                }
             }
 
             auto m  = o.mass;
@@ -516,7 +512,7 @@ private:
 
         o.position.set(r); o.velocity.set(v);
 
-        trace(o.index(), r, v.abs() / o.v0, false);
+        if (!stuck) trace(o.index(), r, v.abs() / o.v0, false);
 
         //if (t2 - o.timestamp > 10) printf("%ld: time out\n", o.index());
         //if (o.velocity.abs() <= 1e-3) printf("%ld: speed too low (%f m/s)\n", o.index(), o.velocity.abs());

@@ -143,10 +143,12 @@ class Cartridge:
     grouping  : float # Standard deviation of the group size (rad)
     deviation : float # Standard deviation of the bullet speed in fractions of the muzzle velocity
 
-    grenade = False
+    on_block_hit  = None
+    on_player_hit = None
+    grenade       = False
 
 @dataclass
-class Bullet(Cartridge):
+class OgiveBullet(Cartridge):
     BC      : float # Ballistic coefficient
     caliber : float # Caliber (m)
 
@@ -161,10 +163,10 @@ class Bullet(Cartridge):
         i = m / (d * d)
         self.ballistic = i / self.BC
 
-class G1(Bullet):
+class G1(OgiveBullet):
     model = 1
 
-class G7(Bullet):
+class G7(OgiveBullet):
     model = 2
 
 @dataclass
@@ -376,24 +378,27 @@ class Item:
         raise NotImplementedError
 
 class CartridgeBox(Item):
-    def __init__(self, o, capacity = 0):
+    def __init__(self, o, current = 0):
         Item.__init__(self)
 
         self.object   = o
-        self.capacity = capacity
+        self._current = current
 
     def pop(self):
-        if self.capacity > 0:
-            self.capacity -= 1
+        if self._current > 0:
+            self._current -= 1
             return self.object
+
+    def current(self):
+        return self._current
 
     @property
     def mass(self):
-        return self.capacity * self.object.totmass
+        return self._current * self.object.totmass
 
     @property
     def name(self):
-        return f"{self.object.name} Box ({self.capacity})"
+        return f"{self.object.name} Box ({self._current})"
 
 class Inventory:
     def __init__(self):
@@ -462,16 +467,6 @@ class Magazine(Item):
     def current(self):
         raise NotImplementedError
 
-    def reserved(self, i):
-        raise NotImplementedError
-
-    def can_reload(self, i):
-        return 0 < self.reserved(i) and self.current() < self.capacity
-
-def icons(x, xs):
-    yield x
-    yield from xs
-
 class BoxMagazine(Magazine):
     continuous = False
     cartridge  = NotImplemented
@@ -479,43 +474,22 @@ class BoxMagazine(Magazine):
     def __init__(self):
         Magazine.__init__(self)
 
-        self._current = 0
-        self.restock()
+        self._current = self.capacity
 
     def reload(self, i):
-        it = filter(lambda o: isinstance(o, type(self)) and o.current() > 0, i)
-
-        if succ := next(it, None):
-            i.remove(succ)
-            i.append(self)
-            return succ, False
-
-        return self, False
+        return next(filter(lambda o: o.current() > 0, i), None), False
 
     def current(self):
         return self._current
-
-    def reserved(self, i):
-        return sum(map(lambda o: o.current(), filter(lambda o: isinstance(o, type(self)), i)))
 
     def eject(self):
         if self._current > 0:
             self._current -= 1
             return self.cartridge
 
-    def restock(self):
-        self._current = self.capacity
-
     @property
     def mass(self):
         return self._mass + self._current * self.cartridge.totmass
-
-    def info(self, i):
-        res = filter(lambda o: isinstance(o, type(self)), i)
-        return "Magazines: " + ", ".join(icons(
-            str(self.current()) + "*",
-            map(lambda o: str(o.current()), res)
-        ))
 
     @property
     def name(self):
@@ -535,47 +509,26 @@ class TubularMagazine(Magazine):
 
     def reload(self, i):
         if self.capacity <= self.current():
-            return self, False
+            return None, False
 
-        it = filter(
-            lambda o: isinstance(o, CartridgeBox) and
-                      isinstance(o.object, self.cartridge) and
-                      o.capacity > 0,
-            i
-        )
+        it = filter(lambda o: o.current() > 0, i)
 
         if o := next(it, None):
             self.push(o.pop())
-            return self, True
+            return None, True
 
-        return self, False
+        return None, False
 
     def current(self):
         return len(self.container)
-
-    def reserved(self, i):
-        it = filter(
-            lambda o: isinstance(o, CartridgeBox) and
-                      isinstance(o.object, self.cartridge),
-            i
-        )
-
-        return sum(map(lambda o: o.capacity, it))
 
     def eject(self):
         if bool(self.container):
             return self.container.popleft()
 
-    def restock(self):
-        raise NotImplementedError
-
     @property
     def mass(self):
         return sum(map(lambda o: o.totmass, self.container))
-
-    def info(self, i):
-        rem = self.reserved(i)
-        return f"{rem} round(s) in reserve"
 
 class Tool:
     def on_lmb_press(self):

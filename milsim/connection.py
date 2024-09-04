@@ -34,7 +34,7 @@ fracture_warning = {
 bleeding_warning = "You're bleeding."
 
 class MilsimConnection:
-    body_mass      = 70
+    body_mass = 70
 
     def __init__(self, *w, **kw):
         assert isinstance(self, BaseConnection)
@@ -64,7 +64,7 @@ class MilsimConnection:
         contained              = loaders.WeaponReload()
         contained.player_id    = self.player_id
         contained.clip_ammo    = self.weapon_object.magazine.current()
-        contained.reserve_ammo = self.weapon_object.magazine.reserved(self.inventory)
+        contained.reserve_ammo = self.weapon_object.reserved()
         self.send_contained(contained)
 
     def alive(self):
@@ -157,8 +157,9 @@ class MilsimConnection:
 
     def item_shown(self, t):
         P = not self.world_object.sprint
-        Q = t - self.last_sprint >= 0.5
-        R = t - self.last_tool_update >= 0.5
+        Q = 0.5 <= t - self.last_sprint
+        R = 0.5 <= t - self.last_tool_update
+
         return P and Q and R
 
     def set_tool(self, tool):

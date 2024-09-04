@@ -50,13 +50,13 @@ cdef class HitEffectPacket(Loader):
         int xi, yi, zi
         float xf, yf, zf
 
-    def __init__(self, position, x, y, z, target):
-        self.xf     = position.x
-        self.yf     = position.y
-        self.zf     = position.z
-        self.xi     = x
-        self.yi     = y
-        self.zi     = z
+    def __init__(self, xf, yf, zf, xi, yi, zi, target):
+        self.xf     = xf
+        self.yf     = yf
+        self.zf     = zf
+        self.xi     = xi
+        self.yi     = yi
+        self.zi     = zi
         self.target = target
 
     cpdef write(self, ByteWriter writer):

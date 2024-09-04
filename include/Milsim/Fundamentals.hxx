@@ -89,17 +89,6 @@ enum class Limb : uint8_t {
     legr  = 5
 };
 
-enum class HitEffect : uint8_t {
-    block    = 0,
-    headshot = 1,
-    player   = 2,
-};
-
-constexpr inline HitEffect effectOfLimb(const Limb hit) {
-    return hit == Limb::head ? HitEffect::headshot
-                             : HitEffect::player;
-}
-
 namespace Fundamentals {
     template<typename T> constexpr T playerHeightInMeters = 1.8;
     template<typename T> constexpr T playerHeightInBlocks = 2.5;

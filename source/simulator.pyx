@@ -62,14 +62,14 @@ cdef extern from "Milsim/Engine.hxx":
         vector[Player[T]] players
 
         Engine()
-        uint64_t add(int, Vector3[T] r, Vector3[T] v, T timestamp, bool_t grenade, T mass, T ballistic, uint32_t model, T area)
+        uint64_t add(object, int, Vector3[T] r, Vector3[T] v, T timestamp, T mass, T ballistic, uint32_t model, T area)
         void step(T, T)
 
         void wipe(MapData *)
 
         void invokeOnTrace(object)
-        void invokeOnHitEffect(object)
-        void invokeOnHit(object)
+        void invokeOnBlockHit(object)
+        void invokeOnPlayerHit(object)
         void invokeOnDestroy(object)
 
         size_t defaultMaterial, buildMaterial
@@ -136,9 +136,9 @@ cdef class Simulator:
         self.materials = {}
         self.protocol  = protocol
 
-        self.engine.invokeOnHit(protocol.onHit)
+        self.engine.invokeOnPlayerHit(protocol.onPlayerHit)
+        self.engine.invokeOnBlockHit(protocol.onBlockHit)
         self.engine.invokeOnDestroy(protocol.onDestroy)
-        self.engine.invokeOnHitEffect(protocol.onHitEffect)
 
     def flush(self):
         self.engine.flush()
@@ -203,11 +203,11 @@ cdef class Simulator:
 
     def add(self, thrower, r, v, timestamp, params):
         return self.engine.add(
+            params,
             thrower.player_id,
             Vector3[double](r.x, r.y, r.z),
             Vector3[double](v.x, v.y, v.z),
             timestamp,
-            params.grenade,
             params.effmass,
             params.ballistic,
             params.model,

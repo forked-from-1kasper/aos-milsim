@@ -37,16 +37,6 @@ def health(conn):
     """
     return " ".join(map(ppBodyPart, conn.body.values()))
 
-@command()
-@alive_only
-def weapon(conn):
-    """
-    Print remaining ammo status
-    /weapon
-    """
-    if o := conn.weapon_object:
-        return o.magazine.info(conn.inventory)
-
 def formatMicroseconds(T):
     if T <= 1e+3:
         return "{:.2f} us".format(T)
@@ -409,8 +399,8 @@ def apply_script(protocol, connection, config):
             connection.on_position_update(self)
 
         def on_reload_complete(self):
-            if not self.weapon_object.magazine.continuous:
-                self.send_chat(self.weapon_object.magazine.info(self.inventory))
+            if reply := self.weapon_object.format_ammo():
+                self.send_chat(reply)
 
             connection.on_reload_complete(self)
 
