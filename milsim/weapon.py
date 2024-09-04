@@ -193,7 +193,7 @@ class ABCWeapon(Tool):
             sim = self.player.protocol.simulator
 
             for i in range(cartridge.pellets):
-                u = toMeters3(o.velocity)
+                u = toMeters3(o.velocity * 32)
                 v = n * gauss(mu = cartridge.muzzle, sigma = cartridge.muzzle * cartridge.deviation)
                 sim.add(self.player, r, u + cone(v, cartridge.grouping), t, cartridge)
 

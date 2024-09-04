@@ -81,13 +81,7 @@ class MilsimConnection:
 
     def eye(self):
         if o := self.world_object:
-            dt = reactor.seconds() - self.last_position_update
-
-            return Vertex3(
-                o.position.x + o.velocity.x * dt,
-                o.position.y + o.velocity.y * dt,
-                o.position.z + o.velocity.z * dt - self.height(),
-            )
+            return Vertex3(o.position.x, o.position.y, o.position.z - self.height())
 
     def floor(self):
         if o := self.world_object:
