@@ -111,7 +111,7 @@ class Rifle(DetachableMagazineItem):
     delay                  = 0.50
     reload_time            = 2.5
     magazine_class         = RifleMagazine
-    default_magazine       = HEIMagazine
+    default_magazine       = R762Magazine
     default_magazine_count = 5
 
 class SMGMagazine(BoxMagazine):
