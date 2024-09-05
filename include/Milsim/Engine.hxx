@@ -14,7 +14,9 @@
 #include <map>
 
 #include "Python.h"
-#include "vxl_c.h"
+
+#include <common_c.h>
+#include <vxl_c.h>
 
 template<typename Real> Real vaporPressureOfWater(const Real T) {
     // https://en.wikipedia.org/wiki/Tetens_equation
@@ -80,16 +82,21 @@ public:
 
 template<typename T> uint64_t Object<T>::gidx = 0;
 
-template<typename T> void __Pyx_call_destructor(T & x) { x.~T(); }
-
 template<typename T> struct Player {
-    int id; Vector3<T> position, orientation; bool crouch;
+    bool c; Vector * p; Vector * f;
 
     Player() {}
     ~Player() {}
 
-    constexpr inline void set(int i, T x, T y, T z, T ox, T oy, T oz, bool c)
-    { id = i; crouch = c; position.set(x, y, z); orientation.set(ox, oy, oz); }
+    inline bool valid() const { return p != NULL; }
+
+    inline void set_crouch(bool b)          { c = b; }
+    inline void set_position(Vector * v)    { p = v; }
+    inline void set_orientation(Vector * v) { f = v; }
+
+    inline bool       crouch()      const { return c; }
+    inline Vector3<T> position()    const { return Vector3<T>(p); }
+    inline Vector3<T> orientation() const { return Vector3<T>(f); }
 };
 
 enum class Terminal { flying, ricochet, penetration };
@@ -425,19 +432,22 @@ private:
             int target = -1; Limb hit;
             T dist = std::numeric_limits<T>::infinity();
 
-            for (const auto & player : players) {
-                auto origin = player.position.translate(0, 0, player.crouch ? -1.05 : -1.1);
+            for (size_t i = 0; i < players.size(); i++) {
+                Player<T> & player = players[i];
+                if (!player.valid()) continue;
+
+                auto origin = player.position().translate(0, 0, player.crouch() ? -1.05 : -1.1);
 
                 auto ray = Ray<T>(r, dr).translate(-origin).pointAt(
-                    player.orientation.xOy().normal(), Vector3<T>(0, 1, 0)
+                    player.orientation().xOy().normal(), Vector3<T>(0, 1, 0)
                 );
 
-                auto & torso = player.crouch ? Box::torsoc<T> : Box::torso<T>;
+                auto & torso = player.crouch() ? Box::torsoc<T> : Box::torso<T>;
                 auto d = torso.intersect(ray);
 
                 if (d < dist) {
                     dist   = d;
-                    target = player.id;
+                    target = i;
                     hit    = Limb::torso;
                 }
 
@@ -446,43 +456,43 @@ private:
 
                 if (d < dist) {
                     dist   = d;
-                    target = player.id;
+                    target = i;
                     hit    = Limb::head;
                 }
 
-                auto & legl = player.crouch ? Box::legc_left<T> : Box::leg_left<T>;
+                auto & legl = player.crouch() ? Box::legc_left<T> : Box::leg_left<T>;
                 d = legl.intersect(ray);
 
                 if (d < dist) {
                     dist   = d;
-                    target = player.id;
+                    target = i;
                     hit    = Limb::legl;
                 }
 
-                auto & legr = player.crouch ? Box::legc_right<T> : Box::leg_right<T>;
+                auto & legr = player.crouch() ? Box::legc_right<T> : Box::leg_right<T>;
                 d = legr.intersect(ray);
 
                 if (d < dist) {
                     dist   = d;
-                    target = player.id;
+                    target = i;
                     hit    = Limb::legr;
                 }
 
-                auto & armr = player.crouch ? Box::armc_right<T> : Box::arm_right<T>;
+                auto & armr = player.crouch() ? Box::armc_right<T> : Box::arm_right<T>;
                 d = armr.intersect(ray);
 
                 if (d < dist) {
                     dist   = d;
-                    target = player.id;
+                    target = i;
                     hit    = Limb::armr;
                 }
 
-                auto & arml = player.crouch ? Box::armc_left<T> : Box::arm_left<T>;
+                auto & arml = player.crouch() ? Box::armc_left<T> : Box::arm_left<T>;
                 d = arml.intersect(ray.rot(Vector3<T>(0, 0, 1), -std::numbers::pi_v<T> / 4));
 
                 if (d < dist) {
                     dist   = d;
-                    target = player.id;
+                    target = i;
                     hit    = Limb::arml;
                 }
             }
@@ -497,6 +507,8 @@ private:
                     );
 
                     stuck = retval == Py_True;
+
+                    trace(o.index(), w, v.abs() / o.v0, false);
                 }
             }
 

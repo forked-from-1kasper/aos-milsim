@@ -10,6 +10,7 @@ from cpython.ref cimport PyObject
 
 from math import pi, sin, cos
 
+from pyspades.common cimport Vertex3, Vector
 from pyspades.vxl cimport VXLData, MapData
 from pyspades.common import Vertex3
 
@@ -40,7 +41,9 @@ cdef extern from "Milsim/Engine.hxx":
     cdef Vector3[T] c_cone "cone"[T](const Vector3[T] &, const T)
 
     cdef cppclass Player[T]:
-        void set(int, T x, T y, T z, T ox, T oy, T oz, bool_t)
+        void set_crouch(bool_t)
+        void set_position(Vector *)
+        void set_orientation(Vector *)
 
     cdef cppclass Material[T]:
         T ricochet
@@ -258,21 +261,35 @@ cdef class Simulator:
     def set(self, int x, int y, int z, o):
         self.engine.set(get_pos(x, y, z), o.index, 1.0)
 
-    def step(self, t1, t2):
+    cdef void resize(self):
         self.engine.players.resize(len(self.protocol.players))
 
-        for i, player in enumerate(self.protocol.players.values()):
-            character = player.world_object
+    def set_animation(self, size_t i, bool_t value):
+        self.engine.players[i].set_crouch(value)
 
-            if character and not character.dead:
-                position    = character.position
-                orientation = character.orientation
+    def on_spawn(self, size_t i):
+        self.resize()
+        wo = self.protocol.players[i].world_object
 
-                self.engine.players[i].set(
-                    player.player_id, position.x, position.y, position.z,
-                    orientation.x, orientation.y, orientation.z, character.crouch
-                )
-            else:
-                self.engine.players[i].set(player.player_id, 0, -64, 0, 0, 0, 0, 0)
+        p = <Vertex3> wo.position
+        f = <Vertex3> wo.orientation
 
+        assert p.is_ref and f.is_ref
+
+        cdef Player[double] * player = &self.engine.players[i]
+
+        player.set_crouch(wo.crouch)
+        player.set_position(p.value)
+        player.set_orientation(f.value)
+
+    def on_despawn(self, size_t i):
+        cdef Player[double] * player = &self.engine.players[i]
+
+        player.set_crouch(0)
+        player.set_position(NULL)
+        player.set_orientation(NULL)
+
+        self.resize()
+
+    def step(self, t1, t2):
         self.engine.step(t1, t2)

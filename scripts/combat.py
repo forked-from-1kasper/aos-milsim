@@ -189,9 +189,12 @@ def apply_script(protocol, connection, config):
 
             self.sendWeaponReloadPacket()
 
+            self.protocol.simulator.on_spawn(self.player_id)
+
             connection.on_spawn(self, pos)
 
         def on_disconnect(self):
+            self.protocol.simulator.on_despawn(self.player_id)
             self.drop_all()
 
             connection.on_disconnect(self)
@@ -200,6 +203,7 @@ def apply_script(protocol, connection, config):
             if connection.on_kill(self, killer, kill_type, grenade) is False:
                 return False
 
+            self.protocol.simulator.on_despawn(self.player_id)
             self.drop_all()
 
         def on_animation_update(self, jump, crouch, sneak, sprint):
@@ -216,6 +220,8 @@ def apply_script(protocol, connection, config):
                     self.tool_object.on_sneak_press()
                 else:
                     self.tool_object.on_sneak_release()
+
+            self.protocol.simulator.set_animation(self.player_id, crouch)
 
             return retval
 

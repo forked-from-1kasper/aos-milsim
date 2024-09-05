@@ -6,7 +6,7 @@
 #include <mutex>
 #include <queue>
 
-#include "vxl_c.h"
+#include <vxl_c.h>
 
 #include <Milsim/Vector.hxx>
 

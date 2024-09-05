@@ -15,10 +15,10 @@ DYNLIBS      = $(MODULES:%=$(LIBDIR)/%.so)
 
 all: hier $(DYNLIBS)
 
-$(BUILDDIR)/%.c: $(SOURCEDIR)/%.pyx $(HXXFILES)
-	$(CYTHON) -3 $< -o $@
+$(BUILDDIR)/%.cxx: $(SOURCEDIR)/%.pyx $(HXXFILES)
+	$(CYTHON) --cplus -3 $< -o $@
 
-$(BUILDDIR)/%.o: $(BUILDDIR)/%.c
+$(BUILDDIR)/%.o: $(BUILDDIR)/%.cxx
 	$(CXX) -c $(CXXFLAGS) $^ -o $@
 
 $(LIBDIR)/%.so: $(BUILDDIR)/%.o
@@ -28,4 +28,4 @@ hier:
 	mkdir -p $(BUILDDIR)
 
 clean:
-	rm -rf $(BUILDDIR)/*.o $(BUILDDIR)/*.c $(DYNLIBS)
+	rm -rf $(BUILDDIR)/*.o $(BUILDDIR)/*.cxx $(DYNLIBS)
