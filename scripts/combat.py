@@ -48,7 +48,13 @@ def apply_script(protocol, connection, config):
         def on_map_change(self, M):
             deleteQueueClear()
 
+            for player in self.players.values():
+                player.weapon_object.clear()
+                player.inventory.clear()
+
             self.clear_entities()
+            Item.reset()
+
             protocol.on_map_change(self, M)
 
             for i in self.team1_tent_inventory, self.team2_tent_inventory:
@@ -194,7 +200,7 @@ def apply_script(protocol, connection, config):
             connection.on_spawn(self, pos)
 
         def on_disconnect(self):
-            self.protocol.simulator.on_despawn(self.player_id)
+            self.weapon_object.reset()
             self.drop_all()
 
             connection.on_disconnect(self)
@@ -205,6 +211,10 @@ def apply_script(protocol, connection, config):
 
             self.protocol.simulator.on_despawn(self.player_id)
             self.drop_all()
+
+        def reset(self):
+            self.protocol.simulator.on_despawn(self.player_id)
+            connection.reset(self)
 
         def on_animation_update(self, jump, crouch, sneak, sprint):
             retval = connection.on_animation_update(self, jump, crouch, sneak, sprint)

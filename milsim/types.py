@@ -355,11 +355,16 @@ def encode(n, key = ascii_uppercase):
     return "".join(map(key.__getitem__, ds))[::-1]
 
 from itertools import count
-itemidpool = map(encode, count(1))
 
 class Item:
+    idpool = None
+
+    @staticmethod
+    def reset():
+        Item.idpool = map(encode, count(1))
+
     def __init__(self):
-        self.id = next(itemidpool)
+        self.id = next(Item.idpool)
         self.persistent = True
 
     def mark_renewable(self):

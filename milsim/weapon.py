@@ -204,11 +204,13 @@ class ABCWeapon(Tool):
             if o.persistent:
                 self.player.get_drop_inventory().push(o)
 
-        self.item_underbarrel = None
-
         self.last_shot = -inf
         self.reloading = False
         self.restock()
+        self.clear()
+
+    def clear(self):
+        self.item_underbarrel = None
 
     def format_ammo(self):
         return None
