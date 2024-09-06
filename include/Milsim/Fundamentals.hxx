@@ -80,13 +80,13 @@ template<typename T> inline bool randbool(T probability)
 template<typename T> T uniform(T m, T M)
 { return m + random<T>() * (M - m); }
 
-enum class Limb : uint8_t {
-    head  = 0,
-    torso = 1,
-    arml  = 2,
-    armr  = 3,
-    legl  = 4,
-    legr  = 5
+enum {
+    LIMB_HEAD  = 0,
+    LIMB_TORSO = 1,
+    LIMB_ARML  = 2,
+    LIMB_ARMR  = 3,
+    LIMB_LEGL  = 4,
+    LIMB_LEGR  = 5
 };
 
 namespace Fundamentals {

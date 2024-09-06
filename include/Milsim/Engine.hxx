@@ -429,7 +429,7 @@ private:
                 }
             }
 
-            int target = -1; Limb hit;
+            int target = -1; int limb;
             T dist = std::numeric_limits<T>::infinity();
 
             for (size_t i = 0; i < players.size(); i++) {
@@ -448,7 +448,7 @@ private:
                 if (d < dist) {
                     dist   = d;
                     target = i;
-                    hit    = Limb::torso;
+                    limb   = LIMB_TORSO;
                 }
 
                 auto & head = Box::head<T>;
@@ -457,7 +457,7 @@ private:
                 if (d < dist) {
                     dist   = d;
                     target = i;
-                    hit    = Limb::head;
+                    limb   = LIMB_HEAD;
                 }
 
                 auto & legl = player.crouch() ? Box::legc_left<T> : Box::leg_left<T>;
@@ -466,7 +466,7 @@ private:
                 if (d < dist) {
                     dist   = d;
                     target = i;
-                    hit    = Limb::legl;
+                    limb   = LIMB_LEGL;
                 }
 
                 auto & legr = player.crouch() ? Box::legc_right<T> : Box::leg_right<T>;
@@ -475,7 +475,7 @@ private:
                 if (d < dist) {
                     dist   = d;
                     target = i;
-                    hit    = Limb::legr;
+                    limb   = LIMB_LEGR;
                 }
 
                 auto & armr = player.crouch() ? Box::armc_right<T> : Box::arm_right<T>;
@@ -484,7 +484,7 @@ private:
                 if (d < dist) {
                     dist   = d;
                     target = i;
-                    hit    = Limb::armr;
+                    limb   = LIMB_ARMR;
                 }
 
                 auto & arml = player.crouch() ? Box::armc_left<T> : Box::arm_left<T>;
@@ -493,23 +493,21 @@ private:
                 if (d < dist) {
                     dist   = d;
                     target = i;
-                    hit    = Limb::arml;
+                    limb   = LIMB_ARML;
                 }
             }
 
-            if (target >= 0) {
-                if (onPlayerHit != Py_None) {
-                    Vector3<T> w = r + dr * dist;
+            if (0 <= target && onPlayerHit != Py_None) {
+                Vector3<T> w = r + dr * dist;
 
-                    auto retval = PyObject_CallFunction(onPlayerHit, "Offffffiiiiddii",
-                        o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
-                        o.thrower, o.energy(), o.area, target, hit
-                    );
+                auto retval = PyObject_CallFunction(onPlayerHit, "Offffffiiiiddii",
+                    o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
+                    o.thrower, o.energy(), o.area, target, limb
+                );
 
-                    stuck = retval == Py_True;
+                stuck = retval == Py_True;
 
-                    trace(o.index(), w, v.abs() / o.v0, false);
-                }
+                trace(o.index(), w, v.abs() / o.v0, false);
             }
 
             auto m  = o.mass;
