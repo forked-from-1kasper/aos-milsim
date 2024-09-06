@@ -34,7 +34,7 @@ template<> inline PyObject * newPyObject<unsigned long long>(unsigned long long 
 template<typename... Ts, size_t... Is>
 inline PyObject * newPyTuple(std::index_sequence<Is...>, Ts... ts) {
     PyObject * value = PyTuple_New(sizeof...(Ts));
-    (PyTuple_SetItem(value, Is, newPyObject<Ts>(ts)), ...);
+    (PyTuple_SET_ITEM(value, Is, newPyObject<Ts>(ts)), ...);
 
     return value;
 }

@@ -15,6 +15,9 @@ DYNLIBS      = $(MODULES:%=$(LIBDIR)/%.so)
 
 all: hier $(DYNLIBS)
 
+release: CXXFLAGS += -O3
+release: all
+
 $(BUILDDIR)/%.cxx: $(SOURCEDIR)/%.pyx $(HXXFILES)
 	$(CYTHON) --cplus -3 $< -o $@
 

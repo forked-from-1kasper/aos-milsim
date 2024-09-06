@@ -14,6 +14,9 @@ template<typename T> struct Vector3 {
     constexpr Vector3(const Vector3<T> & v) : x(v.x), y(v.y), z(v.z) {}
     constexpr Vector3(const Vector * v) : x(v->x), y(v->y), z(v->z) {}
 
+    constexpr Vector3<T> & operator=(const Vector3<T> &) = default;
+    constexpr Vector3<T> & operator=(Vector3<T> &&) = default;
+
     constexpr inline T norm() const { return x * x + y * y + z * z; }
     constexpr inline T abs()  const { return std::hypot(x, y, z); }
 

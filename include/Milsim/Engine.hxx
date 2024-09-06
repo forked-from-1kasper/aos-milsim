@@ -65,8 +65,8 @@ public:
         const int i, const Vector3<T> & r, const Vector3<T> & v,
         const T timestamp, const T m, const T ballistic,
         const uint32_t model, const T A
-    ) : object(object), thrower(i), timestamp(timestamp), position(r), velocity(v),
-        mass(m), ballistic(ballistic), model(model), area(A)
+    ) : object(object), mass(m), ballistic(ballistic), area(A), model(model),
+        thrower(i), timestamp(timestamp), position(r), velocity(v)
     { Py_INCREF(object); v0 = v.abs(); _index = gidx; gidx++; }
 
     ~Object() { Py_DECREF(object); }
