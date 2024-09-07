@@ -21,7 +21,7 @@
 template<typename Real> Real vaporPressureOfWater(const Real T) {
     // https://en.wikipedia.org/wiki/Tetens_equation
     auto k = T > 0 ? (17.27 * T) / (T + 237.3) : (21.875 * T) / (T + 265.5);
-    return 610.78 * exp(k);
+    return 610.78 * exp(k); // Pa
 }
 
 inline void retain(PyObject * & member, PyObject * const obj) {
@@ -123,7 +123,7 @@ private:
     // Independent variables.
     T _temperature, _pressure, _humidity; Vector3<T> _wind;
     // Derived variables.
-    T _density, _mach;
+    T _density, _mach, _po2;
 
 private:
     inline Material<T> & material(const Voxel<T> & voxel)
@@ -203,7 +203,9 @@ public:
         auto p₁ = φ * vaporPressureOfWater<T>(t), p₂ = p - p₁;
 
         auto ε = gasConstant<T> * (t - absoluteZero<T>);
+
         _density = (p₁ * molarMassWaterVapor<T> + p₂ * molarMassDryAir<T>) / ε;
+        _po2     = 0.20946 * p₂;
 
         // 2) Here we assume Amagat’s law.
 
@@ -235,12 +237,13 @@ public:
         // See also: http://resource.npl.co.uk/acoustics/techguides/speedair/
     }
 
-    inline T          temperature() const { return _temperature; }
-    inline T          pressure()    const { return _pressure; }
-    inline T          humidity()    const { return _humidity; }
-    inline T          density()     const { return _density; }
-    inline T          mach()        const { return _mach; }
-    inline Vector3<T> wind()        const { return _wind; }
+    inline T          temperature() const { return _temperature; } // ℃
+    inline T          pressure()    const { return _pressure; }    // Pa
+    inline T          humidity()    const { return _humidity; }    // %
+    inline T          density()     const { return _density; }     // kg/m³
+    inline T          mach()        const { return _mach; }        // m/s
+    inline T          po2()         const { return _po2; }         // Pa
+    inline Vector3<T> wind()        const { return _wind; }        // m/s
 
     void wipe(MapData * ptr) {
         set(0, 101325, 0.3, Vector3<T>(0, 0, 0));
