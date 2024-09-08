@@ -116,7 +116,7 @@ class Environment:
     palette  : Dict[int, Material] = field(default_factory = dict)
     defaults : Iterable[Tuple[Vector3i, Material]] = field(default_factory = void)
     north    : Vertex3 = Vertex3(1, 0, 0)
-    weather  : Weather = StaticWeather()
+    weather  : Weather = field(default_factory = StaticWeather)
 
     def apply(self, sim):
         assert len(self.registry) > 0

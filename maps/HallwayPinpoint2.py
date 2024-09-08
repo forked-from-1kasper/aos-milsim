@@ -5,6 +5,7 @@ from itertools import product
 from pyspades.constants import *
 from milsim.vxl import VxlData
 
+from milsim.types import StaticWeather
 from milsim.common import *
 
 name    = 'HallwayPinpoint2'
@@ -28,14 +29,10 @@ def get_spawn_location(connection):
 
     if connection.team is connection.protocol.blue_team:
         x = uniform(32, min(wall1(y), 256 - 64))
-        z = M.get_z(x, y, height(x) + 1)
-
-        return x, y, z
+        return x, y, M.get_z(x, y, height(x) + 1)
     elif connection.team is connection.protocol.green_team:
         x = uniform(max(256 + 64, wall2(y) + 1), 512 - 32)
-        z = M.get_z(x, y, height(x) + 1)
-
-        return x, y, z
+        return x, y, M.get_z(x, y, height(x) + 1)
     else:
         return ServerConnection.get_spawn_location(connection)
 
@@ -51,11 +48,9 @@ def get_entity_location(team, entity_id):
 
 byte = lambda x: int(x * 255)
 
-def texture(hue, rgen):
-    r, g, b = hsv_to_rgb(hue, rgen.uniform(0.5, 1.0), 1.0)
+def gen_color(rgen, hue, minsat = 0.5, maxsat = 1.0):
+    r, g, b = hsv_to_rgb(hue, rgen.uniform(minsat, maxsat), 1.0)
     return byte(r), byte(g), byte(b)
-
-WATER = (0, 170, 240)
 
 def defaults():
     for x, Δy in product(range(512), range(64)):
@@ -82,8 +77,10 @@ def on_map_generation(dirname, seed):
     rgen = Random(seed)
     hue = rgen.uniform(0, 1)
 
+    water = gen_color(rgen, hue, minsat = 0.5, maxsat = 0.7)
+
     for x, y in product(range(512), range(512)):
-        vxl.set_point(x, y, 63, WATER)
+        vxl.set_point(x, y, 63, water)
 
     for x, Δy in product(range(512), range(64)):
         z = height(x)
@@ -94,12 +91,12 @@ def on_map_generation(dirname, seed):
         vxl.set_column_fast(x, 256 - Δy, 0, z, 0, 0)
         vxl.set_column_fast(x, 256 + Δy, 0, z, 0, 0)
 
-        vxl.set_point(x, 256 - Δy, 63 - z, texture(hue, rgen))
-        vxl.set_point(x, 256 - Δy, z,      texture(hue, rgen))
-        vxl.set_point(x, 256 - Δy, 0,      texture(hue, rgen))
-        vxl.set_point(x, 256 + Δy, 63 - z, texture(hue, rgen))
-        vxl.set_point(x, 256 + Δy, z,      texture(hue, rgen))
-        vxl.set_point(x, 256 + Δy, 0,      texture(hue, rgen))
+        vxl.set_point(x, 256 - Δy, 63 - z, gen_color(rgen, hue))
+        vxl.set_point(x, 256 - Δy, z,      gen_color(rgen, hue))
+        vxl.set_point(x, 256 - Δy, 0,      gen_color(rgen, hue))
+        vxl.set_point(x, 256 + Δy, 63 - z, gen_color(rgen, hue))
+        vxl.set_point(x, 256 + Δy, z,      gen_color(rgen, hue))
+        vxl.set_point(x, 256 + Δy, 0,      gen_color(rgen, hue))
 
     for y in range(256 - 64, 256 + 65):
         x1, x2 = wall1(y), wall2(y)
@@ -109,17 +106,24 @@ def on_map_generation(dirname, seed):
 
         if x1 < x2:
             for z, Δx in product(range(64), range(8)):
-                vxl.set_point(x1 + Δx, y, z, texture(hue, rgen))
-                vxl.set_point(x2 - Δx, y, z, texture(hue, rgen))
+                vxl.set_point(x1 + Δx, y, z, gen_color(rgen, hue))
+                vxl.set_point(x2 - Δx, y, z, gen_color(rgen, hue))
 
     return vxl
 
 def on_environment_generation(dirname, seed):
+    weather = StaticWeather()
+
+    rgen = Random(seed)
+    hue = rgen.uniform(0, 1) # TODO: deduplicate
+    weather.clear_sky_fog = gen_color(rgen, hue, minsat = 0.1, maxsat = 0.4)
+
     return Environment(
         registry = [StrongBricks, Dirt, Sand2, Water],
         default  = Dirt,
         build    = Sand2,
         water    = Water,
         size     = Box(ymin = 256 - 64, ymax = 256 + 65),
-        defaults = defaults()
+        defaults = defaults(),
+        weather  = weather
     )
