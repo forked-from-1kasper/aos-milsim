@@ -108,16 +108,15 @@ def void():
 
 @dataclass
 class Environment:
-    registry        : List[Material]
-    default         : Material
-    build           : Material
-    water           : Material
-    on_flag_capture : Callable = lambda player: None
-    size            : Box = field(default_factory = Box)
-    palette         : Dict[int, Material] = field(default_factory = dict)
-    defaults        : Callable[[], Iterable[Tuple[Vector3i, Material]]] = void
-    north           : Vertex3 = Vertex3(1, 0, 0)
-    weather         : Weather = StaticWeather()
+    registry : List[Material]
+    default  : Material
+    build    : Material
+    water    : Material
+    size     : Box = field(default_factory = Box)
+    palette  : Dict[int, Material] = field(default_factory = dict)
+    defaults : Iterable[Tuple[Vector3i, Material]] = field(default_factory = void)
+    north    : Vertex3 = Vertex3(1, 0, 0)
+    weather  : Weather = StaticWeather()
 
     def apply(self, sim):
         assert len(self.registry) > 0
@@ -131,7 +130,7 @@ class Environment:
 
         sim.applyPalette(self.palette)
 
-        for (x, y, z), M in self.defaults():
+        for (x, y, z), M in self.defaults:
             sim.set(x, y, z, M)
 
 @dataclass

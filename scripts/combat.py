@@ -1,8 +1,9 @@
 from itertools import product, islice
 from math import floor, inf, hypot
 from time import monotonic
+import os
 
-from twisted.internet import reactor
+from twisted.internet import reactor, threads
 from twisted.logger import Logger
 
 from pyspades.packet import register_packet_handler
@@ -10,35 +11,75 @@ from pyspades import contained as loaders
 from pyspades.world import cube_line
 from pyspades.constants import *
 
-from piqueserver.map import Map, MapNotFound
+from piqueserver.commands import command
+from piqueserver.config import config
 
 from milsim.protocol import MilsimProtocol, HEIMagazine, Buckshot1, Buckshot2, Bullet
 from milsim.connection import MilsimConnection
 
 from milsim.weapon import GrenadeLauncher, GrenadeItem, FlashbangItem
-from milsim.vxl import VxlData, onDeleteQueue, deleteQueueClear
+from milsim.map import MapInfo, check_rotation, check_map
+from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.common import *
-
-def load_vxl(self, rot):
-    try:
-        fin = open(rot.get_map_filename(self.load_dir), 'rb')
-    except OSError:
-        raise MapNotFound(rot.name)
-
-    self.data = VxlData(fin)
-    fin.close()
 
 log = Logger()
 
-Map.load_vxl = load_vxl # is there any better way to override this?
+@command()
+def seed(connection):
+    """
+    Return the map's seed
+    /seed
+    """
+    return str(connection.protocol.map_info.seed)
 
-def apply_script(protocol, connection, config):
+@command('map', admin_only = True)
+def change_planned_map(connection, map_name):
+    """
+    Set the next map to be loaded after current game ends and inform everyone of it
+    /map <mapname>
+    """
+    nickname = connection.name
+    protocol = connection.protocol
+
+    if rot_info := check_map(map_name, protocol.map_dir):
+        protocol.planned_map = rot_info
+        protocol.broadcast_chat(
+            '{} changed next map to {}'.format(nickname, map_name),
+            irc = True
+        )
+    else:
+        return 'Map {} not found'.format(map_name)
+
+@command('loadmap', admin_only = True)
+def load_map(connection, map_name):
+    """
+    Instantly switches map to the specified
+    /loadmap <mapname>
+    """
+    protocol = connection.protocol
+
+    if rot_info := check_map(map_name, protocol.map_dir):
+        protocol.planned_map = rot_info
+        protocol.advance_rotation()
+    else:
+        return 'Map {} not found'.format(map_name)
+
+def apply_script(protocol, connection, _):
     class CombatProtocol(MilsimProtocol, protocol):
         def __init__(self, *w, **kw):
+            self.map_dir = os.path.join(config.config_dir, 'maps')
+
             protocol.__init__(self, *w, **kw)
             MilsimProtocol.__init__(self, *w, **kw)
 
             self.team_spectator.kills = 0 # bugfix
+
+        def set_map_rotation(self, maps):
+            self.maps = check_rotation(maps, self.map_dir)
+            self.map_rotator = self.map_rotator_type(self.maps)
+
+        def make_map(self, rot_info):
+            return threads.deferToThread(MapInfo, rot_info, self.map_dir)
 
         def on_connect(self, peer):
             log.info("{address} connected", address = peer.address)
@@ -85,13 +126,11 @@ def apply_script(protocol, connection, config):
 
             t1 = monotonic()
 
-            o = self.map_info.extensions.get('environment')
-            MilsimProtocol.on_environment_change(self, o)
+            MilsimProtocol.on_environment_change(self, self.map_info.environment)
 
             t2 = monotonic()
 
-            dt = t2 - t1
-            log.info("Environment loading took {duration:.2f} s", duration = dt)
+            log.info("Environment loading took {duration:.2f} s", duration = t2 - t1)
 
         def on_world_update(self):
             MilsimProtocol.on_simulator_update(self)
@@ -262,7 +301,9 @@ def apply_script(protocol, connection, config):
             return connection.on_grenade(self, fuse)
 
         def on_flag_capture(self):
-            self.protocol.environment.on_flag_capture(self)
+            if map_on_flag_capture := self.protocol.map_info.on_flag_capture:
+                map_on_flag_capture(self)
+
             connection.on_flag_capture(self)
 
         def on_position_update(self):

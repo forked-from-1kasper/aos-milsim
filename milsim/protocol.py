@@ -243,12 +243,9 @@ class MilsimProtocol:
     def on_environment_change(self, o):
         self.simulator.wipe()
 
-        if isinstance(o, Environment):
-            self.environment = o
-            o.apply(self.simulator)
-            self.update_weather()
-        else:
-            raise TypeError("“environment” expected to be of the type milsim.types.Enviornment")
+        self.environment = o
+        o.apply(self.simulator)
+        self.update_weather()
 
     def on_simulator_update(self):
         t = reactor.seconds()

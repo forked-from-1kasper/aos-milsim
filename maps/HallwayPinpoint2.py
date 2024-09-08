@@ -7,6 +7,10 @@ from milsim.vxl import VxlData
 
 from milsim.common import *
 
+name    = 'HallwayPinpoint2'
+version = '1.0'
+author  = 'Siegmentation Fault'
+
 StrongBricks = Material(name = "strong bricks", ricochet = 1.0,  deflecting = 5,  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
 Sand2        = Material(name = "sand",          ricochet = 0.4,  deflecting = 83, durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)
 
@@ -52,7 +56,27 @@ def texture(hue, rgen):
     return byte(r), byte(g), byte(b)
 
 WATER = (0, 170, 240)
-def gen_script(basename, seed):
+
+def defaults():
+    for x, Δy in product(range(512), range(64)):
+        z = height(x)
+
+        yield ((x, 256 - Δy, 63 - z), StrongBricks)
+        yield ((x, 256 - Δy, z),      StrongBricks)
+        yield ((x, 256 - Δy, 0),      StrongBricks)
+        yield ((x, 256 + Δy, 63 - z), StrongBricks)
+        yield ((x, 256 + Δy, z),      StrongBricks)
+        yield ((x, 256 + Δy, 0),      StrongBricks)
+
+    for y in range(256 - 64, 256 + 65):
+        x1, x2 = wall1(y), wall2(y)
+
+        if x1 < x2:
+            for z, Δx in product(range(64), range(8)):
+                yield ((x1 + Δx, y, z), StrongBricks)
+                yield ((x2 - Δx, y, z), StrongBricks)
+
+def on_map_generation(dirname, seed):
     vxl = VxlData()
 
     rgen = Random(seed)
@@ -90,35 +114,12 @@ def gen_script(basename, seed):
 
     return vxl
 
-def defaults():
-    for x, Δy in product(range(512), range(64)):
-        z = height(x)
-
-        yield ((x, 256 - Δy, 63 - z), StrongBricks)
-        yield ((x, 256 - Δy, z),      StrongBricks)
-        yield ((x, 256 - Δy, 0),      StrongBricks)
-        yield ((x, 256 + Δy, 63 - z), StrongBricks)
-        yield ((x, 256 + Δy, z),      StrongBricks)
-        yield ((x, 256 + Δy, 0),      StrongBricks)
-
-    for y in range(256 - 64, 256 + 65):
-        x1, x2 = wall1(y), wall2(y)
-
-        if x1 < x2:
-            for z, Δx in product(range(64), range(8)):
-                yield ((x1 + Δx, y, z), StrongBricks)
-                yield ((x2 - Δx, y, z), StrongBricks)
-
-E = Environment(
-    registry = [StrongBricks, Dirt, Sand2, Water],
-    default  = Dirt,
-    build    = Sand2,
-    water    = Water,
-    size     = Box(ymin = 256 - 64, ymax = 256 + 65),
-    defaults = defaults
-)
-
-name       = 'HallwayPinpoint2'
-version    = '1.0'
-author     = 'Siegmentation Fault'
-extensions = {'environment' : E}
+def on_environment_generation(dirname, seed):
+    return Environment(
+        registry = [StrongBricks, Dirt, Sand2, Water],
+        default  = Dirt,
+        build    = Sand2,
+        water    = Water,
+        size     = Box(ymin = 256 - 64, ymax = 256 + 65),
+        defaults = defaults()
+    )

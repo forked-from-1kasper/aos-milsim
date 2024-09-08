@@ -93,8 +93,9 @@ class ABCWeapon(Tool):
     reload_time = NotImplemented
 
     def __init__(self, player):
-        self.player           = player
-        self.item_underbarrel = None
+        self.weapon_reload_timer = -inf
+        self.player              = player
+        self.item_underbarrel    = None
 
         self.reset()
 
@@ -129,21 +130,20 @@ class ABCWeapon(Tool):
             self.reloading = True
 
     def update(self, t):
-        if self.reloading:
-            if t - self.weapon_reload_timer >= self.reload_time:
-                self.weapon_reload_timer = t
+        if self.reloading and t - self.weapon_reload_timer >= self.reload_time:
+            self.weapon_reload_timer = t
 
-                succ, self.reloading = self.magazine.reload(self.reserve())
+            succ, self.reloading = self.magazine.reload(self.reserve())
 
-                if succ is not None:
-                    i = self.player.inventory
-                    i.remove(succ)
-                    i.append(self.magazine)
+            if succ is not None:
+                i = self.player.inventory
+                i.remove(succ)
+                i.append(self.magazine)
 
-                    self.magazine = succ
+                self.magazine = succ
 
-                self.player.on_reload_complete()
-                self.player.sendWeaponReloadPacket()
+            self.player.on_reload_complete()
+            self.player.sendWeaponReloadPacket()
 
     def on_sneak_press(self):
         if self.player.world_object.secondary_fire:

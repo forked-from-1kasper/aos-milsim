@@ -73,6 +73,8 @@ Water    = Material(name = "water",    ricochet = 0.7,  deflecting = 78, durabil
 
 grenade_zone = lambda x, y, z: product(range(x - 1, x + 2), range(y - 1, y + 2), range(z - 1, z + 2))
 
+clamp = lambda m, M, x: max(m, min(M, x))
+
 dot = lambda u, v: u.x * v.x + u.y * v.y + u.z * v.z
 xOy = lambda v: Vertex3(v.x, v.y, 0)
 xOz = lambda v: Vertex3(v.x, 0, v.z)

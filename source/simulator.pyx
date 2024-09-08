@@ -90,7 +90,7 @@ cdef extern from "Milsim/Engine.hxx":
         T humidity()
         T density()
         T mach()
-        T po2()
+        T ppo2()
         Vector3[T] wind()
 
         bool_t dig(int, int, int, T)
@@ -186,8 +186,8 @@ cdef class Simulator:
     def mach(self):
         return self.engine.mach()
 
-    def po2(self):
-        return self.engine.po2()
+    def ppo2(self):
+        return self.engine.ppo2()
 
     def wind(self):
         cdef Vector3[double] w = self.engine.wind()

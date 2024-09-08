@@ -3,8 +3,7 @@ from random import weibullvariate
 import requests
 
 from milsim.types import Weather
-
-clamp = lambda m, M, x: max(m, min(M, x))
+from milsim.common import clamp
 
 class Stopwatch:
     def __init__(self, delay, pingback):

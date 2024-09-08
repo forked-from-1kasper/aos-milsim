@@ -6,6 +6,10 @@ from milsim.vxl import VxlData
 
 from milsim.common import *
 
+name    = 'Tower'
+version = '1.0'
+author  = 'Siegmentation Fault'
+
 StrongConcrete = Material(name = "strong concrete", ricochet = 1.0,  deflecting = 5,  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
 StrongSteel    = Material(name = "strong steel",    ricochet = 1.0,  deflecting = 5,  durability = 600.0, strength = 500e+6, density = 7850, absorption = 1e+15, crumbly = False)
 Sand2          = Material(name = "sand",            ricochet = 0.4,  deflecting = 83, durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)
@@ -60,16 +64,6 @@ def on_flag_capture(conn):
 
     team.set_flag()
     team.flag.update()
-
-E = Environment(
-    registry        = [StrongConcrete, StrongSteel, Dirt, Sand2, Water],
-    default         = Dirt,
-    build           = Sand2,
-    water           = Water,
-    palette         = palette,
-    size            = Box(xmin = 256 - 64, xmax = 256 + 64, ymin = 256 - 64, ymax = 256 + 64),
-    on_flag_capture = on_flag_capture,
-)
 
 WATER    = (0, 170, 240)
 CONCRETE = (0xCC, 0xCC, 0xCC)
@@ -130,7 +124,7 @@ def floor(vxl, offset, k):
                 for z in range(offset - 8 * k + 1, offset - 8 * (k - 1)):
                     vxl.set_point(256 + x, 256 + y, z, STEEL)
 
-def gen_script(basename, seed):
+def on_map_generation(dirname, seed):
     vxl = VxlData()
 
     for x, y in product(range(512), range(512)):
@@ -143,7 +137,12 @@ def gen_script(basename, seed):
 
     return vxl
 
-name       = 'Tower'
-version    = '1.0'
-author     = 'Siegmentation Fault'
-extensions = {'environment' : E}
+def on_environment_generation(dirname, seed):
+    return Environment(
+        registry = [StrongConcrete, StrongSteel, Dirt, Sand2, Water],
+        default  = Dirt,
+        build    = Sand2,
+        water    = Water,
+        palette  = palette,
+        size     = Box(xmin = 256 - 64, xmax = 256 + 64, ymin = 256 - 64, ymax = 256 + 64)
+    )

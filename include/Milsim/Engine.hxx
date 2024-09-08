@@ -123,7 +123,7 @@ private:
     // Independent variables.
     T _temperature, _pressure, _humidity; Vector3<T> _wind;
     // Derived variables.
-    T _density, _mach, _po2;
+    T _density, _mach, _ppo2;
 
 private:
     inline Material<T> & material(const Voxel<T> & voxel)
@@ -205,7 +205,7 @@ public:
         auto ε = gasConstant<T> * (t - absoluteZero<T>);
 
         _density = (p₁ * molarMassWaterVapor<T> + p₂ * molarMassDryAir<T>) / ε;
-        _po2     = 0.20946 * p₂;
+        _ppo2    = 0.20946 * p₂;
 
         // 2) Here we assume Amagat’s law.
 
@@ -242,7 +242,7 @@ public:
     inline T          humidity()    const { return _humidity; }    // %
     inline T          density()     const { return _density; }     // kg/m³
     inline T          mach()        const { return _mach; }        // m/s
-    inline T          po2()         const { return _po2; }         // Pa
+    inline T          ppo2()        const { return _ppo2; }        // Pa
     inline Vector3<T> wind()        const { return _wind; }        // m/s
 
     void wipe(MapData * ptr) {
