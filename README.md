@@ -92,6 +92,10 @@ Sent whenever projectile hits a target to provide better visual response.
 | 1      | Headshot    |
 | 2      | Player      |
 
+# Third-party resources
+
+The [OktoberDistrict](maps/OktoberDistrict.vxl) map by Bubochka.
+
 # References
 
 * [Under the hood: the physics of projectile ballistics](http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php).
