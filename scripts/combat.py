@@ -239,7 +239,9 @@ def apply_script(protocol, connection, _):
             connection.on_spawn(self, pos)
 
         def on_disconnect(self):
-            self.weapon_object.reset()
+            if o := self.weapon_object:
+                o.reset()
+
             self.drop_all()
 
             connection.on_disconnect(self)
