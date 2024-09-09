@@ -6,11 +6,12 @@ from twisted.internet import reactor
 
 from pyspades.collision import collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
-from pyspades.protocol import BaseConnection
 from pyspades import contained as loaders
 from pyspades.world import cube_line
 from pyspades.common import Vertex3
 from pyspades.constants import *
+
+from piqueserver.player import FeatureConnection
 
 from milsim.common import grenade_zone, TNT, gram, BandageItem, TourniquetItem, SplintItem
 from milsim.blast import sendGrenadePacket, explode, flashbang_effect
@@ -33,11 +34,11 @@ fracture_warning = {
 
 bleeding_warning = "You're bleeding."
 
-class MilsimConnection:
+class MilsimConnection(FeatureConnection):
     body_mass = 70
 
     def __init__(self, *w, **kw):
-        assert isinstance(self, BaseConnection)
+        FeatureConnection.__init__(self, *w, **kw)
 
         self.spade_object   = self.protocol.SpadeTool(self)
         self.block_object   = self.protocol.BlockTool(self)
@@ -46,6 +47,8 @@ class MilsimConnection:
         self.last_hp_update = -inf
         self.inventory      = Inventory()
         self.body           = Body()
+
+        self.previous_floor_position = None
 
     def on_reload_complete(self):
         pass
@@ -134,7 +137,7 @@ class MilsimConnection:
             self.inventory.remove(o)
             self.sendWeaponReloadPacket()
 
-    def drop_all(self):
+    def drop_inventory(self):
         if self.world_object is not None:
             self.get_drop_inventory().extend(
                 filter(lambda o: o.persistent, self.inventory)
@@ -155,6 +158,115 @@ class MilsimConnection:
         R = 0.5 <= t - self.last_tool_update
 
         return P and Q and R
+
+    def on_position_update(self):
+        if self.previous_floor_position is not None:
+            r1, r2 = self.previous_floor_position, self.floor()
+
+            M = self.protocol.map
+            for x, y, z in cube_line(*r1, *r2):
+                if M.get_solid(x, y, z):
+                    if e := self.protocol.get_tile_entity(x, y, z):
+                        e.on_pressure()
+
+            self.previous_floor_position = r2
+
+        FeatureConnection.on_position_update(self)
+
+    def on_orientation_update(self, x, y, z):
+        retval = FeatureConnection.on_orientation_update(self, x, y, z)
+
+        if retval == False:
+            return False
+
+        torso = self.body.torso
+
+        if torso.fractured and not torso.splint:
+            torso.hit(torso.rotation_damage)
+
+        return retval
+
+    def on_animation_update(self, jump, crouch, sneak, sprint):
+        retval = FeatureConnection.on_animation_update(self, jump, crouch, sneak, sprint)
+
+        if retval is not None:
+            jump, crouch, sneak, sprint = retval
+
+        if self.world_object.sprint and not sprint:
+            self.last_sprint = reactor.seconds()
+
+        if self.world_object.sneak != sneak:
+            if sneak:
+                self.tool_object.on_sneak_press()
+            else:
+                self.tool_object.on_sneak_release()
+
+        self.protocol.simulator.set_animation(self.player_id, crouch)
+
+        return retval
+
+    def on_block_build(self, x, y, z):
+        self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
+        FeatureConnection.on_block_build(self, x, y, z)
+
+    def on_line_build(self, points):
+        self.blocks = 50
+        FeatureConnection.on_line_build(self, points)
+
+    def on_tool_set_attempt(self, tool):
+        if self.body.arml.fractured or self.body.armr.fractured:
+            return False
+        else:
+            return FeatureConnection.on_tool_set_attempt(self, tool)
+
+    def on_grenade(self, fuse):
+        if not self.spade_object.enabled():
+            self.send_chat_error("How did you do that??")
+            return False
+
+        return FeatureConnection.on_grenade(self, fuse)
+
+    def on_flag_capture(self):
+        if map_on_flag_capture := self.protocol.map_info.on_flag_capture:
+            map_on_flag_capture(self)
+
+        FeatureConnection.on_flag_capture(self)
+
+    def on_spawn(self, pos):
+        self.previous_floor_position = self.floor()
+
+        self.tool_object = self.weapon_object
+
+        self.last_sprint      = -inf
+        self.last_tool_update = -inf
+
+        self.last_hp_update = reactor.seconds()
+        self.body.reset()
+        self.hp = 100
+
+        self.sendWeaponReloadPacket()
+
+        self.protocol.simulator.on_spawn(self.player_id)
+        FeatureConnection.on_spawn(self, pos)
+
+    def on_kill(self, killer, kill_type, grenade):
+        if FeatureConnection.on_kill(self, killer, kill_type, grenade) is False:
+            return False
+
+        self.protocol.simulator.on_despawn(self.player_id)
+        self.drop_inventory()
+
+    def on_disconnect(self):
+        if o := self.weapon_object:
+            o.reset()
+
+        self.drop_inventory()
+
+        FeatureConnection.on_disconnect(self)
+
+    def reset(self):
+        self.protocol.simulator.on_despawn(self.player_id)
+        FeatureConnection.reset(self)
 
     def set_tool(self, tool):
         self.tool             = tool
@@ -473,3 +585,29 @@ class MilsimConnection:
 
         for x, y, z in locs:
             self.protocol.on_block_build(x, y, z)
+
+    @register_packet_handler(loaders.ExistingPlayer)
+    @register_packet_handler(loaders.ShortPlayerData)
+    def on_new_player_recieved(self, contained):
+        if contained.team not in self.protocol.teams:
+            return
+
+        FeatureConnection.on_new_player_recieved(self, contained)
+
+    @register_packet_handler(loaders.ChangeTeam)
+    def on_team_change_recieved(self, contained):
+        if contained.team not in self.protocol.teams:
+            return
+
+        FeatureConnection.on_team_change_recieved(self, contained)
+
+    @register_packet_handler(loaders.BlockAction)
+    def on_block_action_recieved(self, contained):
+        # Everything else is handled server-side.
+        if contained.value == BUILD_BLOCK:
+            if self.protocol.map.get_solid(contained.x, contained.y, contained.z):
+                return
+
+            FeatureConnection.on_block_action_recieved(self, contained)
+
+assert MilsimConnection.on_connect is FeatureConnection.on_connect

@@ -1,10 +1,17 @@
-from twisted.internet import reactor
+from itertools import islice
+from time import monotonic
 from random import choice
+import os
 
-from pyspades.protocol import BaseProtocol
+from twisted.internet import reactor, threads
+from twisted.logger import Logger
+
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
+
+from piqueserver.server import FeatureProtocol
+from piqueserver.config import config
 
 from milsim.packets import (
     TracerPacket, HitEffectPacket,
@@ -12,7 +19,10 @@ from milsim.packets import (
     milsim_extensions
 )
 
+from milsim.weapon import GrenadeLauncher, GrenadeItem, FlashbangItem
+from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.blast import sendGrenadePacket, explode
+from milsim.map import MapInfo, check_rotation
 from milsim.constants import Limb, HitEffect
 from milsim.simulator import Simulator
 from milsim.weapon import ABCWeapon
@@ -145,14 +155,16 @@ class Shotgun(IntegralMagazineItem):
     default_cartridge = Buckshot1
     default_reserve   = 70
 
-class MilsimProtocol:
+log = Logger()
+
+class MilsimProtocol(FeatureProtocol):
     WeaponTool  = ABCWeapon
     SpadeTool   = SpadeTool
     BlockTool   = BlockTool
     GrenadeTool = GrenadeTool
 
     def __init__(self, *w, **kw):
-        assert isinstance(self, BaseProtocol)
+        self.map_dir = os.path.join(config.config_dir, 'maps')
 
         self.environment = None
         self.simulator   = Simulator(self)
@@ -168,7 +180,21 @@ class MilsimProtocol:
         self.smg     = type('SMG',     (SMG,     self.WeaponTool), dict())
         self.shotgun = type('Shotgun', (Shotgun, self.WeaponTool), dict())
 
+        FeatureProtocol.__init__(self, *w, **kw)
+
+        self.team_spectator.kills = 0 # bugfix
         self.available_proto_extensions.extend(milsim_extensions)
+
+    def set_map_rotation(self, maps):
+        self.maps = check_rotation(maps, self.map_dir)
+        self.map_rotator = self.map_rotator_type(self.maps)
+
+    def make_map(self, rot_info):
+        return threads.deferToThread(MapInfo, rot_info, self.map_dir)
+
+    def on_connect(self, peer):
+        log.info("{address} connected", address = peer.address)
+        FeatureProtocol.on_connect(self, peer)
 
     def get_weapon(self, weapon):
         if weapon == RIFLE_WEAPON:
@@ -272,6 +298,123 @@ class MilsimProtocol:
 
         self.drop_item_entity(x, y, z)
 
+    def on_map_change(self, M):
+        deleteQueueClear()
+
+        for player in self.players.values():
+            player.weapon_object.clear()
+            player.inventory.clear()
+
+        self.clear_entities()
+        Item.reset()
+
+        FeatureProtocol.on_map_change(self, M)
+
+        for i in self.team1_tent_inventory, self.team2_tent_inventory:
+            for k in range(90):
+                i.append(
+                    GrenadeLauncher(),
+                    GrenadeItem(),
+                    GrenadeItem(),
+                    GrenadeItem(),
+                    FlashbangItem(),
+                    CompassItem(),
+                    ProtractorItem(),
+                    RangefinderItem(),
+                    CartridgeBox(Bullet, 50),
+                    CartridgeBox(Buckshot1, 60),
+                    CartridgeBox(Buckshot2, 60),
+                    HEIMagazine()
+                )
+
+            i.append(
+                Kettlebell(1),
+                Kettlebell(5),
+                Kettlebell(10),
+                Kettlebell(15),
+                Kettlebell(30),
+                Kettlebell(50)
+            )
+
+        t1 = monotonic()
+        self.on_environment_change(self.map_info.environment)
+        t2 = monotonic()
+
+        log.info("Environment loading took {duration:.2f} s", duration = t2 - t1)
+
+    def on_world_update(self):
+        self.on_simulator_update()
+
+        for x, y, z in islice(onDeleteQueue(), 50):
+            if e := self.get_tile_entity(x, y, z):
+                e.on_destroy()
+
+            self.drop_item_entity(x, y, z)
+
+        t = reactor.seconds()
+
+        for player in self.living():
+            dt = t - player.last_hp_update
+
+            player.body.update(dt)
+
+            if player.moving():
+                for leg in player.body.legs():
+                    if leg.fractured:
+                        if player.world_object.sprint:
+                            leg.hit(leg.sprint_damage_rate * dt)
+                        elif not leg.splint:
+                            leg.hit(leg.walk_damage_rate * dt)
+
+            for arm in player.body.arms():
+                if player.world_object.primary_fire and arm.fractured:
+                    arm.hit(arm.action_damage_rate * dt)
+
+            player.weapon_object.update(t)
+
+            if player.item_shown(t):
+                if player.world_object.primary_fire:
+                    player.tool_object.on_lmb_hold(t, dt)
+
+                if player.world_object.secondary_fire:
+                    player.tool_object.on_rmb_hold(t, dt)
+
+                if player.world_object.sneak:
+                    player.tool_object.on_sneak_hold(t, dt)
+
+            hp = player.body.average()
+            if player.hp != hp:
+                player.set_hp(hp, kill_type = MELEE_KILL)
+
+            if not self.environment.size.inside(player.world_object.position):
+                player.kill()
+
+            player.last_hp_update = t
+
+        FeatureProtocol.on_world_update(self)
+
+    def broadcast_contained(self, contained, unsequenced = False, sender = None, team = None, save = False, rule = None):
+        FeatureProtocol.broadcast_contained(self, contained, unsequenced, sender, team, save, rule)
+
+        if isinstance(contained, loaders.BlockAction):
+            x, y, z = contained.x, contained.y, contained.z
+
+            # This is intentionally not in `connection.on_block_build`, so that `protocol.on_block_build`
+            # is called *after* the BlockAction packet has been sent.
+            if contained.value == BUILD_BLOCK:
+                self.on_block_build(x, y, z)
+
+            if contained.value == DESTROY_BLOCK:
+                self.on_block_destroy(x, y, z)
+
+            if contained.value == SPADE_DESTROY:
+                for X, Y, Z in (x, y, z), (x, y, z - 1), (x, y, z + 1):
+                    self.on_block_destroy(X, Y, Z)
+
+            if contained.value == GRENADE_DESTROY:
+                for X, Y, Z in grenade_zone(x, y, z):
+                    self.on_block_destroy(X, Y, Z)
+
     def onTrace(self, index, x, y, z, value, origin):
         self.broadcast_contained(
             TracerPacket(index, Vertex3(x, y, z), value, origin = origin),
@@ -307,7 +450,9 @@ class MilsimProtocol:
         )
 
         if callable(o.on_block_hit):
-            return o.on_block_hit(self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A)
+            return o.on_block_hit(
+                self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A
+            )
 
     def onPlayerHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower, E, A, target, limb_index):
         player    = self.players.get(target)
@@ -331,6 +476,8 @@ class MilsimProtocol:
             )
 
             if callable(o.on_player_hit):
-                return o.on_player_hit(self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A, target, limb)
+                return o.on_player_hit(
+                    self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A, target, limb
+                )
 
         return True
