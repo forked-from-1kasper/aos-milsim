@@ -65,7 +65,7 @@ class LandmineItem(ExplosiveItem):
 
     def spawn(self, player, x, y, z):
         if e := player.protocol.get_tile_entity(x, y, z):
-            if isinstance(e, LandmineItem):
+            if isinstance(e, Landmine):
                 player.inventory.remove(self)
                 e.explode()
 
@@ -174,7 +174,7 @@ def apply_script(protocol, connection, config):
             if reply := apply_item(ExplosiveItem, self.player, errmsg = "You do not have explosives"):
                 self.player.send_chat(reply)
 
-    class MineProtocol(protocol):
+    class ExplosiveProtocol(protocol):
         GrenadeTool = MineGrenadeTool
 
         def on_map_change(self, M):
@@ -189,11 +189,11 @@ def apply_script(protocol, connection, config):
                         ChargeItem()
                     )
 
-    class MineConnection(connection):
+    class ExplosiveConnection(connection):
         def on_refill(self):
             connection.on_refill(self)
 
             for k in range(2):
                 self.inventory.append(LandmineItem().mark_renewable())
 
-    return MineProtocol, MineConnection
+    return ExplosiveProtocol, ExplosiveConnection

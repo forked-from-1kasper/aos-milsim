@@ -60,6 +60,7 @@ def status(conn, nickname = None):
     ip = player.address[0]
     if ip in protocol.bans:
         name, reason, timestamp = protocol.bans[ip]
+        reason = reason or ""
 
         if timestamp < time():
             protocol.remove_ban(ip)

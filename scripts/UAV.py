@@ -204,7 +204,7 @@ def drone(conn, nickname = None):
         drone.track(conn, player)
 
 def apply_script(protocol, connection, config):
-    class DroneProtocol(protocol):
+    class UAVProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.drones = {
@@ -220,8 +220,8 @@ def apply_script(protocol, connection, config):
 
             protocol.on_map_change(self, M)
 
-    class DroneConnection(connection):
+    class UAVConnection(connection):
         def get_drone(self):
             return self.protocol.drones[self.team.id]
 
-    return DroneProtocol, DroneConnection
+    return UAVProtocol, UAVConnection

@@ -65,6 +65,8 @@ def load_map(connection, map_name):
         return 'Map {} not found'.format(map_name)
 
 def apply_script(protocol, connection, _):
+    print(protocol, connection)
+
     class CombatProtocol(MilsimProtocol, protocol):
         def __init__(self, *w, **kw):
             self.map_dir = os.path.join(config.config_dir, 'maps')
