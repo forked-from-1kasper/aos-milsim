@@ -224,6 +224,9 @@ def mail(conn, *w):
         conn.lastmail = timestamp
         return "Message sent."
 
+def format_exception(exc):
+    return "{}: {}".format(type(exc).__name__, exc)
+
 @command('eval', admin_only = True)
 def c_eval(conn, *w):
     """
@@ -231,7 +234,22 @@ def c_eval(conn, *w):
     /eval <code>
     """
 
-    return str(eval(' '.join(w), globals(), locals()))
+    try:
+        return str(eval(' '.join(w), globals()))
+    except Exception as exc:
+        return format_exception(exc)
+
+@command('exec', admin_only = True)
+def c_exec(conn, *w):
+    """
+    Executes arbitrary Python code
+    /exec <code>
+    """
+
+    try:
+        exec(' '.join(w), globals())
+    except Exception as exc:
+        return format_exception(exc)
 
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
