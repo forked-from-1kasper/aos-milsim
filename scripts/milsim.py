@@ -45,4 +45,5 @@ def load_map(connection, map_name):
         return 'Map {} not found'.format(map_name)
 
 def apply_script(protocol, connection, config):
+    # Scripts listed before are intentionally ignored.
     return MilsimProtocol, MilsimConnection

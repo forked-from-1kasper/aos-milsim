@@ -1,6 +1,7 @@
-from random import randint, random
+from random import randint, random, uniform
 from dataclasses import dataclass
 from math import floor, inf
+from time import sleep
 
 from twisted.internet import reactor
 
@@ -10,9 +11,10 @@ from piqueserver.config import config
 from pyspades.common import Vertex3
 from pyspades.team import Team
 
-from piqueserver.commands import command, player_only
 from milsim.blast import sendGrenadePacket, explode
 from milsim.weapon import UnderbarrelItem
+from piqueserver.commands import command
+from milsim.common import alive_only
 
 section = config.section("airstrike")
 
@@ -32,78 +34,72 @@ AIRBOMB_GUARANTEED_KILL_RADIUS = 40
 AIRSTRIKE_PASSES        = 50
 AIRSTRIKE_CAST_DISTANCE = 300
 
-shift = lambda val: val + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
-
-def dummy(*args, **kwargs):
-    pass
-
-def airbomb_explode(protocol, player_id, pos):
+def airbomb_explode(protocol, player_id, x, y, z):
     if player := protocol.take_player(player_id):
-        x, y, z = floor(pos.x), floor(pos.y), floor(pos.z)
-
-        explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, player, pos)
+        explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, player, Vertex3(x, y, z))
 
         for i in range(AIRSTRIKE_PASSES):
-            X, Y = shift(x), shift(y)
+            X = x + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
+            Y = y + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
             Z = protocol.map.get_z(X, Y)
 
             player.grenade_destroy(X, Y, Z)
-            reactor.callLater(random(), sendGrenadePacket, protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
+            sendGrenadePacket(protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
 
-def drop_airbomb(protocol, player_id, x, y, vx, vy):
-    pos = Vertex3(x, y, protocol.map.get_z(x, y) - 2)
-    reactor.callLater(AIRBOMB_DELAY, airbomb_explode, protocol, player_id, pos)
+            sleep(uniform(0.0, 0.05))
 
-def do_bombing(protocol, player_id, x, y, vx, vy, bombs):
-    if bombs <= 0: return
+def drop_airbomb(protocol, player_id, x, y):
+    X = floor(x)
+    Y = floor(y)
+    Z = protocol.map.get_z(X, Y) - 2
 
-    drop_airbomb(protocol, player_id, floor(x), floor(y), vx, vy)
+    airbomb_explode(protocol, player_id, X, Y, Z)
 
-    x1 = x + vx * BOMBING_DELAY
-    y1 = y + vy * BOMBING_DELAY
+def do_bombing(protocol, player_id, x, y, vx, vy, nbombs):
+    for k in range(nbombs):
+        sleep(BOMBING_DELAY)
+        drop_airbomb(protocol, player_id, x, y)
 
-    if bombs > 1:
-        reactor.callLater(
-            BOMBING_DELAY, do_bombing, protocol, player_id, x1, y1, vx, vy, bombs - 1
-        )
+        x += vx * BOMBING_DELAY
+        y += vy * BOMBING_DELAY
 
-def do_airstrike(name, conn, callback):
-    if conn.player_id not in conn.protocol.players:
-        return
+def do_airstrike(name, connection):
+    protocol = connection.protocol
 
-    if loc := conn.world_object.cast_ray(AIRSTRIKE_CAST_DISTANCE):
-        conn.protocol.broadcast_chat(
-            "<%s> Coordinates recieved. Over." % name,
-            global_message=False, team=conn.team
-        )
+    if wo := connection.world_object:
+        if loc := wo.cast_ray(AIRSTRIKE_CAST_DISTANCE):
+            protocol.broadcast_chat(
+                "<{}> Coordinates recieved. Over.".format(name),
+                global_message = False, team = connection.team
+            )
 
-        x, y, _ = loc
-        orientation = conn.world_object.orientation
-        v = Vertex3(orientation.x, orientation.y, 0).normal() * BOMBER_SPEED
+            x, y, z = loc
+            o = wo.orientation
+            v = Vertex3(o.x, o.y, 0).normal() * BOMBER_SPEED
 
-        do_bombing(conn.protocol, conn.player_id, x, y, v.x, v.y, BOMBS_COUNT)
-        callback()
+            reactor.callInThread(do_bombing, protocol, connection.player_id, x, y, v.x, v.y, BOMBS_COUNT)
 
 @command(admin_only = True)
-@player_only
-def gift(conn):
-    do_airstrike("Panavia Tornado ECR", conn, dummy)
+@alive_only
+def gift(connection):
+    do_airstrike("Panavia Tornado ECR", connection)
 
-@command('air')
-def air(conn):
+@command()
+@alive_only
+def air(player):
     """
     Report time before bomber's arrival
     /air
     """
 
-    bomber = conn.get_bomber()
-    remaining = bomber.remaining()
+    if o := player.get_bomber():
+        remaining = o.remaining()
 
-    if remaining:
-        approx = (remaining // 10 + 1) * 10
-        bomber.report("Will be ready in %d seconds" % approx)
-    else:
-        bomber.report("Awaiting for coordinates")
+        if remaining is not None:
+            approx = round((remaining / 10 + 1) * 10)
+            o.report("Will be ready in {} seconds".format(approx))
+        else:
+            o.report("Awaiting for coordinates")
 
 class Laser(UnderbarrelItem):
     name = "Laser"
@@ -121,38 +117,9 @@ class Laser(UnderbarrelItem):
 
         if self.timer > airstrike_zoomv_time:
             self.timer = 0
-            player.get_bomber().point(player)
 
-class Ghost:
-    def __init__(self):
-        self.call = None
-        self.ready = False
-        self.player_id = None
-        self.preparation = None
-
-    def init(self, by_server = False):
-        pass
-
-    def point(self, conn):
-        pass
-
-    def active(self):
-        pass
-
-    def stop(self, player_id = None):
-        pass
-
-    def start(self):
-        pass
-
-    def restart(self):
-        pass
-
-    def report(self, msg):
-        pass
-
-    def remaining(self):
-        pass
+            if o := player.get_bomber():
+                o.point(player)
 
 @dataclass
 class Bomber:
@@ -175,7 +142,8 @@ class Bomber:
     def point(self, conn):
         if not self.active() and self.ready:
             self.player_id = conn.player_id
-            do_airstrike(self.name, conn, self.restart)
+            do_airstrike(self.name, conn)
+            self.restart()
 
     def active(self):
         return self.call and self.call.active()
@@ -218,9 +186,8 @@ def apply_script(protocol, connection, config):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.bombers = {
-                self.team_spectator.id : Ghost(),
-                self.team_1.id         : Bomber("B-52",   self.team_1, self),
-                self.team_2.id         : Bomber("Tu-22M", self.team_2, self)
+                self.team_1.id : Bomber("B-52",   self.team_1, self),
+                self.team_2.id : Bomber("Tu-22M", self.team_2, self)
             }
 
         def on_map_change(self, M):
@@ -234,12 +201,11 @@ def apply_script(protocol, connection, config):
 
     class AirstrikeConnection(connection):
         def get_bomber(self):
-            return self.protocol.bombers[self.team.id]
+            return self.protocol.bombers.get(self.team.id)
 
         def on_spawn(self, pos):
             connection.on_spawn(self, pos)
 
-            self.weapon_object.item_underbarrel = Laser()
-            self.weapon_object.item_underbarrel.mark_renewable()
+            self.weapon_object.item_underbarrel = Laser().mark_renewable()
 
     return AirstrikeProtocol, AirstrikeConnection
