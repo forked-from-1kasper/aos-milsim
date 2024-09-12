@@ -47,3 +47,6 @@ template<typename... Ts> struct PyTuple {
     PyTuple(Ts... ts) { value = newPyTuple<Ts...>(std::index_sequence_for<Ts...>(), ts...); }
     ~PyTuple() { Py_DECREF(value); }
 };
+
+template<typename... Ts> inline PyObject * PyApply(PyObject * funval, Ts... ts)
+{ return PyObject_Call(funval, PyTuple(ts...), NULL); }

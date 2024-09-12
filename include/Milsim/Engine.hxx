@@ -320,9 +320,7 @@ public:
 
 private:
     inline void trace(const uint64_t index, const Vector3<T> & r, const T value, bool origin) {
-        if (onTrace != Py_None) PyObject_Call(
-            onTrace, PyTuple(index, r.x, r.y, r.z, value, origin ? Py_True : Py_False), NULL
-        );
+        if (onTrace != Py_None) PyApply(onTrace, index, r.x, r.y, r.z, value, origin ? Py_True : Py_False);
     }
 
     void next(T t1, const T t2, Iterator<T> & it) {
@@ -362,11 +360,9 @@ private:
                     trace(o.index(), r, v.abs() / o.v0, false);
 
                     if (onBlockHit != Py_None && hitEffectThresholdEnergy <= o.energy()) {
-                        auto retval = PyObject_Call(
-                            onBlockHit, PyTuple(
-                                o.object, r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
-                                o.thrower, o.energy(), o.area
-                            ), NULL
+                        auto retval = PyApply(onBlockHit,
+                            o.object, r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
+                            o.thrower, o.energy(), o.area
                         );
 
                         stuck = retval == Py_True;
@@ -503,11 +499,9 @@ private:
             if (0 <= target && onPlayerHit != Py_None) {
                 Vector3<T> w = r + dr * dist;
 
-                auto retval = PyObject_Call(
-                    onPlayerHit, PyTuple(
-                        o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
-                        o.thrower, o.energy(), o.area, target, limb
-                    ), NULL
+                auto retval = PyApply(onPlayerHit,
+                    o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
+                    o.thrower, o.energy(), o.area, target, limb
                 );
 
                 stuck = retval == Py_True;
