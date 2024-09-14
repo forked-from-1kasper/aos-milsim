@@ -41,6 +41,8 @@ class RotationInfo:
         return os.path.join(dirname, self.get_filename(dirname))
 
 class MapInfo:
+    name = "(unnamed)"
+
     def __init__(self, rot_info, dirname):
         filepath = rot_info.get_filepath(dirname)
 
@@ -62,11 +64,18 @@ class MapInfo:
             is_indestructable   = None
         )
 
-        with open(filepath, 'r') as fin:
+        try:
+            fin = open(filepath, 'r')
+        except OSError:
+            raise MapNotFound(filepath)
+
+        try:
             exec(
                 compile(fin.read(), rot_info.get_filename(dirname), 'exec'),
                 self.attributes
             )
+        finally:
+            fin.close()
 
         self.info      = self # for the backward compatibility reasons
         self.load_dir  = dirname
