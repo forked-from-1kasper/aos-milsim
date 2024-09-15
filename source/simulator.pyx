@@ -8,13 +8,19 @@ from cython.operator import dereference as deref
 from cython.operator import postincrement
 from cpython.ref cimport PyObject
 
-from math import pi, sin, cos
+from math import sin, cos
 
 from pyspades.common cimport Vertex3, Vector
 from pyspades.vxl cimport VXLData, MapData
 from pyspades.common import Vertex3
 
 from milsim.types import Material as PyMaterial, Voxel as PyVoxel
+
+cdef public MapData * mapDataRef(object o):
+    if isinstance(o, VXLData):
+        return (<VXLData> o).map
+    else:
+        raise Exception
 
 cdef extern from "stdint.h":
     ctypedef unsigned long long uint64_t
@@ -23,10 +29,6 @@ cdef extern from "vxl_c.h":
     int get_pos(int, int, int)
 
 cdef extern from "Milsim/Engine.hxx":
-    """
-    template struct Engine<double>;
-    """
-
     cdef T c_ofMeters "ofMeters"[T](const T)
     cdef T c_toMeters "toMeters"[T](const T)
 
@@ -40,35 +42,23 @@ cdef extern from "Milsim/Engine.hxx":
 
     cdef Vector3[T] c_cone "cone"[T](const Vector3[T] &, const T)
 
-    cdef cppclass Player[T]:
+    cdef cppclass Player:
         void set_crouch(bool_t)
         void set_position(Vector *)
         void set_orientation(Vector *)
 
-    cdef cppclass Material[T]:
-        T ricochet
-        T density
-        T strength
-        T deflecting
-        T durability
-        T absorption
-        bool_t crumbly
-
-    cdef cppclass Voxel[T]:
+    cdef cppclass Voxel:
         size_t id
-        T durability
+        double durability
 
-    cpdef cppclass DragModel:
-        pass
-
-    cdef cppclass Engine[T]:
-        vector[Player[T]] players
+    cdef cppclass Engine:
+        vector[Player] players
 
         Engine()
-        uint64_t add(object, int, Vector3[T] r, Vector3[T] v, T timestamp, T mass, T ballistic, uint32_t model, T area)
-        void step(T, T)
+        uint64_t add(int, Vector3[double] r, Vector3[double] v, double timestamp, object)
+        void step(double, double)
 
-        void wipe(MapData *)
+        void wipe(object)
 
         void invokeOnTrace(object)
         void invokeOnBlockHit(object)
@@ -76,25 +66,25 @@ cdef extern from "Milsim/Engine.hxx":
         void invokeOnDestroy(object)
 
         size_t defaultMaterial, buildMaterial
-        Voxel[T] water
+        Voxel water
 
-        Material[T] & alloc(size_t *)
+        size_t alloc(object)
 
-        void set(const int, const uint32_t, const T)
-        Voxel[T] & get(int, int, int)
+        void set(const int, const uint32_t, const double)
+        Voxel & get(int, int, int)
 
-        void set(const T, const T, const T, const Vector3[T] &)
+        void set(const double, const double, const double, const Vector3[double] &)
 
-        T temperature()
-        T pressure()
-        T humidity()
-        T density()
-        T mach()
-        T ppo2()
-        Vector3[T] wind()
+        double temperature()
+        double pressure()
+        double humidity()
+        double density()
+        double mach()
+        double ppo2()
+        Vector3[double] wind()
 
-        bool_t dig(int, int, int, T)
-        bool_t smash(int, int, int, T)
+        void dig(int, int, int, int, double)
+        void smash(int, int, int, int, double)
 
         void build(int, int, int)
         void destroy(int, int, int)
@@ -114,22 +104,13 @@ def cone(v, float deviation):
 
     return Vertex3(u.x, u.y, u.z)
 
-cdef void unpackMaterial(object o, Material[double] * M):
-    M.ricochet   = o.ricochet
-    M.density    = o.density
-    M.strength   = o.strength
-    M.deflecting = (o.deflecting / 180) * pi
-    M.durability = o.durability
-    M.absorption = o.absorption
-    M.crumbly    = o.crumbly
-
 cdef Vector3[double] polar(object v, float r, float t):
     x = v.x * cos(t) - v.y * sin(t)
     y = v.x * sin(t) + v.y * cos(t)
     return Vector3[double](r * x, r * y, 0)
 
 cdef class Simulator:
-    cdef Engine[double] engine
+    cdef Engine engine
     cdef object protocol
 
     cdef object defaultMaterial, buildMaterial, waterMaterial
@@ -202,38 +183,31 @@ cdef class Simulator:
     def destroy(self, x, y, z):
         self.engine.destroy(x, y, z)
 
-    def dig(self, x, y, z, value):
-        return self.engine.dig(x, y, z, value)
+    def dig(self, player_id, x, y, z, value):
+        self.engine.dig(player_id, x, y, z, value)
 
-    def smash(self, x, y, z, value):
-        return self.engine.smash(x, y, z, value)
+    def smash(self, player_id, x, y, z, value):
+        self.engine.smash(player_id, x, y, z, value)
 
     def wipe(self):
         self.materials.clear()
-
-        cdef VXLData data = <VXLData> self.protocol.map
-        self.engine.wipe(data.map)
+        self.engine.wipe(self.protocol.map)
 
     def add(self, thrower, r, v, timestamp, params):
         return self.engine.add(
-            params,
             thrower.player_id,
             Vector3[double](r.x, r.y, r.z),
             Vector3[double](v.x, v.y, v.z),
             timestamp,
-            params.effmass,
-            params.ballistic,
-            params.model,
-            params.area
+            params
         )
 
     def register(self, o):
         cdef size_t index
 
         if isinstance(o, PyMaterial):
-            unpackMaterial(o, &self.engine.alloc(&index))
+            index = self.engine.alloc(o)
             o.index = index
-
             self.materials[index] = o
         else:
             raise TypeError
@@ -265,7 +239,7 @@ cdef class Simulator:
             postincrement(it)
 
     def get(self, int x, int y, int z):
-        cdef Voxel[double] * voxel = &self.engine.get(x, y, z)
+        cdef Voxel * voxel = &self.engine.get(x, y, z)
         return PyVoxel(self.materials[voxel.id], voxel.durability)
 
     def set(self, int x, int y, int z, o):
@@ -286,14 +260,14 @@ cdef class Simulator:
 
         assert p.is_ref and f.is_ref
 
-        cdef Player[double] * player = &self.engine.players[i]
+        cdef Player * player = &self.engine.players[i]
 
         player.set_crouch(wo.crouch)
         player.set_position(p.value)
         player.set_orientation(f.value)
 
     def on_despawn(self, size_t i):
-        cdef Player[double] * player = &self.engine.players[i]
+        cdef Player * player = &self.engine.players[i]
 
         player.set_crouch(0)
         player.set_position(NULL)

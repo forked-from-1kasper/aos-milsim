@@ -339,8 +339,7 @@ class MilsimConnection(FeatureConnection):
             return False
 
         for X, Y, Z in grenade_zone(x, y, z):
-            if self.protocol.simulator.smash(X, Y, Z, TNT(gram(60))):
-                self.protocol.onDestroy(self.player_id, X, Y, Z)
+            self.protocol.simulator.smash(self.player_id, X, Y, Z, TNT(gram(60)))
 
             if e := self.protocol.get_tile_entity(X, Y, Z):
                 e.on_explosion()

@@ -568,10 +568,7 @@ def dig(player, mu, dt, x, y, z):
     sigma = 0.01 if player.world_object.crouch else 0.05
     value = max(0, gauss(mu = mu, sigma = sigma) * dt)
 
-    protocol = player.protocol
-
-    if protocol.simulator.dig(x, y, z, value):
-        protocol.onDestroy(player.player_id, x, y, z)
+    player.protocol.simulator.dig(player.player_id, x, y, z, value)
 
 class SpadeTool(Tool):
     mass = 0.750

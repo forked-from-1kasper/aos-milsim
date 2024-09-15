@@ -109,3 +109,4 @@ template<typename T> Vector3<T> cone(const Vector3<T> & v, const T σ) {
 
 using Vector3i = Vector3<int>;
 using Vector3f = Vector3<float>;
+using Vector3d = Vector3<double>;

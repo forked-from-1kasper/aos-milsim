@@ -104,6 +104,12 @@ namespace Fundamentals {
     template<typename T> constexpr T absoluteZero        = -273.15;   // Celsius
 }
 
+template<typename Real> Real vaporPressureOfWater(const Real T) {
+    // https://en.wikipedia.org/wiki/Tetens_equation
+    auto k = T > 0 ? (17.27 * T) / (T + 237.3) : (21.875 * T) / (T + 265.5);
+    return 610.78 * exp(k); // Pa
+}
+
 template<typename T> constexpr inline T ofMeters(const T v) { return Fundamentals::m2b<T> * v; }
 template<typename T> constexpr inline T toMeters(const T v) { return Fundamentals::b2m<T> * v; }
 

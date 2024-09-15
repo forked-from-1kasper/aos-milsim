@@ -31,7 +31,7 @@ def can_see(VXLData data, float x0, float y0, float z0, float x1, float y1, floa
     global global_map
     global_map = data.map
 
-    cdef bint retval = c_can_see(data.map, x0, y0, z0, x1, y1, z1)
+    cdef bint retval = c_can_see(NULL, x0, y0, z0, x1, y1, z1)
     return retval
 
 def cast_ray(VXLData data, float x0, float y0, float z0, float x1, float y1, float z1, float length):
@@ -40,7 +40,7 @@ def cast_ray(VXLData data, float x0, float y0, float z0, float x1, float y1, flo
 
     cdef long x = -1, y = -1, z = -1
 
-    if c_cast_ray(data.map, x0, y0, z0, x1, y1, z1, length, &x, &y, &z):
+    if c_cast_ray(NULL, x0, y0, z0, x1, y1, z1, length, &x, &y, &z):
         return (x, y, z)
     else:
         return None

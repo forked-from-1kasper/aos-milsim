@@ -18,11 +18,7 @@
 #include <common_c.h>
 #include <vxl_c.h>
 
-template<typename Real> Real vaporPressureOfWater(const Real T) {
-    // https://en.wikipedia.org/wiki/Tetens_equation
-    auto k = T > 0 ? (17.27 * T) / (T + 237.3) : (21.875 * T) / (T + 265.5);
-    return 610.78 * exp(k); // Pa
-}
+extern "C" MapData * mapDataRef(PyObject *);
 
 inline void retain(PyObject * & member, PyObject * const obj) {
     if (member != Py_None)
@@ -37,37 +33,38 @@ inline void retain(PyObject * & member, PyObject * const obj) {
 inline std::unordered_map<int, int> * getColorsOf(MapData * data)
 { return &data->colors; }
 
-template<typename T> struct Material {
-    T durability;
-    T absorption;
-    T density;
-    T strength;
-    T ricochet;
-    T deflecting;
+struct Material {
+    double durability;
+    double absorption;
+    double density;
+    double strength;
+    double ricochet;
+    double deflecting;
     bool crumbly;
 
     Material() {}
 };
 
-template<typename T> struct Object {
+struct Object {
 private:
     static uint64_t gidx; uint64_t _index;
 
 public:
-    PyObject * object; T mass, ballistic, area; uint32_t model;
+    PyObject * object; double mass, ballistic, area; uint32_t model;
 
-    int thrower; T timestamp, v0;
+    int thrower; double timestamp, v0;
 
-    Vector3<T> position, velocity;
+    Vector3d position, velocity;
 
-    Object(
-        PyObject * object,
-        const int i, const Vector3<T> & r, const Vector3<T> & v,
-        const T timestamp, const T m, const T ballistic,
-        const uint32_t model, const T A
-    ) : object(object), mass(m), ballistic(ballistic), area(A), model(model),
-        thrower(i), timestamp(timestamp), position(r), velocity(v)
-    { Py_INCREF(object); v0 = v.abs(); _index = gidx; gidx++; }
+    Object(const int i, const Vector3d & r, const Vector3d & v, const double t, PyObject * o) :
+        object(o), thrower(i), timestamp(t), position(r), velocity(v) {
+        Py_INCREF(object); v0 = v.abs(); _index = gidx++;
+
+        mass      = PyGetAttr<double>(object, "effmass");
+        ballistic = PyGetAttr<double>(object, "ballistic");
+        area      = PyGetAttr<double>(object, "area");
+        model     = PyGetAttr<uint32_t>(object, "model");
+    }
 
     ~Object() { Py_DECREF(object); }
 
@@ -77,12 +74,12 @@ public:
 
     constexpr inline uint64_t index() const { return _index; }
 
-    inline T energy() { return 0.5 * mass * velocity.norm(); }
+    inline double energy() { return 0.5 * mass * velocity.norm(); }
 };
 
-template<typename T> uint64_t Object<T>::gidx = 0;
+uint64_t Object::gidx = 0;
 
-template<typename T> struct Player {
+struct Player {
     bool c; Vector * p; Vector * f;
 
     Player() {}
@@ -94,42 +91,43 @@ template<typename T> struct Player {
     inline void set_position(Vector * v)    { p = v; }
     inline void set_orientation(Vector * v) { f = v; }
 
-    inline bool       crouch()      const { return c; }
-    inline Vector3<T> position()    const { return Vector3<T>(p); }
-    inline Vector3<T> orientation() const { return Vector3<T>(f); }
+    inline bool     crouch()      const { return c; }
+    inline Vector3d position()    const { return Vector3d(p); }
+    inline Vector3d orientation() const { return Vector3d(f); }
 };
 
 enum class Terminal { flying, ricochet, penetration };
 
-template<typename T> using Iterator = std::list<Object<T>>::iterator;
+using ObjectQueue    = std::list<Object>;
+using ObjectIterator = ObjectQueue::iterator;
 
-template<typename T> struct Voxel {
-    size_t id; T durability;
+struct Voxel {
+    size_t id; double durability;
 
     Voxel() : id(0), durability(1.0) {}
-    Voxel(const size_t id, const T value) : id(id), durability(value) {}
+    Voxel(const size_t id, const double value) : id(id), durability(value) {}
 };
 
-template<typename T> struct Engine {
+struct Engine {
 private:
-    std::vector<Material<T>> materials;
-    std::map<int, Voxel<T>> voxels;
-    std::list<Object<T>> objects;
+    std::vector<Material> materials;
+    std::map<int, Voxel> voxels;
+    ObjectQueue objects;
 
     MapData * map; PyObject * onTrace, * onBlockHit, * onPlayerHit, * onDestroy;
 
     double _lag, _peak;
 
     // Independent variables.
-    T _temperature, _pressure, _humidity; Vector3<T> _wind;
+    double _temperature, _pressure, _humidity; Vector3d _wind;
     // Derived variables.
-    T _density, _mach, _ppo2;
+    double _density, _mach, _ppo2;
 
 private:
-    inline Material<T> & material(const Voxel<T> & voxel)
+    inline Material & material(const Voxel & voxel)
     { return materials[voxel.id]; }
 
-    inline bool crumbly(const Voxel<T> & voxel)
+    inline bool crumbly(const Voxel & voxel)
     { return material(voxel).crumbly; }
 
     inline bool indestructible(int x, int y, int z)
@@ -147,20 +145,20 @@ private:
         return false;
     }
 
-    inline bool weaken(Voxel<T> & voxel, T amount)
+    inline bool weaken(Voxel & voxel, double amount)
     { voxel.durability -= amount; return voxel.durability <= 0; }
 
 public:
-    std::vector<Player<T>> players;
+    std::vector<Player> players;
 
-    Voxel<T> water; size_t defaultMaterial, buildMaterial;
+    Voxel water; size_t defaultMaterial, buildMaterial;
 
     Engine() : onTrace(Py_None), onBlockHit(Py_None), onPlayerHit(Py_None), onDestroy(Py_None)
     { srand(time(NULL)); players.reserve(32); _lag = _peak = 0.0; }
 
     ~Engine() { Py_XDECREF(onPlayerHit); Py_XDECREF(onBlockHit); Py_XDECREF(onTrace); Py_XDECREF(onDestroy); }
 
-    Voxel<T> & get(int x, int y, int z) {
+    Voxel & get(int x, int y, int z) {
         if (z == 63) return water;
 
         auto pos = get_pos(x, y, z);
@@ -168,16 +166,16 @@ public:
 
         if (iter == voxels.end()) {
             std::tie(iter, std::ignore) = voxels.insert_or_assign(
-                pos, Voxel<T>(defaultMaterial, 1.0)
+                pos, Voxel(defaultMaterial, 1.0)
             );
         }
 
         return iter->second;
     }
 
-    void set(const int index, const uint32_t i, const T value) {
+    void set(const int index, const uint32_t i, const double value) {
         int x, y, z; get_xyz(index, &x, &y, &z); // ignore z = 63
-        if (z < 63) voxels.insert_or_assign(index, Voxel<T>(i, value));
+        if (z < 63) voxels.insert_or_assign(index, Voxel(i, value));
     }
 
     template<typename... Args> inline uint64_t add(Args &&... args) {
@@ -186,10 +184,22 @@ public:
         return obj.index();
     }
 
-    inline Material<T> & alloc(size_t * id)
-    { *id = materials.size(); return materials.emplace_back(); }
+    inline size_t alloc(PyObject * o) {
+        size_t retval = materials.size();
+        Material & M = materials.emplace_back();
 
-    void set(const T t, const T p, const T φ, const Vector3<T> & w) {
+        M.ricochet   = PyGetAttr<double>(o, "ricochet");
+        M.density    = PyGetAttr<double>(o, "density");
+        M.strength   = PyGetAttr<double>(o, "strength");
+        M.deflecting = PyGetAttr<double>(o, "deflecting") * std::numbers::pi_v<double> / 180.0;
+        M.durability = PyGetAttr<double>(o, "durability");
+        M.absorption = PyGetAttr<double>(o, "absorption");
+        M.crumbly    = PyGetAttr<bool>(o, "crumbly");
+
+        return retval;
+    }
+
+    void set(const double t, const double p, const double φ, const Vector3d & w) {
         using namespace Fundamentals;
 
         _temperature = t;
@@ -200,17 +210,17 @@ public:
         // 1) Here we assume Dalton’s law.
 
         // https://en.wikipedia.org/wiki/Density_of_air#Humid_air
-        auto p₁ = φ * vaporPressureOfWater<T>(t), p₂ = p - p₁;
+        auto p₁ = φ * vaporPressureOfWater<double>(t), p₂ = p - p₁;
 
-        auto ε = gasConstant<T> * (t - absoluteZero<T>);
+        auto ε = gasConstant<double> * (t - absoluteZero<double>);
 
-        _density = (p₁ * molarMassWaterVapor<T> + p₂ * molarMassDryAir<T>) / ε;
+        _density = (p₁ * molarMassWaterVapor<double> + p₂ * molarMassDryAir<double>) / ε;
         _ppo2    = 0.20946 * p₂;
 
         // 2) Here we assume Amagat’s law.
 
         // https://en.wikipedia.org/wiki/Heat_capacity_ratio#Relation_with_degrees_of_freedom
-        constexpr T γ₁ = 1.333333, γ₂ = 1.4;
+        constexpr double γ₁ = 1.333333, γ₂ = 1.4;
 
         // https://physicspages.com/pdf/Thermal%20physics/Bulk%20modulus%20and%20the%20speed%20of%20sound.pdf
         // pV^γ = A, p = AV^−γ, K = −VdP/V = −Vd(AV^−γ)/V = −VA(−γ)V^(−γ + 1) = γAV^−γ = γp
@@ -237,50 +247,56 @@ public:
         // See also: http://resource.npl.co.uk/acoustics/techguides/speedair/
     }
 
-    inline T          temperature() const { return _temperature; } // ℃
-    inline T          pressure()    const { return _pressure; }    // Pa
-    inline T          humidity()    const { return _humidity; }    // %
-    inline T          density()     const { return _density; }     // kg/m³
-    inline T          mach()        const { return _mach; }        // m/s
-    inline T          ppo2()        const { return _ppo2; }        // Pa
-    inline Vector3<T> wind()        const { return _wind; }        // m/s
+    inline double   temperature() const { return _temperature; } // ℃
+    inline double   pressure()    const { return _pressure; }    // Pa
+    inline double   humidity()    const { return _humidity; }    // %
+    inline double   density()     const { return _density; }     // kg/m³
+    inline double   mach()        const { return _mach; }        // m/s
+    inline double   ppo2()        const { return _ppo2; }        // Pa
+    inline Vector3d wind()        const { return _wind; }        // m/s
 
-    void wipe(MapData * ptr) {
-        set(0, 101325, 0.3, Vector3<T>(0, 0, 0));
+    void wipe(PyObject * o) {
+        set(0, 101325, 0.3, Vector3d(0, 0, 0));
 
         _peak = 0.0;
 
         objects.clear();
-        Object<T>::flush();
+        Object::flush();
 
         voxels.clear();
         materials.clear();
 
-        map = ptr;
+        map = mapDataRef(o);
     }
 
-    inline bool dig(int x, int y, int z, T value) {
-        if (indestructible(x, y, z)) return false;
+    inline void dig(int player_id, int x, int y, int z, double value) {
+        if (indestructible(x, y, z)) return;
 
         auto & voxel = get(x, y, z); auto & M = material(voxel);
-        return weaken(voxel, value / M.durability);
+        if (weaken(voxel, value / M.durability) && onDestroy != Py_None)
+            PyApply(onDestroy, player_id, x, y, z);
     }
 
-    inline bool smash(int x, int y, int z, T ΔE) {
-        if (indestructible(x, y, z)) return false;
+    inline void smash(int player_id, int x, int y, int z, double ΔE) {
+        if (indestructible(x, y, z)) return;
 
         auto & voxel = get(x, y, z); auto & M = material(voxel);
 
         if (M.crumbly) {
-            if (randbool<T>(0.5) && unstable(x, y, z))
-                return true;
+            if (randbool<double>(0.5) && unstable(x, y, z)) {
+                if (onDestroy != Py_None)
+                    PyApply(onDestroy, player_id, x, y, z);
+
+                return;
+            }
         }
 
-        return weaken(voxel, ΔE * (M.durability / M.absorption));
+        if (weaken(voxel, ΔE * (M.durability / M.absorption)) && onDestroy != Py_None)
+            PyApply(onDestroy, player_id, x, y, z);
     }
 
     inline void build(int x, int y, int z)
-    { voxels.insert_or_assign(get_pos(x, y, z), Voxel<T>(buildMaterial, 1.0)); }
+    { voxels.insert_or_assign(get_pos(x, y, z), Voxel(buildMaterial, 1.0)); }
 
     inline void destroy(int x, int y, int z)
     { voxels.erase(get_pos(x, y, z)); }
@@ -290,7 +306,7 @@ public:
     inline void invokeOnTrace(PyObject * obj)     { retain(onTrace, obj); }
     inline void invokeOnDestroy(PyObject * obj)   { retain(onDestroy, obj); }
 
-    void step(const T t1, const T t2) {
+    void step(const double t1, const double t2) {
         using namespace std::chrono;
 
         const auto T1 = steady_clock::now();
@@ -310,26 +326,25 @@ public:
     inline double peak() const { return _peak; }
 
     inline size_t alive() const { return objects.size(); }
-    inline size_t total() const { return Object<T>::total(); }
+    inline size_t total() const { return Object::total(); }
 
     // This is only the lower bound.
     inline size_t usage() const {
-        constexpr size_t entrySize = sizeof(int) + sizeof(Voxel<T>);
+        constexpr size_t entrySize = sizeof(int) + sizeof(Voxel);
         return sizeof(decltype(voxels)) + entrySize * voxels.size();
     }
 
 private:
-    inline void trace(const uint64_t index, const Vector3<T> & r, const T value, bool origin) {
-        if (onTrace != Py_None) PyApply(onTrace, index, r.x, r.y, r.z, value, origin ? Py_True : Py_False);
-    }
+    inline void trace(const uint64_t index, const Vector3d & r, const double value, bool origin)
+    { if (onTrace != Py_None) PyApply(onTrace, index, r.x, r.y, r.z, value, origin ? Py_True : Py_False); }
 
-    void next(T t1, const T t2, Iterator<T> & it) {
+    void next(double t1, const double t2, ObjectIterator & it) {
         using namespace Fundamentals;
 
-        Object<T> & o = *it;
+        Object & o = *it;
 
-        Voxel<T> * voxel = nullptr; Material<T> * M = nullptr;
-        Vector3<T> r(o.position), v(o.velocity), n;
+        Voxel * voxel = nullptr; Material * M = nullptr;
+        Vector3d r(o.position), v(o.velocity), n;
 
         uint64_t N = 1;
 
@@ -351,11 +366,11 @@ private:
 
                 auto θ = acos(-(v, n) / v.abs());
 
-                state = M->deflecting <= θ && random<T>() < M->ricochet ? Terminal::ricochet
-                                                                        : Terminal::penetration;
+                state = M->deflecting <= θ && random<double>() < M->ricochet ? Terminal::ricochet
+                                                                             : Terminal::penetration;
 
                 if (state != Terminal::flying) {
-                    constexpr T hitEffectThresholdEnergy = 5.0;
+                    constexpr double hitEffectThresholdEnergy = 5.0;
 
                     trace(o.index(), r, v.abs() / o.v0, false);
 
@@ -376,37 +391,37 @@ private:
 
             // `dr` depends only on direction, not the absolute value of `v`
             // That’s why all direction changes need to be made before this point.
-            T x = v.x > 0 ? std::floor(r.x) + 1 : std::ceil(r.x) - 1;
-            T y = v.y > 0 ? std::floor(r.y) + 1 : std::ceil(r.y) - 1;
-            T z = v.z > 0 ? std::floor(r.z) + 1 : std::ceil(r.z) - 1;
+            double x = v.x > 0 ? std::floor(r.x) + 1 : std::ceil(r.x) - 1;
+            double y = v.y > 0 ? std::floor(r.y) + 1 : std::ceil(r.y) - 1;
+            double z = v.z > 0 ? std::floor(r.z) + 1 : std::ceil(r.z) - 1;
 
-            T dx = x - r.x, dy = y - r.y, dz = z - r.z;
+            double dx = x - r.x, dy = y - r.y, dz = z - r.z;
 
             if (std::abs(dx) < 1e-20) dx = sign(v.x);
             if (std::abs(dy) < 1e-20) dy = sign(v.y);
             if (std::abs(dz) < 1e-20) dz = sign(v.z);
 
-            T idt; std::tie(idt, n) = max(
+            double idt; std::tie(idt, n) = max(
                 [](auto & w1, auto & w2){ return w1.first < w2.first; },
-                std::pair(m2b<T> * v.x / dx, Vector3<T>(-sign(v.x), 0, 0)),
-                std::pair(m2b<T> * v.y / dy, Vector3<T>(0, -sign(v.y), 0)),
-                std::pair(m2b<T> * v.z / dz, Vector3<T>(0, 0, -sign(v.z)))
+                std::pair(m2b<double> * v.x / dx, Vector3d(-sign(v.x), 0, 0)),
+                std::pair(m2b<double> * v.y / dy, Vector3d(0, -sign(v.y), 0)),
+                std::pair(m2b<double> * v.z / dz, Vector3d(0, 0, -sign(v.z)))
             );
 
-            T dt = std::min(idt < 1e-9 ? INFINITY : 1 / idt, t2 - t1);
-            auto dr = v * (m2b<T> * dt);
+            double dt = std::min(idt < 1e-9 ? INFINITY : 1 / idt, t2 - t1);
+            auto dr = v * (m2b<double> * dt);
 
             if (state == Terminal::ricochet) v *= 0.6;
 
             if (state == Terminal::penetration) {
                 // http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php
-                auto depth = dr.abs() * b2m<T>;
+                auto depth = dr.abs() * b2m<double>;
                 auto E₀    = 0.5 * o.mass * v.norm();
                 auto drag  = 1;
                 auto xc    = o.mass / (drag * M->density * o.area);
                 auto xmax  = xc * log(1 + (E₀ * drag * M->density) / (M->strength * o.mass));
 
-                T ΔE = 0; // energy that will be absorbed by block
+                double ΔE = 0; // energy that will be absorbed by block
 
                 if (xmax > depth) {
                     auto ε = exp(-drag * o.area * M->density * depth / o.mass);
@@ -422,26 +437,24 @@ private:
                 // ignore Z ∈ {62, 63} (i.e. water and bottom indestructible layer)
                 if (Z < 62) voxel->durability -= ΔE * (M->durability / M->absorption);
 
-                if (voxel->durability <= 0.0) {
-                    if (onDestroy != Py_None)
-                        PyObject_CallFunction(onDestroy, "iiii", o.thrower, X, Y, Z);
-                }
+                if (voxel->durability <= 0.0 && onDestroy != Py_None)
+                    PyApply(onDestroy, o.thrower, X, Y, Z);
             }
 
             int target = -1; int limb;
-            T dist = std::numeric_limits<T>::infinity();
+            auto dist = std::numeric_limits<double>::infinity();
 
             for (size_t i = 0; i < players.size(); i++) {
-                Player<T> & player = players[i];
+                Player & player = players[i];
                 if (!player.valid()) continue;
 
                 auto origin = player.position().translate(0, 0, player.crouch() ? -1.05 : -1.1);
 
-                auto ray = Ray<T>(r, dr).translate(-origin).pointAt(
-                    player.orientation().xOy().normal(), Vector3<T>(0, 1, 0)
+                auto ray = Ray<double>(r, dr).translate(-origin).pointAt(
+                    player.orientation().xOy().normal(), Vector3d(0, 1, 0)
                 );
 
-                auto & torso = player.crouch() ? Box::torsoc<T> : Box::torso<T>;
+                auto & torso = player.crouch() ? Box::torsoc<double> : Box::torso<double>;
                 auto d = torso.intersect(ray);
 
                 if (d < dist) {
@@ -450,7 +463,7 @@ private:
                     limb   = LIMB_TORSO;
                 }
 
-                auto & head = Box::head<T>;
+                auto & head = Box::head<double>;
                 d = head.intersect(ray);
 
                 if (d < dist) {
@@ -459,7 +472,7 @@ private:
                     limb   = LIMB_HEAD;
                 }
 
-                auto & legl = player.crouch() ? Box::legc_left<T> : Box::leg_left<T>;
+                auto & legl = player.crouch() ? Box::legc_left<double> : Box::leg_left<double>;
                 d = legl.intersect(ray);
 
                 if (d < dist) {
@@ -468,7 +481,7 @@ private:
                     limb   = LIMB_LEGL;
                 }
 
-                auto & legr = player.crouch() ? Box::legc_right<T> : Box::leg_right<T>;
+                auto & legr = player.crouch() ? Box::legc_right<double> : Box::leg_right<double>;
                 d = legr.intersect(ray);
 
                 if (d < dist) {
@@ -477,7 +490,7 @@ private:
                     limb   = LIMB_LEGR;
                 }
 
-                auto & armr = player.crouch() ? Box::armc_right<T> : Box::arm_right<T>;
+                auto & armr = player.crouch() ? Box::armc_right<double> : Box::arm_right<double>;
                 d = armr.intersect(ray);
 
                 if (d < dist) {
@@ -486,8 +499,8 @@ private:
                     limb   = LIMB_ARMR;
                 }
 
-                auto & arml = player.crouch() ? Box::armc_left<T> : Box::arm_left<T>;
-                d = arml.intersect(ray.rot(Vector3<T>(0, 0, 1), -std::numbers::pi_v<T> / 4));
+                auto & arml = player.crouch() ? Box::armc_left<double> : Box::arm_left<double>;
+                d = arml.intersect(ray.rot(Vector3<double>(0, 0, 1), -std::numbers::pi_v<double> / 4));
 
                 if (d < dist) {
                     dist   = d;
@@ -497,7 +510,7 @@ private:
             }
 
             if (0 <= target && onPlayerHit != Py_None) {
-                Vector3<T> w = r + dr * dist;
+                auto w = r + dr * dist;
 
                 auto retval = PyApply(onPlayerHit,
                     o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
@@ -512,7 +525,7 @@ private:
             auto m  = o.mass;
             auto u  = _wind - v;
             auto CD = drag(o.model, o.ballistic, u.abs() / _mach);
-            auto F  = g<T> * m + u * (0.5 * _density * u.abs() * CD * o.area);
+            auto F  = g<double> * m + u * (0.5 * _density * u.abs() * CD * o.area);
 
             auto dv = F * (dt / m);
 
