@@ -246,7 +246,8 @@ cdef class Simulator:
         self.engine.set(get_pos(x, y, z), o.index, 1.0)
 
     cdef void resize(self):
-        self.engine.players.resize(len(self.protocol.players))
+        size = max(self.protocol.players, default = -1) + 1
+        self.engine.players.resize(size)
 
     def set_animation(self, size_t i, bool_t value):
         self.engine.players[i].set_crouch(value)
