@@ -99,7 +99,7 @@ def engine(conn, subcmd, *w):
         return "Unknown command: {}".format(subcmd)
 
 @command()
-@player_only
+@alive_only
 def lookat(conn):
     """
     Report a given block durability
