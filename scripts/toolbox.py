@@ -227,27 +227,35 @@ def mail(conn, *w):
 def format_exception(exc):
     return "{}: {}".format(type(exc).__name__, exc)
 
+def c_locals(connection, vs = {}):
+    vs.update(
+        connection = connection,
+        protocol   = connection.protocol
+    )
+
+    return vs
+
 @command('eval', admin_only = True)
-def c_eval(conn, *w):
+def c_eval(connection, *w):
     """
     Evaluates arbitrary Python code
     /eval <code>
     """
 
     try:
-        return str(eval(' '.join(w), globals()))
+        return str(eval(' '.join(w), globals(), c_locals(connection)))
     except Exception as exc:
         return format_exception(exc)
 
 @command('exec', admin_only = True)
-def c_exec(conn, *w):
+def c_exec(connection, *w):
     """
     Executes arbitrary Python code
     /exec <code>
     """
 
     try:
-        exec(' '.join(w), globals())
+        exec(' '.join(w), globals(), c_locals(connection))
     except Exception as exc:
         return format_exception(exc)
 
