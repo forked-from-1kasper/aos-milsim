@@ -265,7 +265,9 @@ class MilsimConnection(FeatureConnection):
         FeatureConnection.on_disconnect(self)
 
     def reset(self):
-        self.protocol.simulator.on_despawn(self.player_id)
+        if self.player_id is not None:
+            self.protocol.simulator.on_despawn(self.player_id)
+
         FeatureConnection.reset(self)
 
     def set_tool(self, tool):
