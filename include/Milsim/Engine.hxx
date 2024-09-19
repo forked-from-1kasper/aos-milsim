@@ -94,6 +94,30 @@ struct Player {
     inline bool     crouch()      const { return c; }
     inline Vector3d position()    const { return Vector3d(p); }
     inline Vector3d orientation() const { return Vector3d(f); }
+
+    inline auto intersect(const Ray<double> & r) const {
+        using namespace std;
+
+        auto origin = position().translate(0, 0, crouch() ? -1.05 : -1.1);
+
+        auto ray = r.translate(-origin).pointAt(
+            orientation().xOy().normal(), Vector3d(0, 1, 0)
+        );
+
+        auto & head  = Box::head<double>;
+        auto & torso = crouch() ? Box::torsoc<double>     : Box::torso<double>;
+        auto & legl  = crouch() ? Box::legc_left<double>  : Box::leg_left<double>;
+        auto & legr  = crouch() ? Box::legc_right<double> : Box::leg_right<double>;
+        auto & armr  = crouch() ? Box::armc_right<double> : Box::arm_right<double>;
+        auto & arml  = crouch() ? Box::armc_left<double>  : Box::arm_left<double>;
+
+        return min(
+            [](auto & w1, auto & w2) { return w1 < w2; },
+            head.intersect(ray), torso.intersect(ray),
+            legl.intersect(ray), legr.intersect(ray),
+            armr.intersect(ray), arml.intersect(ray.rot(Vector3<double>(0, 0, 1), -std::numbers::pi_v<double> / 4))
+        );
+    }
 };
 
 enum class Terminal { flying, ricochet, penetration };
@@ -374,14 +398,11 @@ private:
 
                     trace(o.index(), r, v.abs() / o.v0, false);
 
-                    if (onBlockHit != Py_None && hitEffectThresholdEnergy <= o.energy()) {
-                        auto retval = PyApply(onBlockHit,
+                    if (onBlockHit != Py_None && hitEffectThresholdEnergy <= o.energy())
+                        stuck = Py_True == PyApply(onBlockHit,
                             o.object, r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
                             o.thrower, o.energy(), o.area
                         );
-
-                        stuck = retval == Py_True;
-                    }
                 }
 
                 if (state == Terminal::ricochet) v -= n * (2 * (v, n));
@@ -441,83 +462,23 @@ private:
                     PyApply(onDestroy, o.thrower, X, Y, Z);
             }
 
-            int target = -1; int limb;
-            auto dist = std::numeric_limits<double>::infinity();
+            Ray<double> ray(r, dr); Arc<double> arc{}; int target = -1;
 
             for (size_t i = 0; i < players.size(); i++) {
                 Player & player = players[i];
                 if (!player.valid()) continue;
 
-                auto origin = player.position().translate(0, 0, player.crouch() ? -1.05 : -1.1);
-
-                auto ray = Ray<double>(r, dr).translate(-origin).pointAt(
-                    player.orientation().xOy().normal(), Vector3d(0, 1, 0)
-                );
-
-                auto & torso = player.crouch() ? Box::torsoc<double> : Box::torso<double>;
-                auto d = torso.intersect(ray);
-
-                if (d < dist) {
-                    dist   = d;
-                    target = i;
-                    limb   = LIMB_TORSO;
-                }
-
-                auto & head = Box::head<double>;
-                d = head.intersect(ray);
-
-                if (d < dist) {
-                    dist   = d;
-                    target = i;
-                    limb   = LIMB_HEAD;
-                }
-
-                auto & legl = player.crouch() ? Box::legc_left<double> : Box::leg_left<double>;
-                d = legl.intersect(ray);
-
-                if (d < dist) {
-                    dist   = d;
-                    target = i;
-                    limb   = LIMB_LEGL;
-                }
-
-                auto & legr = player.crouch() ? Box::legc_right<double> : Box::leg_right<double>;
-                d = legr.intersect(ray);
-
-                if (d < dist) {
-                    dist   = d;
-                    target = i;
-                    limb   = LIMB_LEGR;
-                }
-
-                auto & armr = player.crouch() ? Box::armc_right<double> : Box::arm_right<double>;
-                d = armr.intersect(ray);
-
-                if (d < dist) {
-                    dist   = d;
-                    target = i;
-                    limb   = LIMB_ARMR;
-                }
-
-                auto & arml = player.crouch() ? Box::armc_left<double> : Box::arm_left<double>;
-                d = arml.intersect(ray.rot(Vector3<double>(0, 0, 1), -std::numbers::pi_v<double> / 4));
-
-                if (d < dist) {
-                    dist   = d;
-                    target = i;
-                    limb   = LIMB_ARML;
-                }
+                auto retval = player.intersect(ray);
+                if (retval < arc) { arc = retval; target = i; }
             }
 
             if (0 <= target && onPlayerHit != Py_None) {
-                auto w = r + dr * dist;
+                auto w = arc.begin(ray);
 
-                auto retval = PyApply(onPlayerHit,
+                stuck = Py_True == PyApply(onPlayerHit,
                     o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
-                    o.thrower, o.energy(), o.area, target, limb
+                    o.thrower, o.energy(), o.area, target, arc.index
                 );
-
-                stuck = retval == Py_True;
 
                 trace(o.index(), w, v.abs() / o.v0, false);
             }

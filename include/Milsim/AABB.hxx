@@ -4,39 +4,60 @@
 
 #include <algorithm>
 #include <numbers>
+#include <utility>
 
-template<typename T> struct Ray {
-    Vector3<T> origin, direction;
+template<typename X> constexpr inline std::pair<X, X> diag(const X & x) { return {x, x}; }
 
-    constexpr Ray(const Vector3<T> & r, const Vector3<T> & d) : origin(r), direction(d) {}
+template<typename Real> struct Ray {
+    Vector3<Real> origin, direction;
 
-    constexpr inline Ray<T> translate(const Vector3<T> & v) const
-    { return Ray<T>(origin + v, direction); }
+    constexpr Ray(const Vector3<Real> & r, const Vector3<Real> & d) : origin(r), direction(d) {}
 
-    constexpr inline Ray<T> rot(const Vector3<T> & k, const T θ) const
-    { return Ray<T>(origin.rot(k, θ), direction.rot(k, θ)); }
+    constexpr inline Ray<Real> translate(const Vector3<Real> & v) const
+    { return Ray<Real>(origin + v, direction); }
 
-    constexpr inline Ray<T> pointAt(const Vector3<T> & k1, const Vector3<T> & k2) const
-    { return Ray<T>(origin.pointAt(k1, k2), direction.pointAt(k1, k2)); }
+    constexpr inline Ray<Real> rot(const Vector3<Real> & k, const Real θ) const
+    { return Ray<Real>(origin.rot(k, θ), direction.rot(k, θ)); }
+
+    constexpr inline Ray<Real> pointAt(const Vector3<Real> & k1, const Vector3<Real> & k2) const
+    { return Ray<Real>(origin.pointAt(k1, k2), direction.pointAt(k1, k2)); }
 };
 
-template<typename T> struct AABB {
-    Vector3<T> min, max;
+template<typename Real> struct Arc {
+    int index; Real t1, t2;
 
-    constexpr AABB(const Vector3<T> & A, const Vector3<T> & B) :
+    Arc() : index(-1), t1(std::numeric_limits<Real>::infinity()), t2(std::numeric_limits<Real>::infinity()) {}
+
+    Arc(int i, Real t1, Real t2) : index(i), t1(t1), t2(t2) {}
+
+    constexpr inline Vector3<Real> begin(const Ray<Real> & r)
+    { return r.origin + r.direction * t1; }
+
+    constexpr inline Vector3<Real> end(const Ray<Real> & r)
+    { return r.origin + r.direction * t2; }
+
+    auto operator<=>(const Arc<Real> & w) const { return t1 <=> w.t1; };
+};
+
+template<typename Real> struct AABB {
+    Vector3<Real> min, max;
+
+    constexpr AABB(const Vector3<Real> & A, const Vector3<Real> & B) :
     min(std::min(A.x, B.x), std::min(A.y, B.y), std::min(A.z, B.z)),
     max(std::max(A.x, B.x), std::max(A.y, B.y), std::max(A.z, B.z)) {}
 
-    constexpr T intersect(const Ray<T> & r) const {
+    constexpr Arc<Real> intersect(const int index, const Ray<Real> & r) const {
+        using namespace std;
+
         // https://tavianator.com/2011/ray_box.html
 
-        T irx = 1 / r.direction.x, iry = 1 / r.direction.y, irz = 1 / r.direction.z;
+        Real irx = 1 / r.direction.x, iry = 1 / r.direction.y, irz = 1 / r.direction.z;
 
-        T tx1 = (min.x - r.origin.x) * irx, tx2 = (max.x - r.origin.x) * irx;
-        T ty1 = (min.y - r.origin.y) * iry, ty2 = (max.y - r.origin.y) * iry;
-        T tz1 = (min.z - r.origin.z) * irz, tz2 = (max.z - r.origin.z) * irz;
+        Real tx1 = (min.x - r.origin.x) * irx, tx2 = (max.x - r.origin.x) * irx;
+        Real ty1 = (min.y - r.origin.y) * iry, ty2 = (max.y - r.origin.y) * iry;
+        Real tz1 = (min.z - r.origin.z) * irz, tz2 = (max.z - r.origin.z) * irz;
 
-        T tmin = std::min(tx1, tx2), tmax = std::max(tx1, tx2);
+        Real tmin = std::min(tx1, tx2), tmax = std::max(tx1, tx2);
 
         tmin = std::max(tmin, std::min(std::min(ty1, ty2), tmax));
         tmax = std::min(tmax, std::max(std::max(ty1, ty2), tmin));
@@ -44,15 +65,20 @@ template<typename T> struct AABB {
         tmin = std::max(tmin, std::min(std::min(tz1, tz2), tmax));
         tmax = std::min(tmax, std::max(std::max(tz1, tz2), tmin));
 
-        return (tmax > tmin && 0 <= tmin && tmin <= 1) ? tmin * r.direction.abs() : std::numeric_limits<T>::infinity();
+        Real length = r.direction.abs();
+
+        if (tmin < tmax && 0 <= tmin && tmin <= 1)
+            return {index, tmin * length, tmax * length};
+
+        return {};
     }
 };
 
-template<typename T> struct Hitbox {
-    Vector3<T> pivot, size; T scale; AABB<T> aabb;
+template<typename Real> struct Hitbox {
+    int index; Vector3<Real> pivot, size; Real scale; AABB<Real> aabb;
 
-    constexpr Hitbox(const Vector3<T> & pivot, const Vector3<T> & size, const T scale) :
-    pivot(pivot), size(size), scale(scale), aabb(pivot * scale, (pivot + size) * scale) {}
+    constexpr Hitbox(const int i, const Vector3<Real> & pivot, const Vector3<Real> & size, const Real scale) :
+    index(i), pivot(pivot), size(size), scale(scale), aabb(pivot * scale, (pivot + size) * scale) {}
 
-    constexpr inline T intersect(const Ray<T> & r) const { return aabb.intersect(r); }
+    constexpr inline auto intersect(const Ray<Real> & r) const { return aabb.intersect(index, r); }
 };
