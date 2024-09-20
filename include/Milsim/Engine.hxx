@@ -21,12 +21,6 @@
 extern "C" MapData * mapDataRef(PyObject *);
 extern "C" Vector * vectorRef(PyObject *);
 
-inline void retain(PyObject * & member, PyObject * const obj) {
-    Py_XDECREF(member);
-    Py_XINCREF(obj);
-    member = obj;
-}
-
 inline std::unordered_map<int, int> * getColorsOf(MapData * data)
 { return &data->colors; }
 
@@ -372,11 +366,11 @@ public:
     inline void destroy(int x, int y, int z)
     { voxels.erase(get_pos(x, y, z)); }
 
-    inline void invokeOnPlayerHit(PyObject * o) { retain(onPlayerHit, o); }
-    inline void invokeOnBlockHit(PyObject * o)  { retain(onBlockHit, o); }
-    inline void invokeOnTrace(PyObject * o)     { retain(onTrace, o); }
-    inline void invokeOnDestroy(PyObject * o)   { retain(onDestroy, o); }
-    inline void setProtocolObject(PyObject * o) { retain(protocol, o); }
+    inline void invokeOnPlayerHit(PyObject * o) { PyRetain(onPlayerHit, o); }
+    inline void invokeOnBlockHit(PyObject * o)  { PyRetain(onBlockHit, o); }
+    inline void invokeOnTrace(PyObject * o)     { PyRetain(onTrace, o); }
+    inline void invokeOnDestroy(PyObject * o)   { PyRetain(onDestroy, o); }
+    inline void setProtocolObject(PyObject * o) { PyRetain(protocol, o); }
 
     void step(const double t1, const double t2) {
         using namespace std::chrono;

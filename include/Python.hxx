@@ -109,3 +109,6 @@ template<typename T> inline T PyGetAttr(PyObject * o, const char * attr) {
     else
         return PyDecode<T>(attrval);
 }
+
+inline void PyRetain(PyObject * & member, PyObject * const o)
+{ Py_XDECREF(member); Py_XINCREF(o); member = o; }
