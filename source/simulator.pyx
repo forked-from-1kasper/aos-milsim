@@ -17,10 +17,15 @@ from pyspades.common import Vertex3
 from milsim.types import Material as PyMaterial, Voxel as PyVoxel
 
 cdef public MapData * mapDataRef(object o):
-    if isinstance(o, VXLData):
-        return (<VXLData> o).map
-    else:
-        raise Exception
+    assert isinstance(o, VXLData)
+
+    return (<VXLData> o).map
+
+cdef public Vector * vectorRef(object v):
+    assert isinstance(v, Vertex3)
+    assert (<Vertex3> v).is_ref
+
+    return (<Vertex3> v).value
 
 cdef extern from "stdint.h":
     ctypedef unsigned long long uint64_t
@@ -42,28 +47,22 @@ cdef extern from "Milsim/Engine.hxx":
 
     cdef Vector3[T] c_cone "cone"[T](const Vector3[T] &, const T)
 
-    cdef cppclass Player:
-        void set_crouch(bool_t)
-        void set_position(Vector *)
-        void set_orientation(Vector *)
-
     cdef cppclass Voxel:
         size_t id
         double durability
 
     cdef cppclass Engine:
-        vector[Player] players
-
         Engine()
         uint64_t add(int, Vector3[double] r, Vector3[double] v, double timestamp, object)
         void step(double, double)
 
-        void wipe(object)
+        void clear()
 
-        void invokeOnTrace(object)
-        void invokeOnBlockHit(object)
-        void invokeOnPlayerHit(object)
-        void invokeOnDestroy(object)
+        void invokeOnTrace(PyObject *)
+        void invokeOnBlockHit(PyObject *)
+        void invokeOnPlayerHit(PyObject *)
+        void invokeOnDestroy(PyObject *)
+        void setProtocolObject(PyObject *)
 
         size_t defaultMaterial, buildMaterial
         Voxel water
@@ -82,6 +81,10 @@ cdef extern from "Milsim/Engine.hxx":
         double mach()
         double ppo2()
         Vector3[double] wind()
+
+        void on_spawn(size_t)
+        void on_despawn(size_t)
+        void set_animation(size_t, bool_t)
 
         void dig(int, int, int, int, double)
         void smash(int, int, int, int, double)
@@ -118,12 +121,14 @@ cdef class Simulator:
     cdef dict materials
 
     def __init__(self, protocol):
+        self.engine.setProtocolObject(<PyObject *> protocol)
+
         self.materials = {}
         self.protocol  = protocol
 
-        self.engine.invokeOnPlayerHit(protocol.onPlayerHit)
-        self.engine.invokeOnBlockHit(protocol.onBlockHit)
-        self.engine.invokeOnDestroy(protocol.onDestroy)
+        self.engine.invokeOnPlayerHit(<PyObject *> protocol.onPlayerHit)
+        self.engine.invokeOnBlockHit(<PyObject *> protocol.onBlockHit)
+        self.engine.invokeOnDestroy(<PyObject *> protocol.onDestroy)
 
     def flush(self):
         self.engine.flush()
@@ -174,8 +179,11 @@ cdef class Simulator:
         cdef Vector3[double] w = self.engine.wind()
         return Vertex3(w.x, w.y, w.z)
 
-    def invokeOnTrace(self, callback):
-        self.engine.invokeOnTrace(callback)
+    def invokeOnTrace(self, o):
+        if callable(o):
+            self.engine.invokeOnTrace(<PyObject *> o)
+        else:
+            self.engine.invokeOnTrace(NULL)
 
     def build(self, x, y, z):
         self.engine.build(x, y, z)
@@ -189,9 +197,9 @@ cdef class Simulator:
     def smash(self, player_id, x, y, z, value):
         self.engine.smash(player_id, x, y, z, value)
 
-    def wipe(self):
+    def clear(self):
         self.materials.clear()
-        self.engine.wipe(self.protocol.map)
+        self.engine.clear()
 
     def add(self, thrower, r, v, timestamp, params):
         return self.engine.add(
@@ -245,36 +253,14 @@ cdef class Simulator:
     def set(self, int x, int y, int z, o):
         self.engine.set(get_pos(x, y, z), o.index, 1.0)
 
-    cdef void resize(self):
-        size = max(self.protocol.players, default = -1) + 1
-        self.engine.players.resize(size)
-
-    def set_animation(self, size_t i, bool_t value):
-        self.engine.players[i].set_crouch(value)
-
     def on_spawn(self, size_t i):
-        self.resize()
-        wo = self.protocol.players[i].world_object
-
-        p = <Vertex3> wo.position
-        f = <Vertex3> wo.orientation
-
-        assert p.is_ref and f.is_ref
-
-        cdef Player * player = &self.engine.players[i]
-
-        player.set_crouch(wo.crouch)
-        player.set_position(p.value)
-        player.set_orientation(f.value)
+        self.engine.on_spawn(i)
 
     def on_despawn(self, size_t i):
-        cdef Player * player = &self.engine.players[i]
+        self.engine.on_despawn(i)
 
-        player.set_crouch(0)
-        player.set_position(NULL)
-        player.set_orientation(NULL)
-
-        self.resize()
+    def set_animation(self, size_t i, bool_t value):
+        self.engine.set_animation(i, value)
 
     def step(self, t1, t2):
         self.engine.step(t1, t2)

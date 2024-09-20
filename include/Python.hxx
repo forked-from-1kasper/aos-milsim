@@ -80,11 +80,29 @@ template<typename... Ts> struct PyTuple {
     ~PyTuple() { Py_DECREF(value); }
 };
 
+class PyOwnedRef {
+    PyObject * ref;
+public:
+    PyOwnedRef(PyObject * o) : ref(o) {}
+
+    PyOwnedRef(PyObject * o, const char * attr)
+    { ref = PyObject_GetAttrString(o, attr); }
+
+    ~PyOwnedRef() { Py_XDECREF(ref); }
+
+    inline void invalidate() { ref = nullptr; }
+
+    inline operator PyObject *() const { return ref; }
+
+    PyOwnedRef(const PyOwnedRef &) = delete;
+    PyOwnedRef & operator=(const PyOwnedRef &) = delete;
+};
+
 template<typename... Ts> inline PyObject * PyApply(PyObject * funval, Ts... ts)
 { return PyObject_Call(funval, PyTuple(ts...), NULL); }
 
 template<typename T> inline T PyGetAttr(PyObject * o, const char * attr) {
-    auto attrval = PyObject_GetAttrString(o, attr);
+    PyOwnedRef attrval(o, attr);
 
     if (attrval == nullptr)
         return {};

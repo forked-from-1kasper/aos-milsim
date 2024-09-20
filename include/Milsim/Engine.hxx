@@ -19,14 +19,11 @@
 #include <vxl_c.h>
 
 extern "C" MapData * mapDataRef(PyObject *);
+extern "C" Vector * vectorRef(PyObject *);
 
 inline void retain(PyObject * & member, PyObject * const obj) {
-    if (member != Py_None)
-        Py_DECREF(member);
-
-    if (obj != Py_None)
-        Py_INCREF(obj);
-
+    Py_XDECREF(member);
+    Py_XINCREF(obj);
     member = obj;
 }
 
@@ -82,10 +79,10 @@ uint64_t Object::gidx = 0;
 struct Player {
     bool c; Vector * p; Vector * f;
 
-    Player() {}
+    Player() : p(nullptr), f(nullptr) {}
     ~Player() {}
 
-    inline bool valid() const { return p != NULL; }
+    inline bool valid() const { return p != nullptr; }
 
     inline void set_crouch(bool b)          { c = b; }
     inline void set_position(Vector * v)    { p = v; }
@@ -132,8 +129,21 @@ struct Voxel {
     Voxel(const size_t id, const double value) : id(id), durability(value) {}
 };
 
+template<typename T> inline T dictLargestKey(PyObject * dict) {
+    T retval = -1;
+
+    Py_ssize_t i = 0; PyObject * k, * v;
+
+    while (PyDict_Next(dict, &i, &k, &v))
+        retval = std::max<T>(retval, PyDecode<T>(k));
+
+    return retval;
+}
+
 struct Engine {
 private:
+    PyObject * protocol;
+
     std::vector<Material> materials;
     std::map<int, Voxel> voxels;
     ObjectQueue objects;
@@ -177,10 +187,10 @@ public:
 
     Voxel water; size_t defaultMaterial, buildMaterial;
 
-    Engine() : onTrace(Py_None), onBlockHit(Py_None), onPlayerHit(Py_None), onDestroy(Py_None)
+    Engine() : protocol(nullptr), onTrace(nullptr), onBlockHit(nullptr), onPlayerHit(nullptr), onDestroy(nullptr)
     { srand(time(NULL)); players.reserve(32); _lag = _peak = 0.0; }
 
-    ~Engine() { Py_XDECREF(onPlayerHit); Py_XDECREF(onBlockHit); Py_XDECREF(onTrace); Py_XDECREF(onDestroy); }
+    ~Engine() { Py_XDECREF(protocol); Py_XDECREF(onPlayerHit); Py_XDECREF(onBlockHit); Py_XDECREF(onTrace); Py_XDECREF(onDestroy); }
 
     Voxel & get(int x, int y, int z) {
         if (z == 63) return water;
@@ -221,6 +231,39 @@ public:
         M.crumbly    = PyGetAttr<bool>(o, "crumbly");
 
         return retval;
+    }
+
+    inline void on_spawn(size_t i) {
+        PyOwnedRef ds(protocol, "players");
+        if (ds == nullptr) return;
+
+        players.resize(dictLargestKey<int>(ds) + 1);
+
+        PyOwnedRef key(PyEncode<size_t>(i)), wo(PyDict_GetItem(ds, key), "world_object");
+        if (wo == nullptr) return;
+
+        PyOwnedRef p(wo, "position"), f(wo, "orientation"), c(wo, "crouch");
+
+        auto & player = players[i];
+        player.set_crouch(c == Py_True);
+        if (p != nullptr) player.set_position(vectorRef(p));
+        if (f != nullptr) player.set_orientation(vectorRef(f));
+    }
+
+    inline void on_despawn(size_t i) {
+        auto & player = players[i];
+        player.set_crouch(false);
+        player.set_position(nullptr);
+        player.set_orientation(nullptr);
+
+        PyOwnedRef ds(protocol, "players");
+        if (ds == nullptr) return;
+
+        players.resize(dictLargestKey<int>(ds) + 1);
+    }
+
+    inline void set_animation(size_t i, bool crouch) {
+        players[i].set_crouch(crouch);
     }
 
     void set(const double t, const double p, const double φ, const Vector3d & w) {
@@ -279,7 +322,7 @@ public:
     inline double   ppo2()        const { return _ppo2; }        // Pa
     inline Vector3d wind()        const { return _wind; }        // m/s
 
-    void wipe(PyObject * o) {
+    void clear() {
         set(0, 101325, 0.3, Vector3d(0, 0, 0));
 
         _peak = 0.0;
@@ -290,14 +333,15 @@ public:
         voxels.clear();
         materials.clear();
 
-        map = mapDataRef(o);
+        PyOwnedRef M(protocol, "map");
+        if (M != nullptr) map = mapDataRef(M);
     }
 
     inline void dig(int player_id, int x, int y, int z, double value) {
         if (indestructible(x, y, z)) return;
 
         auto & voxel = get(x, y, z); auto & M = material(voxel);
-        if (weaken(voxel, value / M.durability) && onDestroy != Py_None)
+        if (weaken(voxel, value / M.durability) && onDestroy != nullptr)
             PyApply(onDestroy, player_id, x, y, z);
     }
 
@@ -308,14 +352,14 @@ public:
 
         if (M.crumbly) {
             if (randbool<double>(0.5) && unstable(x, y, z)) {
-                if (onDestroy != Py_None)
+                if (onDestroy != nullptr)
                     PyApply(onDestroy, player_id, x, y, z);
 
                 return;
             }
         }
 
-        if (weaken(voxel, ΔE * (M.durability / M.absorption)) && onDestroy != Py_None)
+        if (weaken(voxel, ΔE * (M.durability / M.absorption)) && onDestroy != nullptr)
             PyApply(onDestroy, player_id, x, y, z);
     }
 
@@ -325,10 +369,11 @@ public:
     inline void destroy(int x, int y, int z)
     { voxels.erase(get_pos(x, y, z)); }
 
-    inline void invokeOnPlayerHit(PyObject * obj) { retain(onPlayerHit, obj); }
-    inline void invokeOnBlockHit(PyObject * obj)  { retain(onBlockHit, obj); }
-    inline void invokeOnTrace(PyObject * obj)     { retain(onTrace, obj); }
-    inline void invokeOnDestroy(PyObject * obj)   { retain(onDestroy, obj); }
+    inline void invokeOnPlayerHit(PyObject * o) { retain(onPlayerHit, o); }
+    inline void invokeOnBlockHit(PyObject * o)  { retain(onBlockHit, o); }
+    inline void invokeOnTrace(PyObject * o)     { retain(onTrace, o); }
+    inline void invokeOnDestroy(PyObject * o)   { retain(onDestroy, o); }
+    inline void setProtocolObject(PyObject * o) { retain(protocol, o); }
 
     void step(const double t1, const double t2) {
         using namespace std::chrono;
@@ -360,7 +405,7 @@ public:
 
 private:
     inline void trace(const uint64_t index, const Vector3d & r, const double value, bool origin)
-    { if (onTrace != Py_None) PyApply(onTrace, index, r.x, r.y, r.z, value, origin ? Py_True : Py_False); }
+    { if (onTrace != nullptr) PyApply(onTrace, index, r.x, r.y, r.z, value, origin ? Py_True : Py_False); }
 
     void next(double t1, const double t2, ObjectIterator & it) {
         using namespace Fundamentals;
@@ -398,7 +443,7 @@ private:
 
                     trace(o.index(), r, v.abs() / o.v0, false);
 
-                    if (onBlockHit != Py_None && hitEffectThresholdEnergy <= o.energy())
+                    if (onBlockHit != nullptr && hitEffectThresholdEnergy <= o.energy())
                         stuck = Py_True == PyApply(onBlockHit,
                             o.object, r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
                             o.thrower, o.energy(), o.area
@@ -458,21 +503,21 @@ private:
                 // ignore Z ∈ {62, 63} (i.e. water and bottom indestructible layer)
                 if (Z < 62) voxel->durability -= ΔE * (M->durability / M->absorption);
 
-                if (voxel->durability <= 0.0 && onDestroy != Py_None)
+                if (voxel->durability <= 0.0 && onDestroy != nullptr)
                     PyApply(onDestroy, o.thrower, X, Y, Z);
             }
 
             Ray<double> ray(r, dr); Arc<double> arc{}; int target = -1;
 
             for (size_t i = 0; i < players.size(); i++) {
-                Player & player = players[i];
+                auto & player = players[i];
                 if (!player.valid()) continue;
 
                 auto retval = player.intersect(ray);
                 if (retval < arc) { arc = retval; target = i; }
             }
 
-            if (0 <= target && onPlayerHit != Py_None) {
+            if (0 <= target && onPlayerHit != nullptr) {
                 auto w = arc.begin(ray);
 
                 stuck = Py_True == PyApply(onPlayerHit,

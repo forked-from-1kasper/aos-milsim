@@ -267,7 +267,7 @@ class MilsimProtocol(FeatureProtocol):
         self.set_fog_color(self.environment.weather.fog())
 
     def on_environment_change(self, o):
-        self.simulator.wipe()
+        self.simulator.clear()
 
         self.environment = o
         o.apply(self.simulator)
