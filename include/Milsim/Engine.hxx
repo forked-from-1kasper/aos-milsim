@@ -239,7 +239,10 @@ public:
 
         players.resize(dictLargestKey<int>(ds) + 1);
 
-        PyOwnedRef key(PyEncode<size_t>(i)), wo(PyDict_GetItem(ds, key), "world_object");
+        auto o = PyDict_GetItem(ds, PyOwnedRef(PyEncode<size_t>(i)));
+        if (o == nullptr) return;
+
+        PyOwnedRef wo(o, "world_object");
         if (wo == nullptr) return;
 
         PyOwnedRef p(wo, "position"), f(wo, "orientation"), c(wo, "crouch");
