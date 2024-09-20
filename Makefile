@@ -9,7 +9,7 @@ BUILDDIR     = build
 LIBDIR       = milsim
 CXXFLAGS     = -pthread -std=c++23 -fPIC -I$(INCLUDEDIR) -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
 LDFLAGS      = -pthread -shared
-MODULES      = vitals simulator vxl packets
+MODULES      = simulator vxl packets
 HXXFILES     = $(shell find $(INCLUDEDIR) -type f -name '*.hxx')
 DYNLIBS      = $(MODULES:%=$(LIBDIR)/%.so)
 
