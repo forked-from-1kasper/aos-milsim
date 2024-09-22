@@ -14,8 +14,8 @@ from piqueserver.config import config
 
 from milsim.blast import sendGrenadePacket, explode
 
-BOOM_GUARANTEED_KILL_RADIUS = 17
-BOOM_RADIUS = 40
+BELT_GUARANTEED_KILL_RADIUS = 17
+BELT_KILL_RADIUS = 40
 
 section = config.section("kamikaze")
 
@@ -23,13 +23,7 @@ kamikaze_message  = section.option("message", None).get()
 kamikaze_max_fuse = section.option("max_fuse", 60).get()
 kamikaze_delay    = section.option("delay", 15).get()
 
-class Boom:
-    protection = [
-        "Don't try to die twice.",
-        "Are you a zombie?",
-        "Your death was not a fake."
-    ]
-
+class ExplosiveBelt:
     def __init__(self, conn):
         self.defer = None
         self.conn  = conn
@@ -39,11 +33,11 @@ class Boom:
         return self.conn and self.conn.alive()
 
     def start(self, fuse):
-        if self.defer:
+        if self.defer is not None:
             return
 
         if not self.alive():
-            return choice(self.protection)
+            return
 
         if fuse < 0 or fuse > kamikaze_max_fuse:
             return "Delay should be non-negative and less than {}.".format(kamikaze_max_fuse)
@@ -84,11 +78,11 @@ class Boom:
         )
 
         self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3))
-        explode(BOOM_GUARANTEED_KILL_RADIUS, BOOM_RADIUS, self.conn, r)
+        explode(BELT_GUARANTEED_KILL_RADIUS, BELT_KILL_RADIUS, self.conn, r)
 
 @command('boom', 'a')
 @player_only
-def boom(conn, fuse = 0):
+def boom(player, fuse = 0):
     """
     Detonates the explosive belt after a given number of seconds.
     /boom [delay]
@@ -102,22 +96,22 @@ def boom(conn, fuse = 0):
     if isnan(fuse) or isinf(fuse):
         return "Are you a hacker?"
 
-    return conn.boom.start(fuse)
+    return player.belt.start(fuse)
 
 def apply_script(protocol, connection, config):
     class KamikazeConnection(connection):
         def __init__(self, *w, **kw):
             connection.__init__(self, *w, **kw)
-            self.boom = Boom(self)
+            self.belt = ExplosiveBelt(self)
 
         def on_spawn(self, pos):
-            self.boom.stop()
+            self.belt.stop()
 
             connection.on_spawn(self, pos)
 
         def on_team_changed(self, old_team):
             if self.team is None or self.team.spectator:
-                self.boom.stop()
+                self.belt.stop()
 
             connection.on_team_changed(self, old_team)
 
