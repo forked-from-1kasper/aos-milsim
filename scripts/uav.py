@@ -29,30 +29,6 @@ class Status(Enum):
     awaiting = auto()
     inwork   = auto()
 
-class Ghost:
-    def __init__(self):
-        self.status   = None
-        self.callback = None
-        self.grenades = 0
-
-    def init(self, by_server = False):
-        pass
-
-    def report(self, msg):
-        pass
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
-
-    def track(self, player, target):
-        pass
-
-    def remaining(self):
-        pass
-
 @dataclass
 class Drone:
     name     : str
@@ -155,7 +131,6 @@ class Drone:
                 self.status   = Status.awaiting
                 self.callback = None
                 self.report("Bombed out. Awaiting for further instructions")
-
             else:
                 self.status   = Status.inflight
                 self.callback = reactor.callLater(drone_delay, self.arrive)
@@ -164,10 +139,8 @@ class Drone:
             self.callback = reactor.callLater(drone_rate, self.ping)
 
     def remaining(self):
-        if self.callback:
+        if self.callback is not None:
             return self.callback.getTime() - reactor.seconds()
-        else:
-            return None
 
 @command('drone', 'd')
 @alive_only
@@ -177,40 +150,30 @@ def drone(conn, nickname = None):
     /drone <player>
     """
 
-    drone = conn.get_drone()
+    if drone := conn.get_drone():
+        if drone.status == Status.inflight:
+            if rem := drone.remaining():
+                approx = (rem // 5 + 1) * 5
+                drone.report("Will be on the battlefield in {:.0f} seconds".format(approx))
+        elif drone.status == Status.inwork:
+            drone.report("Drone is busy")
+        elif nickname is None:
+            return "Usage: /drone <player>"
+        elif drone.status == Status.awaiting:
+            player = get_player(conn.protocol, nickname, spectators = False)
 
-    if drone.status == Status.inflight:
-        remaining = drone.remaining()
-        if remaining:
-            approx = (remaining // 5 + 1) * 5
-            drone.report("Will be on the battlefield in {:.0f} seconds".format(approx))
+            if player.team.id == conn.team.id and not drone_teamkill:
+                raise CommandError("Expected enemy's nickname")
 
-        return
-
-    if drone.status == Status.inwork:
-        drone.report("Drone is busy")
-
-        return
-
-    if nickname is None:
-        return "Usage: /drone <player>"
-
-    if drone.status == Status.awaiting:
-        player = get_player(conn.protocol, nickname, spectators = False)
-
-        if player.team.id == conn.team.id and not drone_teamkill:
-            raise CommandError("Expected enemy's nickname")
-
-        drone.track(conn, player)
+            drone.track(conn, player)
 
 def apply_script(protocol, connection, config):
     class UAVProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.drones = {
-                self.team_spectator.id : Ghost(),
-                self.team_1.id         : Drone("DJI Mavic 3",   self.team_1, self),
-                self.team_2.id         : Drone("DJI Phantom 4", self.team_2, self)
+                self.team_1.id : Drone("DJI Mavic 3",   self.team_1, self),
+                self.team_2.id : Drone("DJI Phantom 4", self.team_2, self)
             }
 
         def on_map_change(self, M):
@@ -222,6 +185,6 @@ def apply_script(protocol, connection, config):
 
     class UAVConnection(connection):
         def get_drone(self):
-            return self.protocol.drones[self.team.id]
+            return self.protocol.drones.get(self.team.id)
 
     return UAVProtocol, UAVConnection
