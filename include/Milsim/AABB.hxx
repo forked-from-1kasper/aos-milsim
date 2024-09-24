@@ -6,12 +6,10 @@
 #include <numbers>
 #include <utility>
 
-template<typename X> constexpr inline std::pair<X, X> diag(const X & x) { return {x, x}; }
-
 template<typename Real> struct Ray {
     Vector3<Real> origin, direction;
 
-    constexpr Ray(const Vector3<Real> & r, const Vector3<Real> & d) : origin(r), direction(d) {}
+    constexpr inline Ray(const Vector3<Real> & r, const Vector3<Real> & d) : origin(r), direction(d) {}
 
     constexpr inline Ray<Real> translate(const Vector3<Real> & v) const
     { return Ray<Real>(origin + v, direction); }
@@ -26,27 +24,27 @@ template<typename Real> struct Ray {
 template<typename Real> struct Arc {
     int index; Real t1, t2;
 
-    Arc() : index(-1), t1(std::numeric_limits<Real>::infinity()), t2(std::numeric_limits<Real>::infinity()) {}
+    constexpr inline Arc() : index(-1), t1(std::numeric_limits<Real>::infinity()), t2(std::numeric_limits<Real>::infinity()) {}
 
-    Arc(int i, Real t1, Real t2) : index(i), t1(t1), t2(t2) {}
+    constexpr inline Arc(int i, Real t1, Real t2) : index(i), t1(t1), t2(t2) {}
 
-    constexpr inline Vector3<Real> begin(const Ray<Real> & r)
+    constexpr inline Vector3<Real> begin(const Ray<Real> & r) const
     { return r.origin + r.direction * t1; }
 
-    constexpr inline Vector3<Real> end(const Ray<Real> & r)
+    constexpr inline Vector3<Real> end(const Ray<Real> & r) const
     { return r.origin + r.direction * t2; }
 
-    auto operator<=>(const Arc<Real> & w) const { return t1 <=> w.t1; };
+    constexpr inline auto operator<=>(const Arc<Real> & w) const { return t1 <=> w.t1; };
 };
 
 template<typename Real> struct AABB {
     Vector3<Real> min, max;
 
-    constexpr AABB(const Vector3<Real> & A, const Vector3<Real> & B) :
+    constexpr inline AABB(const Vector3<Real> & A, const Vector3<Real> & B) :
     min(std::min(A.x, B.x), std::min(A.y, B.y), std::min(A.z, B.z)),
     max(std::max(A.x, B.x), std::max(A.y, B.y), std::max(A.z, B.z)) {}
 
-    constexpr Arc<Real> intersect(const int index, const Ray<Real> & r) const {
+    constexpr inline Arc<Real> intersect(const int index, const Ray<Real> & r) const {
         using namespace std;
 
         // https://tavianator.com/2011/ray_box.html
@@ -77,7 +75,7 @@ template<typename Real> struct AABB {
 template<typename Real> struct Hitbox {
     int index; Vector3<Real> pivot, size; Real scale; AABB<Real> aabb;
 
-    constexpr Hitbox(const int i, const Vector3<Real> & pivot, const Vector3<Real> & size, const Real scale) :
+    constexpr inline Hitbox(const int i, const Vector3<Real> & pivot, const Vector3<Real> & size, const Real scale) :
     index(i), pivot(pivot), size(size), scale(scale), aabb(pivot * scale, (pivot + size) * scale) {}
 
     constexpr inline auto intersect(const Ray<Real> & r) const { return aabb.intersect(index, r); }

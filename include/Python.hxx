@@ -76,8 +76,8 @@ template<typename... Ts> struct PyTuple {
 
     inline operator PyObject *() const { return value; }
 
-    PyTuple(Ts... ts) { value = newPyTuple<Ts...>(std::index_sequence_for<Ts...>(), ts...); }
-    ~PyTuple() { Py_DECREF(value); }
+    inline PyTuple(Ts... ts) { value = newPyTuple<Ts...>(std::index_sequence_for<Ts...>(), ts...); }
+    inline ~PyTuple() { Py_DECREF(value); }
 };
 
 template<typename... Ts> inline PyObject * PyApply(PyObject * funval, Ts... ts)
@@ -86,25 +86,25 @@ template<typename... Ts> inline PyObject * PyApply(PyObject * funval, Ts... ts)
 class PyOwnedRef {
     PyObject * ref;
 public:
-    PyOwnedRef() : ref(nullptr) {}
+    inline PyOwnedRef() : ref(nullptr) {}
 
-    PyOwnedRef(PyObject * o) : ref(o) { }
+    inline PyOwnedRef(PyObject * o) : ref(o) { }
 
-    PyOwnedRef(PyObject * o, const char * attr)
+    inline PyOwnedRef(PyObject * o, const char * attr)
     { ref = PyObject_GetAttrString(o, attr); }
 
-    ~PyOwnedRef() { Py_XDECREF(ref); }
+    inline ~PyOwnedRef() { Py_XDECREF(ref); }
 
     PyOwnedRef(const PyOwnedRef &) = delete;
 
     PyOwnedRef & operator=(const PyOwnedRef &) = delete;
 
-    PyOwnedRef(PyOwnedRef && rvalue) {
+    inline PyOwnedRef(PyOwnedRef && rvalue) {
         ref = rvalue.ref;
         rvalue.ref = nullptr;
     };
 
-    PyOwnedRef & operator=(PyOwnedRef && rvalue) {
+    inline PyOwnedRef & operator=(PyOwnedRef && rvalue) {
         if (this != &rvalue) {
             Py_XDECREF(ref);
             ref = rvalue.ref;
@@ -119,7 +119,7 @@ public:
     template<typename... Ts> inline auto operator()(Ts... ts)
     { return PyOwnedRef(ref == nullptr ? nullptr : PyApply<Ts...>(ref, ts...)); }
 
-    PyObject * incref() { Py_XINCREF(ref); return ref; }
+    inline PyObject * incref() { Py_XINCREF(ref); return ref; }
 
     inline void retain(PyObject * o) { Py_XDECREF(ref); Py_XINCREF(o); ref = o; }
 };

@@ -5,7 +5,7 @@
 
 // https://www.jbmballistics.com/ballistics/downloads/downloads.shtml
 
-template<typename T> T dragModelG1[] = {
+template<typename T> constexpr T dragModelG1[] = {
     0.26290, 0.25580, 0.24870, 0.24130, 0.23440, 0.22780, 0.22140, 0.21550, 0.21040, 0.20610,
     0.20320, 0.20200, 0.20340, 0.20995, 0.21650, 0.23130, 0.25460, 0.29010, 0.34150, 0.40840,
     0.48050, 0.54270, 0.58830, 0.61910, 0.63930, 0.65180, 0.65890, 0.66210, 0.66250, 0.66070,
@@ -19,7 +19,7 @@ template<typename T> T dragModelG1[] = {
     0.49880
 };
 
-template<typename T> T dragModelG7[] = {
+template<typename T> constexpr T dragModelG7[] = {
     0.11980, 0.11970, 0.11960, 0.11940, 0.11930, 0.11940, 0.11940, 0.11940, 0.11930, 0.11930,
     0.11940, 0.11930, 0.11940, 0.11970, 0.12020, 0.12150, 0.12420, 0.13060, 0.14640, 0.20540,
     0.38030, 0.40430, 0.40140, 0.39550, 0.38840, 0.38100, 0.37320, 0.36570, 0.35800, 0.35100,
@@ -33,7 +33,7 @@ template<typename T> T dragModelG7[] = {
     0.16180
 };
 
-template<typename T> T ballModel[] = {
+template<typename T> constexpr T ballModel[] = {
     0.46620, 0.46890, 0.47170, 0.47450, 0.47720, 0.48000, 0.48270, 0.48520, 0.48820, 0.49200,
     0.49700, 0.50800, 0.52600, 0.55900, 0.59200, 0.62580, 0.66100, 0.69850, 0.73700, 0.77570,
     0.81400, 0.85120, 0.88700, 0.92100, 0.95100, 0.97400, 0.99100, 0.99900, 1.00300, 1.00600,
@@ -45,7 +45,7 @@ template<typename T> T ballModel[] = {
     0.92800
 };
 
-template<typename Real> Real lininpol(const Real * values, size_t size, Real step, Real x) {
+template<typename Real> inline Real lininpol(const Real * values, size_t size, Real step, Real x) {
     auto y = x / step;
 
     auto L = std::max<size_t>(0, std::floor(y));
@@ -55,7 +55,7 @@ template<typename Real> Real lininpol(const Real * values, size_t size, Real ste
     return values[L] * (1 - t) + values[R] * t;
 }
 
-template<typename Real> Real drag(uint32_t model, const Real ballistic, const Real mach) {
+template<typename Real> inline Real drag(uint32_t model, const Real ballistic, const Real mach) {
     switch (model) {
         case 0:  return ballistic;
         case 1:  return ballistic * lininpol<Real>(dragModelG1<Real>, sizeof(dragModelG1<Real>), 0.05, mach);
@@ -71,13 +71,13 @@ template<typename T> inline T sign(T x)
 template<typename T, typename... Ts> inline auto min(T t, Ts... ts) { return std::min({ts...}, t); };
 template<typename T, typename... Ts> inline auto max(T t, Ts... ts) { return std::max({ts...}, t); };
 
-template<typename T> T random()
+template<typename T> inline T random()
 { return static_cast<T>(rand()) / static_cast<T>(RAND_MAX); }
 
 template<typename T> inline bool randbool(T probability)
 { return random<T>() < probability; }
 
-template<typename T> T uniform(T m, T M)
+template<typename T> inline T uniform(T m, T M)
 { return m + random<T>() * (M - m); }
 
 enum {
@@ -96,7 +96,7 @@ namespace Fundamentals {
     template<typename T> constexpr T m2b = playerHeightInBlocks<T> / playerHeightInMeters<T>;
     template<typename T> constexpr T b2m = 1 / m2b<T>;
 
-    template<typename T> const Vector3<T> g(0, 0, 9.81); // m/s²
+    template<typename T> constexpr Vector3<T> g(0, 0, 9.81); // m/s²
 
     template<typename T> constexpr T molarMassDryAir     = 0.0289652; // kg/mol
     template<typename T> constexpr T molarMassWaterVapor = 0.018016;  // kg/mol
@@ -104,7 +104,7 @@ namespace Fundamentals {
     template<typename T> constexpr T absoluteZero        = -273.15;   // Celsius
 }
 
-template<typename Real> Real vaporPressureOfWater(const Real T) {
+template<typename Real> constexpr inline Real vaporPressureOfWater(const Real T) {
     // https://en.wikipedia.org/wiki/Tetens_equation
     auto k = T > 0 ? (17.27 * T) / (T + 237.3) : (21.875 * T) / (T + 265.5);
     return 610.78 * exp(k); // Pa

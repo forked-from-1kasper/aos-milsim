@@ -23,6 +23,9 @@ build/%.cxx: source/%.pyx
 build/%.o build/%.h: build/%.cxx
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
+build/%.o: source/%.cxx
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
 milsim/%.so: build/%.o
 	$(CXX) $(LDFLAGS) $^ -o $@
 
@@ -31,14 +34,15 @@ milsim/%.so: build/%.o
 
 all: milsim/ctypes.so milsim/packets.so milsim/simulator.so milsim/vxl.so
 
-.INTERMEDIATE: build/ctypes.o build/packets.o build/vxl.o build/simulator.o
-
 build/ctypes.o:
 build/packets.o:
 build/vxl.o: include/VXL.hxx
 build/simulator.o: include/Milsim/Engine.hxx
+build/Engine.o: include/Milsim/Engine.hxx
+build/VXL.o: include/VXL.hxx
 
-milsim/simulator.so: milsim/ctypes.so
+milsim/vxl.so: build/VXL.o
+milsim/simulator.so: milsim/ctypes.so build/Engine.o
 
 include/Milsim/AABB.hxx: include/Milsim/Vector.hxx
 include/Milsim/Engine.hxx: build/ctypes.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx

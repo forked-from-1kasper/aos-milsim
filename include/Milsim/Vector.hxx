@@ -8,11 +8,11 @@
 template<typename T> struct Vector3 {
     T x, y, z;
 
-    constexpr Vector3() : x(0), y(0), z(0) {}
-    constexpr Vector3(const T x, const T y) : x(x), y(y), z(0) {}
-    constexpr Vector3(const T x, const T y, const T z) : x(x), y(y), z(z) {}
-    constexpr Vector3(const Vector3<T> & v) : x(v.x), y(v.y), z(v.z) {}
-    constexpr Vector3(const Vector * v) : x(v->x), y(v->y), z(v->z) {}
+    constexpr inline Vector3() : x(0), y(0), z(0) {}
+    constexpr inline Vector3(const T x, const T y) : x(x), y(y), z(0) {}
+    constexpr inline Vector3(const T x, const T y, const T z) : x(x), y(y), z(z) {}
+    constexpr inline Vector3(const Vector3<T> & v) : x(v.x), y(v.y), z(v.z) {}
+    constexpr inline Vector3(const Vector * v) : x(v->x), y(v->y), z(v->z) {}
 
     constexpr Vector3<T> & operator=(const Vector3<T> &) = default;
     constexpr Vector3<T> & operator=(Vector3<T> &&) = default;
@@ -25,12 +25,12 @@ template<typename T> struct Vector3 {
     constexpr inline Vector3<T> xOz() const { return Vector3<T>(x, 0, z); }
     constexpr inline Vector3<T> yOz() const { return Vector3<T>(0, y, z); }
 
-    constexpr Vector3<T> normal() const
+    constexpr inline Vector3<T> normal() const
     { T k = abs(); return k <= 1e-30 ? Vector3<T>() : scale(1 / k); }
 
-    constexpr void normalize() { T k = abs(); if (k > 1e-30) *this /= k; }
+    constexpr inline void normalize() { T k = abs(); if (k > 1e-30) *this /= k; }
 
-    template<typename U> constexpr operator Vector3<U>() const
+    template<typename U> constexpr inline operator Vector3<U>() const
     { return Vector3<U>(x, y, z); }
 
     constexpr inline T dot(const Vector3<T> & N) const
@@ -78,7 +78,7 @@ template<typename T> struct Vector3 {
     constexpr inline auto operator-() const { return Vector3<T>(-x, -y, -z); }
     constexpr inline auto operator+() const { return *this; }
 
-    constexpr Vector3<T> cross(const Vector3<T> & N) const
+    constexpr inline Vector3<T> cross(const Vector3<T> & N) const
     { return Vector3<T>(y * N.z - z * N.y, z * N.x - x * N.z, x * N.y - y * N.x); }
 
     constexpr inline void set(const T nx, const T ny, const T nz) { x = nx; y = ny; z = nz; }
@@ -93,19 +93,6 @@ template<typename T> struct Vector3 {
         return scale(cosθ) - cross(k3) + k * (dot(k) * (1 - cosθ));
     }
 };
-
-template<typename T> Vector3<T> cone(const Vector3<T> & v, const T σ) {
-    static std::random_device rd;
-    static std::mt19937 randgen(rd());
-
-    std::normal_distribution gauss(0.0, σ);
-    std::uniform_real_distribution uniform(-std::numbers::pi_v<T>, std::numbers::pi_v<T>);
-
-    auto n = v.normal(); auto left = Vector3<T>(n.y, -n.x, 0).normal();
-    auto α = std::fabs(gauss(randgen)), β = uniform(randgen);
-
-    return v.rot(left, α).rot(n, β);
-}
 
 using Vector3i = Vector3<int>;
 using Vector3f = Vector3<float>;
