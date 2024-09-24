@@ -25,9 +25,6 @@ cdef public Vector * vectorRef(object o):
     assert v.is_ref
     return v.value
 
-cdef extern from "vxl_c.h":
-    int get_pos(int, int, int)
-
 cdef extern from "Milsim/Engine.hxx":
     cdef T c_ofMeters "ofMeters"[T](const T)
     cdef T c_toMeters "toMeters"[T](const T)
@@ -57,14 +54,14 @@ cdef extern from "Milsim/Engine.hxx":
         void setBuildMaterial(object)
         void setWaterMaterial(object)
 
-        void set(const int, object, const double)
+        void setMaterial(int, int, int, object)
 
         object getMaterial(int, int, int)
         double getDurability(int, int, int)
 
         void applyPalette(object)
 
-        void set(const double, const double, const double, const Vector3[double] &)
+        void setWeather(double, double, double, const Vector3[double] &)
 
         double temperature()
         double pressure()
@@ -74,9 +71,9 @@ cdef extern from "Milsim/Engine.hxx":
         double ppo2()
         Vector3[double] wind()
 
-        void on_spawn(size_t)
-        void on_despawn(size_t)
-        void set_animation(size_t, bool_t)
+        void onSpawn(size_t)
+        void onDespawn(size_t)
+        void setAnimation(size_t, bool_t)
 
         void dig(int, int, int, int, double)
         void smash(int, int, int, int, double)
@@ -136,7 +133,7 @@ cdef class Simulator:
         p = E.pressure()
         h = E.humidity()
         w = E.wind()
-        self.engine.set(t, p, h, Vector3[double](w.x, w.y, w.z))
+        self.engine.setWeather(t, p, h, Vector3[double](w.x, w.y, w.z))
 
     def temperature(self):
         return self.engine.temperature()
@@ -206,16 +203,16 @@ cdef class Simulator:
         return self.engine.getDurability(x, y, z)
 
     def set(self, int x, int y, int z, o):
-        self.engine.set(get_pos(x, y, z), o, 1.0)
+        self.engine.setMaterial(x, y, z, o)
 
     def on_spawn(self, size_t i):
-        self.engine.on_spawn(i)
+        self.engine.onSpawn(i)
 
     def on_despawn(self, size_t i):
-        self.engine.on_despawn(i)
+        self.engine.onDespawn(i)
 
     def set_animation(self, size_t i, bool_t value):
-        self.engine.set_animation(i, value)
+        self.engine.setAnimation(i, value)
 
     def step(self, t1, t2):
         self.engine.step(t1, t2)

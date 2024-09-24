@@ -111,6 +111,51 @@ struct Voxel {
     Voxel(PyObject * o, const double f) : object(o), durability(f) { Py_INCREF(o); }
 
     Material * material() const { return reinterpret_cast<Material *>(static_cast<PyObject *>(object)); }
+
+    inline bool isub(double delta) { durability -= delta; return durability <= 0; }
+};
+
+class VoxelData {
+private:
+    Voxel water; std::unordered_map<int, Voxel> data;
+public:
+    PyOwnedRef defaultMaterial;
+
+    VoxelData() { water.durability = std::numeric_limits<double>::infinity(); }
+
+    inline PyOwnedRef & waterMaterial() { return water.object; }
+
+    Voxel & set(int i, PyObject * o) {
+        int x, y, z; get_xyz(i, &x, &y, &z);
+        if (63 <= z) return water; // ignore z = 63
+
+        auto d = z < 62 ? 1.0 : std::numeric_limits<double>::infinity();
+
+        if (o == nullptr) o = defaultMaterial;
+
+        auto [iter, _] = data.insert_or_assign(i, Voxel(o, d));
+        return iter->second;
+    }
+
+    Voxel & get(int x, int y, int z) {
+        if (63 <= z) return water;
+
+        auto i = get_pos(x, y, z); auto iter = data.find(i);
+        return iter == data.end() ? set(i, defaultMaterial) : iter->second;
+    }
+
+    inline Voxel & set(int x, int y, int z, PyObject * o)
+    { return set(get_pos(x, y, z), o); }
+
+    inline void erase(int x, int y, int z) { data.erase(get_pos(x, y, z)); }
+
+    inline void clear() { data.clear(); defaultMaterial.retain(nullptr); waterMaterial().retain(nullptr); }
+
+    // This is only the lower bound.
+    inline size_t usage() const {
+        constexpr size_t entrySize = sizeof(int) + sizeof(Voxel);
+        return sizeof(decltype(data)) + entrySize * data.size();
+    }
 };
 
 template<typename T> inline T dictLargestKey(PyObject * dict) {
@@ -128,14 +173,11 @@ struct Engine {
 private:
     PyOwnedRef protocol;
 
-    std::unordered_map<int, Voxel> voxels;
     ObjectQueue objects;
 
+    MapData * map; VoxelData vxlData; PyOwnedRef buildMaterial;
+
     PyOwnedRef onTrace, onBlockHit, onPlayerHit, onDestroy;
-
-    PyOwnedRef defaultMaterial, buildMaterial, waterMaterial;
-
-    MapData * map;
 
     double _lag, _peak;
 
@@ -146,60 +188,58 @@ private:
 
 private:
     inline bool indestructible(int x, int y, int z)
-    { return z >= 62 || !get_solid(x, y, z, map); }
+    { return 62 <= z || !get_solid(x, y, z, map); }
 
     inline bool unstable(int x₀, int y₀, int z₀) {
         for (int z = z₀ + 1; z < 62; z++) {
             if (!get_solid(x₀, y₀, z, map))
                 return true;
 
-            if (!get(x₀, y₀, z).material()->crumbly)
+            if (!vxlData.get(x₀, y₀, z).material()->crumbly)
                 return false;
         }
 
         return false;
     }
 
-    inline bool weaken(Voxel & voxel, double amount)
-    { voxel.durability -= amount; return voxel.durability <= 0; }
-
 public:
     std::vector<Player> players;
 
     Engine() : _lag(0.0), _peak(0.0) { srand(time(NULL)); players.reserve(32); }
 
-    Voxel & get(int x, int y, int z) {
-        auto pos = get_pos(x, y, z);
-        auto iter = voxels.find(pos);
+    inline double   temperature() const { return _temperature; } // ℃
+    inline double   pressure()    const { return _pressure; }    // Pa
+    inline double   humidity()    const { return _humidity; }    // %
+    inline double   density()     const { return _density; }     // kg/m³
+    inline double   mach()        const { return _mach; }        // m/s
+    inline double   ppo2()        const { return _ppo2; }        // Pa
+    inline Vector3d wind()        const { return _wind; }        // m/s
 
-        if (iter == voxels.end()) {
-            std::tie(iter, std::ignore) = voxels.insert_or_assign(
-                pos, Voxel(z == 63 ? waterMaterial : defaultMaterial, 1.0)
-            );
-        }
+    inline double lag()  const { return _lag; }
+    inline double peak() const { return _peak; }
 
-        return iter->second;
+    inline size_t alive() const { return objects.size(); }
+    inline size_t total() const { return Object::total(); }
+
+    inline size_t usage() const { return vxlData.usage(); }
+
+    void setMaterial(int x, int y, int z, PyObject * o) {
+        if (o == nullptr || !PyObject_TypeCheck(o, &MaterialType))
+            return;
+
+        vxlData.set(x, y, z, o);
     }
 
     inline PyObject * getMaterial(int x, int y, int z)
-    { return get(x, y, z).object.incref(); }
+    { return vxlData.get(x, y, z).object.incref(); }
 
     inline double getDurability(int x, int y, int z)
-    { return get(x, y, z).durability; }
-
-    void set(const int index, PyObject * o, const double value) {
-        if (o == nullptr || !PyObject_TypeCheck(o, &MaterialType)) return;
-
-        int x, y, z; get_xyz(index, &x, &y, &z); // ignore z = 63
-        if (z < 63) voxels.insert_or_assign(index, Voxel(o, value));
-    }
+    { return vxlData.get(x, y, z).durability; }
 
     void applyPalette(PyObject * dict) {
         for (auto & [k, v] : map->colors) {
-            auto M = PyDict_GetItem(dict, PyOwnedRef(PyEncode<unsigned int>(v & 0xFFFFFF)));
-            if (M == nullptr) M = defaultMaterial;
-
-            set(k, M, 1.0);
+            PyOwnedRef i(PyEncode<unsigned int>(v & 0xFFFFFF));
+            vxlData.set(k, PyDict_GetItem(dict, i));
         }
     }
 
@@ -208,7 +248,7 @@ public:
         trace(o.index(), o.position, 1.0, true);
     }
 
-    inline void on_spawn(size_t i) {
+    inline void onSpawn(size_t i) {
         PyOwnedRef ds(protocol, "players");
         if (ds == nullptr) return;
 
@@ -228,7 +268,7 @@ public:
         if (f != nullptr) player.set_orientation(vectorRef(f));
     }
 
-    inline void on_despawn(size_t i) {
+    inline void onDespawn(size_t i) {
         auto & player = players[i];
         player.set_crouch(false);
         player.set_position(nullptr);
@@ -240,11 +280,11 @@ public:
         players.resize(dictLargestKey<int>(ds) + 1);
     }
 
-    inline void set_animation(size_t i, bool crouch) {
+    inline void setAnimation(size_t i, bool crouch) {
         players[i].set_crouch(crouch);
     }
 
-    void set(const double t, const double p, const double φ, const Vector3d & w) {
+    void setWeather(double t, double p, double φ, const Vector3d & w) {
         using namespace Fundamentals;
 
         _temperature = t;
@@ -292,27 +332,16 @@ public:
         // See also: http://resource.npl.co.uk/acoustics/techguides/speedair/
     }
 
-    inline double   temperature() const { return _temperature; } // ℃
-    inline double   pressure()    const { return _pressure; }    // Pa
-    inline double   humidity()    const { return _humidity; }    // %
-    inline double   density()     const { return _density; }     // kg/m³
-    inline double   mach()        const { return _mach; }        // m/s
-    inline double   ppo2()        const { return _ppo2; }        // Pa
-    inline Vector3d wind()        const { return _wind; }        // m/s
-
     void clear() {
-        set(0, 101325, 0.3, Vector3d(0, 0, 0));
+        setWeather(0, 101325, 0.3, Vector3d(0, 0, 0));
 
         _peak = 0.0;
 
         objects.clear();
         Object::flush();
 
-        voxels.clear();
-
-        defaultMaterial.retain(nullptr);
+        vxlData.clear();
         buildMaterial.retain(nullptr);
-        waterMaterial.retain(nullptr);
 
         PyOwnedRef M(protocol, "map");
         if (M != nullptr) map = mapDataRef(M);
@@ -321,43 +350,38 @@ public:
     inline void dig(int player_id, int x, int y, int z, double value) {
         if (indestructible(x, y, z)) return;
 
-        auto & voxel = get(x, y, z); auto M = voxel.material();
-        if (weaken(voxel, value / M->durability))
+        auto & voxel = vxlData.get(x, y, z); auto M = voxel.material();
+
+        if (voxel.isub(value / M->durability))
             onDestroy(player_id, x, y, z);
     }
 
     inline void smash(int player_id, int x, int y, int z, double ΔE) {
         if (indestructible(x, y, z)) return;
 
-        auto & voxel = get(x, y, z); auto M = voxel.material();
+        auto & voxel = vxlData.get(x, y, z); auto M = voxel.material();
 
-        if (M->crumbly) {
-            if (randbool<double>(0.5) && unstable(x, y, z)) {
-                onDestroy(player_id, x, y, z);
-
-                return;
-            }
+        if (M->crumbly && randbool<double>(0.5) && unstable(x, y, z)) {
+            onDestroy(player_id, x, y, z);
+            return;
         }
 
-        if (weaken(voxel, ΔE * (M->durability / M->absorption)))
+        if (voxel.isub(ΔE * (M->durability / M->absorption)))
             onDestroy(player_id, x, y, z);
     }
 
-    inline void build(int x, int y, int z)
-    { voxels.insert_or_assign(get_pos(x, y, z), Voxel(buildMaterial, 1.0)); }
+    inline void build(int x, int y, int z) { vxlData.set(x, y, z, buildMaterial); }
+    inline void destroy(int x, int y, int z) { vxlData.erase(x, y, z); }
 
-    inline void destroy(int x, int y, int z)
-    { voxels.erase(get_pos(x, y, z)); }
+    inline void setDefaultMaterial(PyObject * o) { vxlData.defaultMaterial.retain(o); }
+    inline void setWaterMaterial(PyObject * o) { vxlData.waterMaterial().retain(o); }
+    inline void setBuildMaterial(PyObject * o) { buildMaterial.retain(o); }
 
     inline void invokeOnPlayerHit(PyObject * o) { onPlayerHit.retain(PyCallable_Check(o) ? o : nullptr); }
     inline void invokeOnBlockHit(PyObject * o) { onBlockHit.retain(PyCallable_Check(o) ? o : nullptr); }
     inline void invokeOnTrace(PyObject * o) { onTrace.retain(PyCallable_Check(o) ? o : nullptr); }
     inline void invokeOnDestroy(PyObject * o) { onDestroy.retain(PyCallable_Check(o) ? o : nullptr); }
     inline void setProtocolObject(PyObject * o) { protocol.retain(o); }
-
-    inline void setDefaultMaterial(PyObject * o) { defaultMaterial.retain(o); }
-    inline void setBuildMaterial(PyObject * o) { buildMaterial.retain(o); }
-    inline void setWaterMaterial(PyObject * o) { waterMaterial.retain(o); }
 
     void step(const double t1, const double t2) {
         using namespace std::chrono;
@@ -374,18 +398,6 @@ public:
     }
 
     inline void flush() { objects.clear(); }
-
-    inline double lag()  const { return _lag; }
-    inline double peak() const { return _peak; }
-
-    inline size_t alive() const { return objects.size(); }
-    inline size_t total() const { return Object::total(); }
-
-    // This is only the lower bound.
-    inline size_t usage() const {
-        constexpr size_t entrySize = sizeof(int) + sizeof(Voxel);
-        return sizeof(decltype(voxels)) + entrySize * voxels.size();
-    }
 
 private:
     inline void trace(const uint64_t index, const Vector3d & r, const double value, bool origin)
@@ -412,10 +424,10 @@ private:
             if (n.y != 0 && v.y < 0) Y--;
             if (n.z != 0 && v.z > 0) Z++;
 
-            Terminal state = Terminal::flying;
+            auto state = Terminal::flying;
 
             if (is_valid_position(X, Y, Z) && get_solid(X, Y, Z, map)) {
-                voxel = &get(X, Y, Z); M = voxel->material();
+                voxel = &vxlData.get(X, Y, Z); M = voxel->material();
 
                 auto θ = acos(-(v, n) / v.abs());
 
@@ -484,10 +496,8 @@ private:
                     v.x = v.y = v.z = 0.0;
                 }
 
-                // ignore Z ∈ {62, 63} (i.e. water and bottom indestructible layer)
-                if (Z < 62) voxel->durability -= ΔE * (M->durability / M->absorption);
-
-                if (voxel->durability <= 0.0) onDestroy(o.thrower, X, Y, Z);
+                if (voxel->isub(ΔE * (M->durability / M->absorption)))
+                    onDestroy(o.thrower, X, Y, Z);
             }
 
             Ray<double> ray(r, dr); Arc<double> arc{}; int target = -1;
