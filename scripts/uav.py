@@ -9,7 +9,7 @@ from pyspades.common import Vertex3
 from pyspades.world import Grenade
 from pyspades.team import Team
 
-from piqueserver.commands import command, player_only, get_player, CommandError
+from piqueserver.commands import command, get_player, CommandError
 from piqueserver.config import config
 
 from milsim.blast import sendGrenadePacket

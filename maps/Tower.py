@@ -1,5 +1,6 @@
 from random import randint, random
 from itertools import product
+from math import radians
 
 from pyspades.constants import *
 from milsim.vxl import VxlData
@@ -10,9 +11,9 @@ name    = 'Tower'
 version = '1.0'
 author  = 'Siegmentation Fault'
 
-StrongConcrete = Material(name = "strong concrete", ricochet = 1.0,  deflecting = 5,  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
-StrongSteel    = Material(name = "strong steel",    ricochet = 1.0,  deflecting = 5,  durability = 600.0, strength = 500e+6, density = 7850, absorption = 1e+15, crumbly = False)
-Sand2          = Material(name = "sand",            ricochet = 0.4,  deflecting = 83, durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)
+StrongConcrete = Material(name = "strong concrete", ricochet = 1.0,  deflecting = radians(5),  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
+StrongSteel    = Material(name = "strong steel",    ricochet = 1.0,  deflecting = radians(5),  durability = 600.0, strength = 500e+6, density = 7850, absorption = 1e+15, crumbly = False)
+Sand2          = Material(name = "sand",            ricochet = 0.4,  deflecting = radians(83), durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)
 
 palette = {
     0xCCCCCC: StrongConcrete,
@@ -139,7 +140,6 @@ def on_map_generation(dirname, seed):
 
 def on_environment_generation(dirname, seed):
     return Environment(
-        registry = [StrongConcrete, StrongSteel, Dirt, Sand2, Water],
         default  = Dirt,
         build    = Sand2,
         water    = Water,

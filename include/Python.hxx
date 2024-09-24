@@ -80,26 +80,49 @@ template<typename... Ts> struct PyTuple {
     ~PyTuple() { Py_DECREF(value); }
 };
 
+template<typename... Ts> inline PyObject * PyApply(PyObject * funval, Ts... ts)
+{ return PyObject_Call(funval, PyTuple(ts...), NULL); }
+
 class PyOwnedRef {
     PyObject * ref;
 public:
-    PyOwnedRef(PyObject * o) : ref(o) {}
+    PyOwnedRef() : ref(nullptr) {}
+
+    PyOwnedRef(PyObject * o) : ref(o) { }
 
     PyOwnedRef(PyObject * o, const char * attr)
     { ref = PyObject_GetAttrString(o, attr); }
 
     ~PyOwnedRef() { Py_XDECREF(ref); }
 
-    inline void invalidate() { ref = nullptr; }
+    PyOwnedRef(const PyOwnedRef &) = delete;
+
+    PyOwnedRef & operator=(const PyOwnedRef &) = delete;
+
+    PyOwnedRef(PyOwnedRef && rvalue) {
+        ref = rvalue.ref;
+        rvalue.ref = nullptr;
+    };
+
+    PyOwnedRef & operator=(PyOwnedRef && rvalue) {
+        if (this != &rvalue) {
+            Py_XDECREF(ref);
+            ref = rvalue.ref;
+            rvalue.ref = nullptr;
+        }
+
+        return *this;
+    };
 
     inline operator PyObject *() const { return ref; }
 
-    PyOwnedRef(const PyOwnedRef &) = delete;
-    PyOwnedRef & operator=(const PyOwnedRef &) = delete;
-};
+    template<typename... Ts> inline auto operator()(Ts... ts)
+    { return PyOwnedRef(ref == nullptr ? nullptr : PyApply<Ts...>(ref, ts...)); }
 
-template<typename... Ts> inline PyObject * PyApply(PyObject * funval, Ts... ts)
-{ return PyObject_Call(funval, PyTuple(ts...), NULL); }
+    PyObject * incref() { Py_XINCREF(ref); return ref; }
+
+    inline void retain(PyObject * o) { Py_XDECREF(ref); Py_XINCREF(o); ref = o; }
+};
 
 template<typename T> inline T PyGetAttr(PyObject * o, const char * attr) {
     PyOwnedRef attrval(o, attr);
@@ -110,5 +133,11 @@ template<typename T> inline T PyGetAttr(PyObject * o, const char * attr) {
         return PyDecode<T>(attrval);
 }
 
-inline void PyRetain(PyObject * & member, PyObject * const o)
-{ Py_XDECREF(member); Py_XINCREF(o); member = o; }
+template<typename T> inline T PyGetItem(PyObject * o, const char * k) {
+    auto val = PyDict_GetItemString(o, k);
+
+    if (val == nullptr)
+        return {};
+    else
+        return PyDecode<T>(val);
+}

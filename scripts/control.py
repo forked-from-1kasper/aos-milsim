@@ -100,14 +100,18 @@ def engine(conn, subcmd, *w):
 
 @command()
 @alive_only
-def lookat(conn):
+def lookat(connection):
     """
     Report a given block durability
     /lookat
     """
-    if loc := conn.world_object.cast_ray(7.0):
-        block = conn.protocol.simulator.get(*loc)
-        return f"Material: {block.material.name}, durability: {block.durability:.2f}, crumbly: {yn(block.material.crumbly)}."
+    if loc := connection.world_object.cast_ray(7.0):
+        protocol = connection.protocol
+
+        M = protocol.simulator.getMaterial(*loc)
+        d = protocol.simulator.getDurability(*loc)
+
+        return f"Material: {M.name}, durability: {d:.2f}, crumbly: {yn(M.crumbly)}."
     else:
         return "Block is too far."
 

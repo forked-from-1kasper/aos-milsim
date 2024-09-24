@@ -3,32 +3,47 @@ PYTHONCONFIG = python3-config
 CXX          = c++
 CYTHON       = cython
 LIBPYSPADES  = $(shell $(PYTHON) -m site --user-site)/pyspades
-SOURCEDIR    = source
-INCLUDEDIR   = include
-BUILDDIR     = build
-LIBDIR       = milsim
-CXXFLAGS     = -pthread -std=c++23 -fPIC -I$(INCLUDEDIR) -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
+CXXFLAGS     = -pthread -std=c++23 -fPIC -Ibuild/ -Iinclude/ -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
 LDFLAGS      = -pthread -shared
-MODULES      = simulator vxl packets
-HXXFILES     = $(shell find $(INCLUDEDIR) -type f -name '*.hxx')
-DYNLIBS      = $(MODULES:%=$(LIBDIR)/%.so)
 
-all: hier $(DYNLIBS)
+all: build
+
+build:
+	mkdir -p build
+
+clean:
+	rm -f build/*.o build/*.h build/*.cxx milsim/*.so
 
 release: CXXFLAGS += -O3
 release: all
 
-$(BUILDDIR)/%.cxx: $(SOURCEDIR)/%.pyx $(HXXFILES)
+build/%.cxx: source/%.pyx
 	$(CYTHON) --cplus -3 $< -o $@
 
-$(BUILDDIR)/%.o: $(BUILDDIR)/%.cxx
-	$(CXX) -c $(CXXFLAGS) $^ -o $@
+build/%.o build/%.h: build/%.cxx
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
-$(LIBDIR)/%.so: $(BUILDDIR)/%.o
+milsim/%.so: build/%.o
 	$(CXX) $(LDFLAGS) $^ -o $@
 
-hier:
-	mkdir -p $(BUILDDIR)
+%.hxx:
+	touch $@
 
-clean:
-	rm -rf $(BUILDDIR)/*.o $(BUILDDIR)/*.cxx $(DYNLIBS)
+all: milsim/ctypes.so milsim/packets.so milsim/simulator.so milsim/vxl.so
+
+.INTERMEDIATE: build/ctypes.o build/packets.o build/vxl.o build/simulator.o
+
+build/ctypes.o:
+build/packets.o:
+build/vxl.o: include/VXL.hxx
+build/simulator.o: include/Milsim/Engine.hxx
+
+milsim/simulator.so: milsim/ctypes.so
+
+include/Milsim/AABB.hxx: include/Milsim/Vector.hxx
+include/Milsim/Engine.hxx: build/ctypes.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
+include/Milsim/Fundamentals.hxx: include/Milsim/Vector.hxx include/Milsim/AABB.hxx
+include/Milsim/Vector.hxx:
+
+include/Python.hxx:
+include/VXL.hxx: include/Milsim/Vector.hxx

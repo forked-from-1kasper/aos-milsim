@@ -65,7 +65,6 @@ def on_environment_generation(dirname, seed):
     palette[BGRA(concrete)] = Concrete
 
     return Environment(
-        registry = [Concrete, Dirt, Sand, Water],
         default  = Dirt,
         build    = Sand,
         water    = Water,

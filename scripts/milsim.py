@@ -31,12 +31,14 @@ def change_planned_map(connection, map_name):
         return 'Map {} not found'.format(map_name)
 
 @command('loadmap', admin_only = True)
-def load_map(connection, map_name):
+def load_map(connection, map_name = None):
     """
     Instantly switches map to the specified
     /loadmap <mapname>
     """
     protocol = connection.protocol
+
+    map_name = map_name or protocol.map_info.name
 
     if rot_info := check_map(map_name, protocol.map_dir):
         protocol.planned_map = rot_info

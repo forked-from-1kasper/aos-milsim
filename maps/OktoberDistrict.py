@@ -58,7 +58,6 @@ get_spawn_location = Team(
 
 def on_environment_generation(dirname, seed):
     return Environment(
-        registry = [Wood, Concrete, Steel, Asphalt, Plastic, Grass, Dirt, Sand, Water, Brick],
         default  = Dirt,
         build    = Sand,
         water    = Water,

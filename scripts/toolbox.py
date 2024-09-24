@@ -259,6 +259,16 @@ def c_exec(connection, *w):
     except Exception as exc:
         return format_exception(exc)
 
+from gc import collect
+@command(admin_only = True)
+def gc(connection):
+    """
+    Run the garbage collector
+    /gc
+    """
+
+    return str(collect())
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):

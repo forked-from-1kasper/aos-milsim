@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from collections.abc import Iterable
 from collections import deque
 
-from math import pi, exp, log, inf, floor, prod
+from math import pi, exp, log, inf, floor, prod, sin, cos
 from random import random, gauss
 
 from pyspades.color import interpolate_rgb
@@ -11,26 +11,11 @@ from pyspades.constants import SPADE_TOOL
 from pyspades.common import Vertex3
 
 from milsim.constants import Pound, Inch, Limb
+from milsim.ctypes import Material
 
 randbool = lambda prob: random() <= prob
 
 ite = lambda b, v1, v2: v1 if b else v2
-
-@dataclass
-class Material:
-    name       : str   # Material name.
-    ricochet   : float # Conditional probability of ricochet.
-    deflecting : float # Minimum angle required for a ricochet to occur (degree).
-    durability : float # Average number of seconds to break material with a shovel.
-    strength   : float # Material cavity strength (Pa).
-    density    : float # Density of material (kg/m³).
-    absorption : float # Amount of energy that material can absorb before breaking.
-    crumbly    : bool  # Whether material can crumble.
-
-@dataclass
-class Voxel:
-    material   : Material
-    durability : float
 
 @dataclass
 class Box:
@@ -108,7 +93,6 @@ def void():
 
 @dataclass
 class Environment:
-    registry : List[Material]
     default  : Material
     build    : Material
     water    : Material
@@ -119,11 +103,6 @@ class Environment:
     weather  : Weather = field(default_factory = StaticWeather)
 
     def apply(self, sim):
-        assert len(self.registry) > 0
-
-        for M in self.registry:
-            sim.register(M)
-
         sim.setDefaultMaterial(self.default)
         sim.setBuildMaterial(self.build)
         sim.setWaterMaterial(self.water)
@@ -132,6 +111,26 @@ class Environment:
 
         for (x, y, z), M in self.defaults:
             sim.set(x, y, z, M)
+
+    def ofPolar(self, r, θ):
+        n = self.north
+        x = n.x * cos(θ) - n.y * sin(θ)
+        y = n.x * sin(θ) + n.y * cos(θ)
+
+        return Vertex3(r * x, r * y, 0)
+
+    def temperature(self):
+        return self.weather.temperature()
+
+    def pressure(self):
+        return self.weather.pressure()
+
+    def humidity(self):
+        return self.weather.humidity()
+
+    def wind(self):
+        v, d = self.weather.wind()
+        return self.ofPolar(v, d)
 
 @dataclass
 class Cartridge:

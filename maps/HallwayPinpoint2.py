@@ -1,6 +1,7 @@
 from random import randint, Random
 from colorsys import hsv_to_rgb
 from itertools import product
+from math import radians
 
 from pyspades.constants import *
 from milsim.vxl import VxlData
@@ -12,8 +13,8 @@ name    = 'HallwayPinpoint2'
 version = '1.0'
 author  = 'Siegmentation Fault'
 
-StrongBricks = Material(name = "strong bricks", ricochet = 1.0,  deflecting = 5,  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
-Sand2        = Material(name = "sand",          ricochet = 0.4,  deflecting = 83, durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)
+StrongBricks = Material(name = "strong bricks", ricochet = 1.0,  deflecting = radians(5),  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
+Sand2        = Material(name = "sand",          ricochet = 0.4,  deflecting = radians(83), durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)
 
 height = lambda x: abs(x - 256) // 8
 width  = lambda y: abs(y - 256) * 8
@@ -119,7 +120,6 @@ def on_environment_generation(dirname, seed):
     weather.clear_sky_fog = gen_color(rgen, hue, minsat = 0.1, maxsat = 0.4)
 
     return Environment(
-        registry = [StrongBricks, Dirt, Sand2, Water],
         default  = Dirt,
         build    = Sand2,
         water    = Water,

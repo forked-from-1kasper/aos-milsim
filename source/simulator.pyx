@@ -2,8 +2,6 @@ from libcpp.unordered_map cimport unordered_map as unordered_map_t
 from libcpp cimport bool as bool_t
 from libcpp.vector cimport vector
 
-from libc.stdint cimport uint32_t
-
 from cython.operator import dereference as deref
 from cython.operator import postincrement
 from cpython.ref cimport PyObject
@@ -14,21 +12,18 @@ from pyspades.common cimport Vertex3, Vector
 from pyspades.vxl cimport VXLData, MapData
 from pyspades.common import Vertex3
 
-from milsim.types import Material as PyMaterial, Voxel as PyVoxel
-
 cdef public MapData * mapDataRef(object o):
     assert isinstance(o, VXLData)
 
     return (<VXLData> o).map
 
-cdef public Vector * vectorRef(object v):
-    assert isinstance(v, Vertex3)
-    assert (<Vertex3> v).is_ref
+cdef public Vector * vectorRef(object o):
+    assert isinstance(o, Vertex3)
 
-    return (<Vertex3> v).value
+    cdef Vertex3 v = o
 
-cdef extern from "stdint.h":
-    ctypedef unsigned long long uint64_t
+    assert v.is_ref
+    return v.value
 
 cdef extern from "vxl_c.h":
     int get_pos(int, int, int)
@@ -36,8 +31,6 @@ cdef extern from "vxl_c.h":
 cdef extern from "Milsim/Engine.hxx":
     cdef T c_ofMeters "ofMeters"[T](const T)
     cdef T c_toMeters "toMeters"[T](const T)
-
-    unordered_map_t[int, int] * getColorsOf(MapData *)
 
     cdef cppclass Vector3[T]:
         T x, y, z
@@ -47,30 +40,29 @@ cdef extern from "Milsim/Engine.hxx":
 
     cdef Vector3[T] c_cone "cone"[T](const Vector3[T] &, const T)
 
-    cdef cppclass Voxel:
-        size_t id
-        double durability
-
     cdef cppclass Engine:
         Engine()
-        uint64_t add(int, Vector3[double] r, Vector3[double] v, double timestamp, object)
+        void add(int, Vector3[double] r, Vector3[double] v, double timestamp, object)
         void step(double, double)
 
         void clear()
 
-        void invokeOnTrace(PyObject *)
-        void invokeOnBlockHit(PyObject *)
-        void invokeOnPlayerHit(PyObject *)
-        void invokeOnDestroy(PyObject *)
-        void setProtocolObject(PyObject *)
+        void invokeOnTrace(object)
+        void invokeOnBlockHit(object)
+        void invokeOnPlayerHit(object)
+        void invokeOnDestroy(object)
+        void setProtocolObject(object)
 
-        size_t defaultMaterial, buildMaterial
-        Voxel water
+        void setDefaultMaterial(object)
+        void setBuildMaterial(object)
+        void setWaterMaterial(object)
 
-        size_t alloc(object)
+        void set(const int, object, const double)
 
-        void set(const int, const uint32_t, const double)
-        Voxel & get(int, int, int)
+        object getMaterial(int, int, int)
+        double getDurability(int, int, int)
+
+        void applyPalette(object)
 
         void set(const double, const double, const double, const Vector3[double] &)
 
@@ -114,21 +106,12 @@ cdef Vector3[double] polar(object v, float r, float t):
 
 cdef class Simulator:
     cdef Engine engine
-    cdef object protocol
-
-    cdef object defaultMaterial, buildMaterial, waterMaterial
-
-    cdef dict materials
 
     def __init__(self, protocol):
-        self.engine.setProtocolObject(<PyObject *> protocol)
-
-        self.materials = {}
-        self.protocol  = protocol
-
-        self.engine.invokeOnPlayerHit(<PyObject *> protocol.onPlayerHit)
-        self.engine.invokeOnBlockHit(<PyObject *> protocol.onBlockHit)
-        self.engine.invokeOnDestroy(<PyObject *> protocol.onDestroy)
+        self.engine.setProtocolObject(protocol)
+        self.engine.invokeOnPlayerHit(protocol.onPlayerHit)
+        self.engine.invokeOnBlockHit(protocol.onBlockHit)
+        self.engine.invokeOnDestroy(protocol.onDestroy)
 
     def flush(self):
         self.engine.flush()
@@ -149,13 +132,11 @@ cdef class Simulator:
         return self.engine.usage()
 
     def update(self, E):
-        o = E.weather
-        t = o.temperature()
-        p = o.pressure()
-        h = o.humidity()
-
-        v, d = o.wind()
-        self.engine.set(t, p, h, polar(E.north, v, d))
+        t = E.temperature()
+        p = E.pressure()
+        h = E.humidity()
+        w = E.wind()
+        self.engine.set(t, p, h, Vector3[double](w.x, w.y, w.z))
 
     def temperature(self):
         return self.engine.temperature()
@@ -180,10 +161,7 @@ cdef class Simulator:
         return Vertex3(w.x, w.y, w.z)
 
     def invokeOnTrace(self, o):
-        if callable(o):
-            self.engine.invokeOnTrace(<PyObject *> o)
-        else:
-            self.engine.invokeOnTrace(NULL)
+        self.engine.invokeOnTrace(o)
 
     def build(self, x, y, z):
         self.engine.build(x, y, z)
@@ -198,11 +176,10 @@ cdef class Simulator:
         self.engine.smash(player_id, x, y, z, value)
 
     def clear(self):
-        self.materials.clear()
         self.engine.clear()
 
     def add(self, thrower, r, v, timestamp, params):
-        return self.engine.add(
+        self.engine.add(
             thrower.player_id,
             Vector3[double](r.x, r.y, r.z),
             Vector3[double](v.x, v.y, v.z),
@@ -210,48 +187,26 @@ cdef class Simulator:
             params
         )
 
-    def register(self, o):
-        cdef size_t index
-
-        if isinstance(o, PyMaterial):
-            index = self.engine.alloc(o)
-            o.index = index
-            self.materials[index] = o
-        else:
-            raise TypeError
-
     def setDefaultMaterial(self, o):
-        self.engine.defaultMaterial = o.index
-        self.defaultMaterial = o
+        self.engine.setDefaultMaterial(o)
 
     def setBuildMaterial(self, o):
-        self.engine.buildMaterial = o.index
-        self.buildMaterial = o
+        self.engine.setBuildMaterial(o)
 
     def setWaterMaterial(self, o):
-        self.engine.water.id = o.index
-        self.waterMaterial = o
+        self.engine.setWaterMaterial(o)
 
     def applyPalette(self, palette):
-        cdef VXLData data = <VXLData> self.protocol.map
+        self.engine.applyPalette(palette)
 
-        it = getColorsOf(data.map).begin()
+    def getMaterial(self, int x, int y, int z):
+        return self.engine.getMaterial(x, y, z)
 
-        while it != getColorsOf(data.map).end():
-            index = deref(it).first
-            color = deref(it).second & 0xFFFFFF
-
-            m = palette.get(color, self.defaultMaterial)
-            self.engine.set(index, m.index, 1.0)
-
-            postincrement(it)
-
-    def get(self, int x, int y, int z):
-        cdef Voxel * voxel = &self.engine.get(x, y, z)
-        return PyVoxel(self.materials[voxel.id], voxel.durability)
+    def getDurability(self, int x, int y, int z):
+        return self.engine.getDurability(x, y, z)
 
     def set(self, int x, int y, int z, o):
-        self.engine.set(get_pos(x, y, z), o.index, 1.0)
+        self.engine.set(get_pos(x, y, z), o, 1.0)
 
     def on_spawn(self, size_t i):
         self.engine.on_spawn(i)
