@@ -20,7 +20,7 @@ release: all
 build/%.cxx: source/%.pyx
 	$(CYTHON) --cplus -3 $< -o $@
 
-build/%.o build/%.h: build/%.cxx
+build/%.o: build/%.cxx
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 build/%.o: source/%.cxx
@@ -33,6 +33,8 @@ milsim/%.so: build/%.o
 	touch $@
 
 all: milsim/ctypes.so milsim/packets.so milsim/simulator.so milsim/vxl.so
+
+build/ctypes.h: build/ctypes.o
 
 build/ctypes.o:
 build/packets.o:
