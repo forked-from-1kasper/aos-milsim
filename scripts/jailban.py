@@ -15,12 +15,6 @@ prohibited = {
     loaders.BlockLine.id
 }
 
-whitelist = {
-    "status",
-    "admin",
-    "ping",
-}
-
 @command(admin_only = True)
 def disconnect(conn, nickname):
     """
@@ -90,6 +84,12 @@ def apply_script(protocol, connection, config):
                 player.banned = player.address[0] in self.bans
 
     class JailbanConnection(connection):
+        command_whitelist = {
+            "status",
+            "admin",
+            "ping",
+        }
+
         def __init__(self, *w, **kw):
             self.banned = False
 
@@ -100,7 +100,7 @@ def apply_script(protocol, connection, config):
             self.banned = self.address[0] in self.protocol.bans
 
         def on_command(self, command, parameters):
-            if self.banned and command not in whitelist:
+            if self.banned and command not in self.command_whitelist:
                 if self.protocol.command_antispam:
                     self.command_limiter.record_event(monotonic())
 
