@@ -18,7 +18,7 @@
 #include <common_c.h>
 #include <vxl_c.h>
 
-#include <simulator.h>
+#include <engine.h>
 
 struct Object {
 private:

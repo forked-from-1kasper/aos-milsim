@@ -6,7 +6,7 @@ from pyspades.world import Grenade
 from pyspades.constants import *
 
 from milsim.blast import sendGrenadePacket
-from milsim.simulator import cone
+from milsim.engine import cone
 from milsim.common import *
 
 class UnderbarrelItem(Item):

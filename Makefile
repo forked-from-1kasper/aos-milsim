@@ -32,22 +32,22 @@ milsim/%.so: build/%.o
 %.hxx:
 	touch $@
 
-all: milsim/packets.so milsim/simulator.so milsim/vxl.so
+all: milsim/packets.so milsim/engine.so milsim/vxl.so
 
-build/simulator.h: build/simulator.o
+build/engine.h: build/engine.o
 
 build/packets.o:
 build/vxl.o: include/VXL.hxx
-build/simulator.o: include/Milsim/PyEngine.hxx
+build/engine.o: include/Milsim/PyEngine.hxx
 build/Engine.o: include/Milsim/Engine.hxx
 build/PyEngine.o: include/Milsim/Engine.hxx include/Milsim/PyEngine.hxx
 build/VXL.o: include/VXL.hxx
 
 milsim/vxl.so: build/VXL.o
-milsim/simulator.so: build/PyEngine.o build/Engine.o
+milsim/engine.so: build/PyEngine.o build/Engine.o
 
 include/Milsim/AABB.hxx: include/Milsim/Vector.hxx
-include/Milsim/Engine.hxx: build/simulator.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
+include/Milsim/Engine.hxx: build/engine.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
 include/Milsim/Fundamentals.hxx: include/Milsim/Vector.hxx include/Milsim/AABB.hxx
 include/Milsim/PyEngine.hxx: include/Milsim/Fundamentals.hxx include/Python.hxx
 include/Milsim/Vector.hxx:

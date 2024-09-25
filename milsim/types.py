@@ -11,7 +11,7 @@ from pyspades.constants import SPADE_TOOL
 from pyspades.common import Vertex3
 
 from milsim.constants import Pound, Inch, Limb
-from milsim.simulator import Material
+from milsim.engine import Material
 
 randbool = lambda prob: random() <= prob
 

@@ -24,7 +24,7 @@ from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.blast import sendGrenadePacket, explode
 from milsim.map import MapInfo, check_rotation
 from milsim.constants import Limb, HitEffect
-from milsim.simulator import Engine
+from milsim.engine import Engine
 from milsim.weapon import ABCWeapon
 from milsim.common import *
 
@@ -277,7 +277,7 @@ class MilsimProtocol(FeatureProtocol):
 
         self.update_weather()
 
-    def on_simulator_update(self):
+    def on_engine_update(self):
         t = reactor.seconds()
         dt = t - self.time
 
@@ -347,7 +347,7 @@ class MilsimProtocol(FeatureProtocol):
         log.info("Environment loading took {duration:.2f} s", duration = t2 - t1)
 
     def on_world_update(self):
-        self.on_simulator_update()
+        self.on_engine_update()
 
         for x, y, z in islice(onDeleteQueue(), 50):
             if e := self.get_tile_entity(x, y, z):

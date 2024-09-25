@@ -4,7 +4,7 @@ import functools
 
 from piqueserver.commands import CommandError
 
-from milsim.simulator import toMeters
+from milsim.engine import toMeters
 from milsim.types import *
 
 from milsim.constants import Pound, Yard, Inch
