@@ -32,11 +32,10 @@ milsim/%.so: build/%.o
 %.hxx:
 	touch $@
 
-all: milsim/ctypes.so milsim/packets.so milsim/simulator.so milsim/vxl.so
+all: milsim/packets.so milsim/simulator.so milsim/vxl.so
 
 build/simulator.h: build/simulator.o
 
-build/ctypes.o:
 build/packets.o:
 build/vxl.o: include/VXL.hxx
 build/simulator.o: include/Milsim/PyEngine.hxx
