@@ -116,10 +116,10 @@ public:
 
     inline operator PyObject *() const { return ref; }
 
-    template<typename... Ts> inline auto operator()(Ts... ts)
+    template<typename... Ts> inline auto operator()(Ts... ts) const
     { return PyOwnedRef(ref == nullptr ? nullptr : PyApply<Ts...>(ref, ts...)); }
 
-    inline PyObject * incref() { Py_XINCREF(ref); return ref; }
+    inline PyObject * incref() const { Py_XINCREF(ref); return ref; }
 
     inline void retain(PyObject * o) { Py_XDECREF(ref); Py_XINCREF(o); ref = o; }
 };

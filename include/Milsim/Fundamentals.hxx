@@ -113,6 +113,8 @@ template<typename Real> constexpr inline Real vaporPressureOfWater(const Real T)
 template<typename T> constexpr inline T ofMeters(const T v) { return Fundamentals::m2b<T> * v; }
 template<typename T> constexpr inline T toMeters(const T v) { return Fundamentals::b2m<T> * v; }
 
+template<typename T> Vector3<T> cone(const Vector3<T> & v, const T σ);
+
 namespace Box {
     template<typename T> constexpr auto head = Hitbox<T>(
         LIMB_HEAD, Vector3<T>(-2.5, -2.5, -3.0), Vector3<T>(6, 6, 6), 0.1

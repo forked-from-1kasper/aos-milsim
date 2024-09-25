@@ -201,7 +201,7 @@ class MilsimConnection(FeatureConnection):
             else:
                 self.tool_object.on_sneak_release()
 
-        self.protocol.simulator.set_animation(self.player_id, crouch)
+        self.protocol.engine.set_animation(self.player_id, crouch)
 
         return retval
 
@@ -246,14 +246,14 @@ class MilsimConnection(FeatureConnection):
 
         self.sendWeaponReloadPacket()
 
-        self.protocol.simulator.on_spawn(self.player_id)
+        self.protocol.engine.on_spawn(self.player_id)
         FeatureConnection.on_spawn(self, pos)
 
     def on_kill(self, killer, kill_type, grenade):
         if FeatureConnection.on_kill(self, killer, kill_type, grenade) is False:
             return False
 
-        self.protocol.simulator.on_despawn(self.player_id)
+        self.protocol.engine.on_despawn(self.player_id)
         self.drop_inventory()
 
     def on_disconnect(self):
@@ -266,7 +266,7 @@ class MilsimConnection(FeatureConnection):
 
     def reset(self):
         if self.player_id is not None:
-            self.protocol.simulator.on_despawn(self.player_id)
+            self.protocol.engine.on_despawn(self.player_id)
 
         FeatureConnection.reset(self)
 
@@ -341,7 +341,7 @@ class MilsimConnection(FeatureConnection):
             return False
 
         for X, Y, Z in grenade_zone(x, y, z):
-            self.protocol.simulator.smash(self.player_id, X, Y, Z, TNT(gram(60)))
+            self.protocol.engine.smash(self.player_id, X, Y, Z, TNT(gram(60)))
 
             if e := self.protocol.get_tile_entity(X, Y, Z):
                 e.on_explosion()

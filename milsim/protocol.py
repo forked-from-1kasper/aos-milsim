@@ -24,7 +24,7 @@ from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.blast import sendGrenadePacket, explode
 from milsim.map import MapInfo, check_rotation
 from milsim.constants import Limb, HitEffect
-from milsim.simulator import Simulator
+from milsim.simulator import Engine
 from milsim.weapon import ABCWeapon
 from milsim.common import *
 
@@ -167,7 +167,7 @@ class MilsimProtocol(FeatureProtocol):
         self.map_dir = os.path.join(config.config_dir, 'maps')
 
         self.environment = None
-        self.simulator   = Simulator(self)
+        self.engine      = Engine(self)
         self.time        = reactor.seconds()
 
         self.tile_entities = {}
@@ -263,14 +263,18 @@ class MilsimProtocol(FeatureProtocol):
         self.team2_tent_inventory.clear()
 
     def update_weather(self):
-        self.simulator.update(self.environment)
+        self.engine.update(self.environment)
+
         self.set_fog_color(self.environment.weather.fog())
 
     def on_environment_change(self, o):
-        self.simulator.clear()
+        self.engine.clear()
 
-        self.environment = o
-        o.apply(self.simulator)
+        self.environment    = o
+        self.build_material = o.build
+
+        o.apply(self.engine)
+
         self.update_weather()
 
     def on_simulator_update(self):
@@ -281,17 +285,17 @@ class MilsimProtocol(FeatureProtocol):
             if self.environment.weather.update(dt):
                 self.update_weather()
 
-        self.simulator.step(self.time, t)
+        self.engine.step(self.time, t)
         self.time = t
 
     def on_block_build(self, x, y, z):
-        self.simulator.build(x, y, z)
+        self.engine[x, y, z] = self.build_material
 
         if e := self.get_tile_entity(x, y, z + 1):
             e.on_pressure()
 
     def on_block_destroy(self, x, y, z):
-        self.simulator.destroy(x, y, z)
+        del self.engine[x, y, z]
 
         if e := self.get_tile_entity(x, y, z):
             e.on_destroy()

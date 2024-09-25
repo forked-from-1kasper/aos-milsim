@@ -11,7 +11,7 @@ from pyspades.constants import SPADE_TOOL
 from pyspades.common import Vertex3
 
 from milsim.constants import Pound, Inch, Limb
-from milsim.ctypes import Material
+from milsim.simulator import Material
 
 randbool = lambda prob: random() <= prob
 
@@ -102,15 +102,14 @@ class Environment:
     north    : Vertex3 = Vertex3(1, 0, 0)
     weather  : Weather = field(default_factory = StaticWeather)
 
-    def apply(self, sim):
-        sim.setDefaultMaterial(self.default)
-        sim.setBuildMaterial(self.build)
-        sim.setWaterMaterial(self.water)
+    def apply(self, o):
+        o.default = self.default
+        o.water   = self.water
 
-        sim.applyPalette(self.palette)
+        o.applyPalette(self.palette)
 
         for (x, y, z), M in self.defaults:
-            sim.set(x, y, z, M)
+            o[x, y, z] = M
 
     def ofPolar(self, r, θ):
         n = self.north
@@ -119,15 +118,19 @@ class Environment:
 
         return Vertex3(r * x, r * y, 0)
 
+    @property
     def temperature(self):
         return self.weather.temperature()
 
+    @property
     def pressure(self):
         return self.weather.pressure()
 
+    @property
     def humidity(self):
         return self.weather.humidity()
 
+    @property
     def wind(self):
         v, d = self.weather.wind()
         return self.ofPolar(v, d)
@@ -567,7 +570,7 @@ def dig(player, mu, dt, x, y, z):
     sigma = 0.01 if player.world_object.crouch else 0.05
     value = max(0, gauss(mu = mu, sigma = sigma) * dt)
 
-    player.protocol.simulator.dig(player.player_id, x, y, z, value)
+    player.protocol.engine.dig(player.player_id, x, y, z, value)
 
 class SpadeTool(Tool):
     mass = 0.750

@@ -34,21 +34,23 @@ milsim/%.so: build/%.o
 
 all: milsim/ctypes.so milsim/packets.so milsim/simulator.so milsim/vxl.so
 
-build/ctypes.h: build/ctypes.o
+build/simulator.h: build/simulator.o
 
 build/ctypes.o:
 build/packets.o:
 build/vxl.o: include/VXL.hxx
-build/simulator.o: include/Milsim/Engine.hxx
+build/simulator.o: include/Milsim/PyEngine.hxx
 build/Engine.o: include/Milsim/Engine.hxx
+build/PyEngine.o: include/Milsim/Engine.hxx include/Milsim/PyEngine.hxx
 build/VXL.o: include/VXL.hxx
 
 milsim/vxl.so: build/VXL.o
-milsim/simulator.so: milsim/ctypes.so build/Engine.o
+milsim/simulator.so: build/PyEngine.o build/Engine.o
 
 include/Milsim/AABB.hxx: include/Milsim/Vector.hxx
-include/Milsim/Engine.hxx: build/ctypes.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
+include/Milsim/Engine.hxx: build/simulator.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
 include/Milsim/Fundamentals.hxx: include/Milsim/Vector.hxx include/Milsim/AABB.hxx
+include/Milsim/PyEngine.hxx: include/Milsim/Fundamentals.hxx include/Python.hxx
 include/Milsim/Vector.hxx:
 
 include/Python.hxx:

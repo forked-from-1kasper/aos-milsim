@@ -10,8 +10,6 @@ from milsim.simulator import toMeters
 from milsim.constants import Limb
 from milsim.common import *
 
-WARNING_ON_KILL = "/b for bandage, /t for tourniquet, /s for splint"
-
 yn = lambda b: "yes" if b else "no"
 
 def ppBodyPart(P):
@@ -55,37 +53,34 @@ def formatBytes(x):
 
 class Engine:
     @staticmethod
-    def debug(protocol, *w):
-        usage = "Usage: /engine debug (on|off)"
-
-        try:
-            (value,) = w
-        except ValueError:
-            return usage
+    def debug(protocol, value):
+        o = protocol.engine
 
         if value == 'on':
-            protocol.simulator.invokeOnTrace(protocol.onTrace)
+            o.on_trace = protocol.onTrace
             return "Debug is turned on."
         elif value == 'off':
-            protocol.simulator.invokeOnTrace(None)
+            o.on_trace = None
             return "Debug is turned off."
         else:
-            return usage
+            return "Usage: /engine debug (on|off)"
 
     @staticmethod
-    def stats(protocol, *w):
+    def stats(protocol):
+        o = protocol.engine
+
         return "Total: {total}, alive: {alive}, lag: {lag}, peak: {peak}, usage: {usage}".format(
-            total = protocol.simulator.total(),
-            alive = protocol.simulator.alive(),
-            lag   = formatMicroseconds(protocol.simulator.lag()),
-            peak  = formatMicroseconds(protocol.simulator.peak()),
-            usage = formatBytes(protocol.simulator.usage())
+            total = o.total,
+            alive = o.alive,
+            lag   = formatMicroseconds(o.lag),
+            peak  = formatMicroseconds(o.peak),
+            usage = formatBytes(o.usage)
         )
 
     @staticmethod
-    def flush(protocol, *w):
-        alive = protocol.simulator.alive()
-        protocol.simulator.flush()
+    def flush(protocol):
+        alive = protocol.engine.alive()
+        protocol.engine.flush()
 
         return "Removed {} object(s)".format(alive)
 
@@ -93,8 +88,11 @@ class Engine:
 def engine(conn, subcmd, *w):
     protocol = conn.protocol
 
-    if hasattr(Engine, subcmd):
-        return getattr(Engine, subcmd)(protocol, *w)
+    if attr := getattr(Engine, subcmd, None):
+        try:
+            return attr(protocol, *w)
+        except Exception as e:
+            return str(e)
     else:
         return "Unknown command: {}".format(subcmd)
 
@@ -108,34 +106,34 @@ def lookat(connection):
     if loc := connection.world_object.cast_ray(7.0):
         protocol = connection.protocol
 
-        M = protocol.simulator.getMaterial(*loc)
-        d = protocol.simulator.getDurability(*loc)
-
+        M, d = protocol.engine[loc]
         return f"Material: {M.name}, durability: {d:.2f}, crumbly: {yn(M.crumbly)}."
     else:
         return "Block is too far."
 
 @command()
-def weather(conn):
+def weather(connection):
     """
     Report current weather conditions
     /weather
     """
 
-    o = conn.protocol.simulator
-    W = conn.protocol.environment.weather
+    protocol = connection.protocol
 
-    wind = o.wind()
-    θ = azimuth(conn.protocol.environment, xOy(wind))
+    o = protocol.engine
+    W = protocol.environment.weather
 
-    t = o.temperature()      # Celsius
-    p = o.pressure() / 100   # hPa
-    φ = o.humidity() * 100   # %
-    v = wind.length()        # m/s
-    d = needle(θ)            # N/E/S/W
-    k = W.cloudiness() * 100 # %
+    w = Vertex3(*o.wind)
+    θ = azimuth(protocol.environment, xOy(w))
 
-    return f"{t:.0f} degrees, {p:.1f} hPa, humidity {φ:.0f} %, wind {v:.1f} m/s ({d}), cloud cover {k:.0f} %"
+    return "{t:.0f} degrees, {p:.1f} hPa, humidity {φ:.0f} %, wind {v:.1f} m/s ({d}), cloud cover {k:.0f} %".format(
+        t = o.temperature,       # Celsius
+        p = o.pressure / 100,    # hPa
+        φ = o.humidity * 100,    # %
+        v = w.length(),          # m/s
+        d = needle(θ),           # N/E/S/W
+        k = W.cloudiness() * 100 # %
+    )
 
 limbs = {
     "torso": Limb.torso,
@@ -417,12 +415,5 @@ def apply_script(protocol, connection, config):
                     e.on_pressure()
 
             connection.on_flag_taken(self)
-
-        def on_kill(self, killer, kill_type, grenade):
-            if connection.on_kill(self, killer, kill_type, grenade) is False:
-                return False
-
-            if kill_type != TEAM_CHANGE_KILL and kill_type != CLASS_CHANGE_KILL:
-                self.send_chat(WARNING_ON_KILL)
 
     return protocol, ControlConnection

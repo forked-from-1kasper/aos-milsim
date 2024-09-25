@@ -35,7 +35,13 @@ Voxel & VoxelData::get(int x, int y, int z) {
 uint64_t Object::gidx = 0;
 
 void Engine::clear() {
-    setWeather(0, 101325, 0.3, Vector3d(0, 0, 0));
+    temperature = 0;
+    pressure    = 101325;
+    humidity    = 0.3;
+
+    wind.x = wind.y = wind.z = 0;
+
+    update();
 
     _peak = 0.0;
 
@@ -43,19 +49,15 @@ void Engine::clear() {
     Object::flush();
 
     vxlData.clear();
-    buildMaterial.retain(nullptr);
 
     PyOwnedRef M(protocol, "map");
-    if (M != nullptr) map = mapDataRef(M);
+    if (M != nullptr) _map = mapDataRef(M);
 }
 
-void Engine::setWeather(double t, double p, double φ, const Vector3d & w) {
+void Engine::update() {
     using namespace Fundamentals;
 
-    _temperature = t;
-    _pressure    = p;
-    _humidity    = φ;
-    _wind        = w;
+    auto t = temperature, p = pressure, φ = humidity; auto & w = wind;
 
     // 1) Here we assume Dalton’s law.
 
@@ -134,7 +136,7 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
 
         auto state = Terminal::flying;
 
-        if (is_valid_position(X, Y, Z) && get_solid(X, Y, Z, map)) {
+        if (is_valid_position(X, Y, Z) && get_solid(X, Y, Z, _map)) {
             voxel = &vxlData.get(X, Y, Z); M = voxel->material();
 
             auto θ = acos(-(v, n) / v.abs());
@@ -145,12 +147,12 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
             if (state != Terminal::flying) {
                 constexpr double hitEffectThresholdEnergy = 5.0;
 
-                trace(o.index(), r, v.abs() / o.v0, false);
+                trace(o.index(), r, v.abs() / o.v0(), false);
 
                 if (hitEffectThresholdEnergy <= o.energy())
                     stuck = Py_True == onBlockHit(
-                        o.object, r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
-                        o.thrower, o.energy(), o.area
+                        o.object(), r.x, r.y, r.z, v.x, v.y, v.z, X, Y, Z,
+                        o.thrower(), o.energy(), o.area
                     );
             }
 
@@ -205,7 +207,7 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
             }
 
             if (voxel->isub(ΔE * (M->durability / M->absorption)))
-                onDestroy(o.thrower, X, Y, Z);
+                onDestroy(o.thrower(), X, Y, Z);
         }
 
         Ray<double> ray(r, dr); Arc<double> arc{}; int target = -1;
@@ -222,16 +224,16 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
             auto w = arc.begin(ray);
 
             stuck = Py_True == onPlayerHit(
-                o.object, w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
-                o.thrower, o.energy(), o.area, target, arc.index
+                o.object(), w.x, w.y, w.z, v.x, v.y, v.z, X, Y, Z,
+                o.thrower(), o.energy(), o.area, target, arc.index
             );
 
-            trace(o.index(), w, v.abs() / o.v0, false);
+            trace(o.index(), w, v.abs() / o.v0(), false);
         }
 
         auto m  = o.mass;
-        auto u  = _wind - v;
-        auto CD = drag(o.model, o.ballistic, u.abs() / _mach);
+        auto u  = wind - v;
+        auto CD = drag(o.model(), o.ballistic, u.abs() / _mach);
         auto F  = g<double> * m + u * (0.5 * _density * u.abs() * CD * o.area);
 
         auto dv = F * (dt / m);
@@ -241,13 +243,13 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
 
     o.position.set(r); o.velocity.set(v);
 
-    if (!stuck) trace(o.index(), r, v.abs() / o.v0, false);
+    if (!stuck) trace(o.index(), r, v.abs() / o.v0(), false);
 
-    //if (t2 - o.timestamp > 10) printf("%ld: time out\n", o.index());
+    //if (t2 - o.timestamp() > 10) printf("%ld: time out\n", o.index());
     //if (o.velocity.abs() <= 1e-3) printf("%ld: speed too low (%f m/s)\n", o.index(), o.velocity.abs());
     //if (!is_valid_position(o.position.x, o.position.y, o.position.z)) printf("%ld: out of map (%f, %f, %f)\n", o.index, o.position.x, o.position.y, o.position.z);
 
-    auto P = t2 - o.timestamp <= 10;
+    auto P = t2 - o.timestamp() <= 10;
     auto Q = o.velocity.abs() > 1e-2;
     auto R = is_valid_position(o.position.x, o.position.y, o.position.z);
 

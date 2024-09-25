@@ -190,12 +190,12 @@ class ABCWeapon(Tool):
             n = o.orientation.normal()
             r = self.player.eye() + n * 1.2
 
-            sim = self.player.protocol.simulator
+            engine = self.player.protocol.engine
 
             for i in range(cartridge.pellets):
                 u = toMeters3(o.velocity * 32)
                 v = n * gauss(mu = cartridge.muzzle, sigma = cartridge.muzzle * cartridge.deviation)
-                sim.add(self.player, r, u + cone(v, cartridge.grouping), t, cartridge)
+                engine.add(self.player.player_id, r, u + cone(v, cartridge.grouping), t, cartridge)
 
             self.player.sendWeaponReloadPacket()
 
