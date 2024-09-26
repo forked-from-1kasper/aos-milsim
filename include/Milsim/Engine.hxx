@@ -34,14 +34,8 @@ public:
     inline static void     flush() { gidx = 0;    }
     inline static uint64_t total() { return gidx; }
 
-    inline Object(const int i, const Vector3d & r, const Vector3d & v, const double t, PyObject * o) :
-        _object(o),
-        _model(PyGetAttr<uint32_t>(o, "model")),
-        _thrower(i), _timestamp(t), _v0(v.abs()),
-        mass(PyGetAttr<double>(o, "effmass")),
-        ballistic(PyGetAttr<double>(o, "ballistic")),
-        area(PyGetAttr<double>(o, "area")),
-        position(r), velocity(v)
+    inline Object(PyObject * o, const uint32_t model, const int i, const Vector3d & r, const Vector3d & v, const double t) :
+    _object(o), _model(model), _thrower(i), _timestamp(t), _v0(v.abs()), position(r), velocity(v)
     { Py_INCREF(o); _index = gidx++; }
 
     inline ~Object() { Py_DECREF(_object); }
@@ -153,13 +147,8 @@ template<typename T> inline T dictLargestKey(PyObject * dict) {
 struct Engine {
 public:
     PyOwnedRef protocol;
+    MapData * map;
 
-private:
-    MapData * _map;
-
-    double _lag, _peak;
-
-public:
     VoxelData vxlData;
     ObjectQueue objects;
     std::vector<Player> players;
@@ -167,9 +156,9 @@ public:
     PyOwnedRef onTrace, onBlockHit, onPlayerHit, onDestroy;
 
     // Independent variables.
-    double   temperature; // ℃
+    double   temperature; // °C
     double   pressure;    // Pa
-    double   humidity;    // %
+    double   humidity;    // 1
     Vector3d wind;        // m/s
 
 private:
@@ -178,6 +167,8 @@ private:
     double _mach;    // m/s
     double _ppo2;    // Pa
 
+    double _lag, _peak;
+
     void next(double t1, const double t2, ObjectIterator &);
 
 public:
@@ -185,11 +176,11 @@ public:
     { srand(time(NULL)); players.reserve(32); }
 
     inline bool indestructible(int x, int y, int z)
-    { return 62 <= z || !get_solid(x, y, z, _map); }
+    { return 62 <= z || !get_solid(x, y, z, map); }
 
     inline bool unstable(int x₀, int y₀, int z₀) {
         for (int z = z₀ + 1; z < 62; z++) {
-            if (!get_solid(x₀, y₀, z, _map))
+            if (!get_solid(x₀, y₀, z, map))
                 return true;
 
             if (!vxlData.get(x₀, y₀, z).material()->crumbly)
@@ -198,8 +189,6 @@ public:
 
         return false;
     }
-
-    inline MapData * map() const { return _map;      }
 
     inline double density() const { return _density; }
     inline double mach()    const { return _mach;    }

@@ -43,15 +43,12 @@ void Engine::clear() {
 
     update();
 
-    _peak = 0.0;
+    _lag = _peak = 0.0;
 
     objects.clear();
     Object::flush();
 
     vxlData.clear();
-
-    PyOwnedRef M(protocol, "map");
-    if (M != nullptr) _map = mapDataRef(M);
 }
 
 void Engine::update() {
@@ -136,7 +133,7 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
 
         auto state = Terminal::flying;
 
-        if (is_valid_position(X, Y, Z) && get_solid(X, Y, Z, _map)) {
+        if (is_valid_position(X, Y, Z) && get_solid(X, Y, Z, map)) {
             voxel = &vxlData.get(X, Y, Z); M = voxel->material();
 
             auto θ = acos(-(v, n) / v.abs());

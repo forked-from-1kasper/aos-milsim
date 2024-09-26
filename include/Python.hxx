@@ -2,6 +2,13 @@
 
 #include "Python.h"
 
+#define RETZIFZ(x)    { if ((x) == nullptr)   return nullptr; }
+#define RETERRIFZ(x)  { if ((x) == nullptr)   return -1;      }
+#define RETDEFIFZ(x)  { if ((x) == nullptr)   return {};      }
+#define RETZIFERR()   { if (PyErr_Occurred()) return nullptr; }
+#define RETERRIFERR() { if (PyErr_Occurred()) return -1;      }
+#define RETDEFIFERR() { if (PyErr_Occurred()) return {};      }
+
 template<typename T> PyObject * PyEncode(T) = delete;
 
 template<> inline PyObject * PyEncode<PyObject *>(PyObject * o)
@@ -125,19 +132,13 @@ public:
 };
 
 template<typename T> inline T PyGetAttr(PyObject * o, const char * attr) {
-    PyOwnedRef attrval(o, attr);
+    PyOwnedRef attrval(o, attr); RETDEFIFZ(attrval);
 
-    if (attrval == nullptr)
-        return {};
-    else
-        return PyDecode<T>(attrval);
+    return PyDecode<T>(attrval);
 }
 
 template<typename T> inline T PyGetItem(PyObject * o, const char * k) {
-    auto val = PyDict_GetItemString(o, k);
+    auto val = PyDict_GetItemString(o, k); RETDEFIFZ(val);
 
-    if (val == nullptr)
-        return {};
-    else
-        return PyDecode<T>(val);
+    return PyDecode<T>(val);
 }

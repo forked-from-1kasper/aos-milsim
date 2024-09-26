@@ -1,6 +1,26 @@
 #include <Milsim/PyEngine.hxx>
 #include <Milsim/Engine.hxx>
 
+template<> inline Vector3i PyDecode<Vector3i>(PyObject * o) {
+    Vector3i v;
+
+    v.x = PyGetAttr<int>(o, "x"); RETDEFIFERR();
+    v.y = PyGetAttr<int>(o, "y"); RETDEFIFERR();
+    v.z = PyGetAttr<int>(o, "z"); RETDEFIFERR();
+
+    return v;
+}
+
+template<> inline Vector3d PyDecode<Vector3d>(PyObject * o) {
+    Vector3d v;
+
+    v.x = PyGetAttr<double>(o, "x"); RETDEFIFERR();
+    v.y = PyGetAttr<double>(o, "y"); RETDEFIFERR();
+    v.z = PyGetAttr<double>(o, "z"); RETDEFIFERR();
+
+    return v;
+}
+
 struct PyEngine {
     PyObject_HEAD
     Engine * ref;
@@ -8,24 +28,31 @@ struct PyEngine {
 
 static_assert(std::is_standard_layout_v<PyEngine> == true);
 
-static PyObject * PyEngineNew(PyTypeObject * type, PyObject * w, PyObject * kw) {
-    return type->tp_alloc(type, 0);
+static PyEngine * PyEngineNew(PyTypeObject * type, PyObject * w, PyObject * kw) {
+    auto self = (PyEngine *) type->tp_alloc(type, 0); RETZIFZ(self);
+
+    self->ref = nullptr;
+    return self;
 }
 
 static int PyEngineInit(PyEngine * self, PyObject * w, PyObject * kw) {
     PyObject * o; if (!PyArg_ParseTuple(w, "O", &o)) return -1;
 
-    self->ref = new Engine(o);
+    RETERRIFZ(self->ref = new Engine(o));
 
-    self->ref->onPlayerHit = PyOwnedRef(o, "onPlayerHit");
-    self->ref->onBlockHit  = PyOwnedRef(o, "onBlockHit");
-    self->ref->onDestroy   = PyOwnedRef(o, "onDestroy");
+    RETERRIFZ(self->ref->onPlayerHit = PyOwnedRef(o, "onPlayerHit"));
+    RETERRIFZ(self->ref->onBlockHit  = PyOwnedRef(o, "onBlockHit"));
+    RETERRIFZ(self->ref->onDestroy   = PyOwnedRef(o, "onDestroy"));
 
     return 0;
 }
 
 static int PyEngineClear(PyEngine * self) {
+    if (self->ref == nullptr) return 0;
+
     self->ref->clear();
+
+    self->ref->map = nullptr;
 
     self->ref->protocol.retain(nullptr);
     self->ref->onTrace.retain(nullptr);
@@ -109,21 +136,14 @@ static PyObject * PyEnginePPO2(PyEngine * self, void *)
 { return PyEncode<double>(self->ref->ppo2()); }
 
 static PyObject * PyEngineUpdate(PyEngine * self, PyObject * E) {
-    self->ref->temperature = PyGetAttr<double>(E, "temperature");
-    self->ref->pressure    = PyGetAttr<double>(E, "pressure");
-    self->ref->humidity    = PyGetAttr<double>(E, "humidity");
-
-    PyOwnedRef w(E, "wind");
-
-    self->ref->wind = Vector3d(
-        PyGetAttr<double>(w, "x"),
-        PyGetAttr<double>(w, "y"),
-        PyGetAttr<double>(w, "z")
-    );
+    self->ref->temperature = PyGetAttr<double>(E, "temperature"); RETZIFERR();
+    self->ref->pressure    = PyGetAttr<double>(E, "pressure");    RETZIFERR();
+    self->ref->humidity    = PyGetAttr<double>(E, "humidity");    RETZIFERR();
+    self->ref->wind        = PyGetAttr<Vector3d>(E, "wind");      RETZIFERR();
 
     self->ref->update();
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineAdd(PyEngine * self, PyObject * w) {
@@ -132,22 +152,20 @@ static PyObject * PyEngineAdd(PyEngine * self, PyObject * w) {
     if (!PyArg_ParseTuple(w, "iOOdO", &player_id, &ro, &vo, &timestamp, &po))
         return nullptr;
 
-    Vector3d r(
-        PyGetAttr<double>(ro, "x"),
-        PyGetAttr<double>(ro, "y"),
-        PyGetAttr<double>(ro, "z")
-    );
+    auto r = PyDecode<Vector3d>(ro); RETZIFERR();
+    auto v = PyDecode<Vector3d>(vo); RETZIFERR();
 
-    Vector3d v(
-        PyGetAttr<double>(vo, "x"),
-        PyGetAttr<double>(vo, "y"),
-        PyGetAttr<double>(vo, "z")
-    );
+    auto i = PyGetAttr<uint32_t>(po, "model");   RETZIFERR();
+    auto m = PyGetAttr<double>(po, "effmass");   RETZIFERR();
+    auto b = PyGetAttr<double>(po, "ballistic"); RETZIFERR();
+    auto A = PyGetAttr<double>(po, "area");      RETZIFERR();
 
-    auto & o = self->ref->objects.emplace_back(player_id, r, v, timestamp, po);
+    auto & o = self->ref->objects.emplace_back(po, i, player_id, r, v, timestamp);
+    o.mass = m; o.ballistic = b; o.area = A;
+
     self->ref->trace(o.index(), o.position, 1.0, true);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineStep(PyEngine * self, PyObject * w) {
@@ -158,7 +176,7 @@ static PyObject * PyEngineStep(PyEngine * self, PyObject * w) {
 
     self->ref->step(t1, t2);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineGetitem(PyEngine * self, PyObject * k) {
@@ -182,26 +200,33 @@ static int PyEngineSetitem(PyEngine * self, PyObject * k, PyObject * o) {
     if (!PyArg_ParseTuple(k, "iii", &x, &y, &z))
         return -1;
 
-    if (o == nullptr) { self->ref->vxlData.erase(x, y, z); return 0; }
+    if (o == nullptr)
+        self->ref->vxlData.erase(x, y, z);
+    else {
+        if (!PyObject_TypeCheck(o, &MaterialType)) {
+            PyErr_SetString(PyExc_TypeError, "must be Material");
+            return -1;
+        }
 
-    if (!PyObject_TypeCheck(o, &MaterialType)) {
-        PyErr_SetString(PyExc_TypeError, "must be Material");
-        return -1;
+        self->ref->vxlData.set(x, y, z, o);
     }
 
-    self->ref->vxlData.set(x, y, z, o); return 0;
+    return 0;
 }
 
 static PyObject * PyEngineClearMeth(PyEngine * self, PyObject *) {
     self->ref->clear();
 
-    return Py_None;
+    PyOwnedRef M(self->ref->protocol, "map"); RETZIFZ(M);
+    RETZIFZ(self->ref->map = mapDataRef(M));
+
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineFlush(PyEngine * self, PyObject *) {
     self->ref->objects.clear();
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineDig(PyEngine * self, PyObject * w) {
@@ -210,14 +235,16 @@ static PyObject * PyEngineDig(PyEngine * self, PyObject * w) {
     if (!PyArg_ParseTuple(w, "iiiid", &player_id, &x, &y, &z, &value))
         return nullptr;
 
-    if (self->ref->indestructible(x, y, z)) return Py_None;
+    if (self->ref->indestructible(x, y, z))
+        Py_RETURN_NONE;
 
-    auto & voxel = self->ref->vxlData.get(x, y, z); auto M = voxel.material();
+    auto & voxel = self->ref->vxlData.get(x, y, z);
+    auto M = voxel.material();
 
     if (voxel.isub(value / M->durability))
         self->ref->onDestroy(player_id, x, y, z);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineSmash(PyEngine * self, PyObject * w) {
@@ -226,19 +253,21 @@ static PyObject * PyEngineSmash(PyEngine * self, PyObject * w) {
     if (!PyArg_ParseTuple(w, "iiiid", &player_id, &x, &y, &z, &ΔE))
         return nullptr;
 
-    if (self->ref->indestructible(x, y, z)) return Py_None;
+    if (self->ref->indestructible(x, y, z))
+        Py_RETURN_NONE;
 
-    auto & voxel = self->ref->vxlData.get(x, y, z); auto M = voxel.material();
+    auto & voxel = self->ref->vxlData.get(x, y, z);
+    auto M = voxel.material();
 
     if (M->crumbly && randbool<double>(0.5) && self->ref->unstable(x, y, z)) {
         self->ref->onDestroy(player_id, x, y, z);
-        return Py_None;
+        Py_RETURN_NONE;
     }
 
     if (voxel.isub(ΔE * (M->durability / M->absorption)))
         self->ref->onDestroy(player_id, x, y, z);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineApply(PyEngine * self, PyObject * dict) {
@@ -248,12 +277,12 @@ static PyObject * PyEngineApply(PyEngine * self, PyObject * dict) {
         return nullptr;
     }
 
-    for (auto & [k, v] : self->ref->map()->colors) {
+    for (auto & [k, v] : self->ref->map->colors) {
         PyOwnedRef i(PyEncode<unsigned int>(v & 0xFFFFFF));
         self->ref->vxlData.set(k, PyDict_GetItem(dict, i));
     }
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineOnSpawn(PyEngine * self, PyObject * w) {
@@ -262,25 +291,26 @@ static PyObject * PyEngineOnSpawn(PyEngine * self, PyObject * w) {
     if (!PyArg_ParseTuple(w, "i", &i))
         return nullptr;
 
-    PyOwnedRef ds(self->ref->protocol, "players");
-    if (ds == nullptr) return nullptr;
+    PyOwnedRef ds(self->ref->protocol, "players"); RETZIFZ(ds);
 
     self->ref->players.resize(dictLargestKey<int>(ds) + 1);
 
-    auto o = PyDict_GetItem(ds, PyOwnedRef(PyEncode<size_t>(i)));
-    if (o == nullptr) return nullptr;
+    auto o = PyDict_GetItem(ds, PyOwnedRef(PyEncode<size_t>(i))); RETZIFZ(o);
 
-    PyOwnedRef wo(o, "world_object");
-    if (wo == nullptr) return nullptr;
+    PyOwnedRef wo(o, "world_object"); RETZIFZ(wo);
+    PyOwnedRef po(wo, "position");    RETZIFZ(po);
+    PyOwnedRef fo(wo, "orientation"); RETZIFZ(fo);
+    PyOwnedRef co(wo, "crouch");      RETZIFZ(co);
 
-    PyOwnedRef p(wo, "position"), f(wo, "orientation"), c(wo, "crouch");
+    auto p = vectorRef(po); RETZIFZ(p);
+    auto f = vectorRef(fo); RETZIFZ(f);
 
     auto & player = self->ref->players[i];
-    player.set_crouch(c == Py_True);
-    if (p != nullptr) player.set_position(vectorRef(p));
-    if (f != nullptr) player.set_orientation(vectorRef(f));
+    player.set_position(p);
+    player.set_orientation(f);
+    player.set_crouch(co == Py_True);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineOnDespawn(PyEngine * self, PyObject * w) {
@@ -294,12 +324,10 @@ static PyObject * PyEngineOnDespawn(PyEngine * self, PyObject * w) {
     player.set_position(nullptr);
     player.set_orientation(nullptr);
 
-    PyOwnedRef ds(self->ref->protocol, "players");
-    if (ds == nullptr) return nullptr;
-
+    PyOwnedRef ds(self->ref->protocol, "players"); RETZIFZ(ds);
     self->ref->players.resize(dictLargestKey<int>(ds) + 1);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineSetAnimation(PyEngine * self, PyObject * w) {
@@ -310,12 +338,12 @@ static PyObject * PyEngineSetAnimation(PyEngine * self, PyObject * w) {
 
     self->ref->players[i].set_crouch(crouch);
 
-    return Py_None;
+    Py_RETURN_NONE;
 }
 
 static PyObject * PyEngineGetOnTrace(PyEngine * self, void *) {
     auto newref = self->ref->onTrace.incref();
-    return newref == nullptr ? Py_None : newref;
+    return newref == nullptr ? Py_NewRef(Py_None) : newref;
 }
 
 static int PyEngineSetOnTrace(PyEngine * self, PyObject * o, void *) {
@@ -364,7 +392,7 @@ static PyMethodDef PyEngineMethods[] = {
     {"update",        PyCFunction(PyEngineUpdate),       METH_O,       NULL},
     {"dig",           PyCFunction(PyEngineDig),          METH_VARARGS, NULL},
     {"smash",         PyCFunction(PyEngineSmash),        METH_VARARGS, NULL},
-    {"applyPalette",  PyCFunction(PyEngineApply),        METH_O,       NULL},
+    {"apply",         PyCFunction(PyEngineApply),        METH_O,       NULL},
     {"clear",         PyCFunction(PyEngineClearMeth),    METH_NOARGS,  NULL},
     {"flush",         PyCFunction(PyEngineFlush),        METH_NOARGS,  NULL},
     {"on_spawn",      PyCFunction(PyEngineOnSpawn),      METH_VARARGS, NULL},
@@ -374,22 +402,22 @@ static PyMethodDef PyEngineMethods[] = {
 };
 
 static PyGetSetDef PyEngineGetset[] = {
-    {"lag",         getter(PyEngineLag),         nullptr,                    NULL, NULL},
-    {"peak",        getter(PyEnginePeak),        nullptr,                    NULL, NULL},
-    {"alive",       getter(PyEngineAlive),       nullptr,                    NULL, NULL},
-    {"total",       getter(PyEngineTotal),       nullptr,                    NULL, NULL},
-    {"usage",       getter(PyEngineUsage),       nullptr,                    NULL, NULL},
-    {"temperature", getter(PyEngineTemperature), nullptr,                    NULL, NULL},
-    {"pressure",    getter(PyEnginePressure),    nullptr,                    NULL, NULL},
-    {"humidity",    getter(PyEngineHumidity),    nullptr,                    NULL, NULL},
-    {"wind",        getter(PyEngineWind),        nullptr,                    NULL, NULL},
-    {"density",     getter(PyEngineDensity),     nullptr,                    NULL, NULL},
-    {"mach",        getter(PyEngineMach),        nullptr,                    NULL, NULL},
-    {"ppo2",        getter(PyEnginePPO2),        nullptr,                    NULL, NULL},
-    {"on_trace",    getter(PyEngineGetOnTrace),  setter(PyEngineSetOnTrace), NULL, NULL},
-    {"default",     getter(PyEngineGetDefault),  setter(PyEngineSetDefault), NULL, NULL},
-    {"water",       getter(PyEngineGetWater),    setter(PyEngineSetWater),   NULL, NULL},
-    {NULL                                                                              }
+    {"lag",         getter(PyEngineLag),         nullptr,                    "Average time elapsed in `Engine.step` (μs)", NULL},
+    {"peak",        getter(PyEnginePeak),        nullptr,                    "Peak time elapsed in `Engine.lag` (μs)",     NULL},
+    {"alive",       getter(PyEngineAlive),       nullptr,                    "Number of alive objects",                    NULL},
+    {"total",       getter(PyEngineTotal),       nullptr,                    "Total number of registered objects",         NULL},
+    {"usage",       getter(PyEngineUsage),       nullptr,                    "Approximate memory usage (byte)",            NULL},
+    {"temperature", getter(PyEngineTemperature), nullptr,                    "Ambient temperature (°C)",                   NULL},
+    {"pressure",    getter(PyEnginePressure),    nullptr,                    "Ambient pressure (Pa)",                      NULL},
+    {"humidity",    getter(PyEngineHumidity),    nullptr,                    "Ambient relative humidity",                  NULL},
+    {"wind",        getter(PyEngineWind),        nullptr,                    "Wind velocity (m/s)",                        NULL},
+    {"density",     getter(PyEngineDensity),     nullptr,                    "Air density (kg/m³)",                        NULL},
+    {"mach",        getter(PyEngineMach),        nullptr,                    "Speed of sound (m/s)",                       NULL},
+    {"ppo2",        getter(PyEnginePPO2),        nullptr,                    "Partial pressure of oxygen (Pa)",            NULL},
+    {"on_trace",    getter(PyEngineGetOnTrace),  setter(PyEngineSetOnTrace), "Object position update callback",            NULL},
+    {"default",     getter(PyEngineGetDefault),  setter(PyEngineSetDefault), "Default material",                           NULL},
+    {"water",       getter(PyEngineGetWater),    setter(PyEngineSetWater),   "Water material",                             NULL},
+    {NULL                                                                                                                      }
 };
 
 PyTypeObject PyEngineType = {
@@ -405,7 +433,7 @@ PyTypeObject PyEngineType = {
     .tp_methods    = PyEngineMethods,
     .tp_getset     = PyEngineGetset,
     .tp_init       = initproc(PyEngineInit),
-    .tp_new        = PyEngineNew,
+    .tp_new        = newfunc(PyEngineNew),
 };
 
 void PyEngineReady() {

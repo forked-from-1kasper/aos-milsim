@@ -106,7 +106,7 @@ class Environment:
         o.default = self.default
         o.water   = self.water
 
-        o.applyPalette(self.palette)
+        o.apply(self.palette)
 
         for (x, y, z), M in self.defaults:
             o[x, y, z] = M
