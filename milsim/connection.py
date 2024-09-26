@@ -466,7 +466,11 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.SetTool)
     def on_tool_change_recieved(self, contained):
-        if not self.hp: return
+        if not self.hp:
+            return
+
+        if self.tool == contained.value:
+            return
 
         if self.on_tool_set_attempt(contained.value) == False:
             # Reset it back for the player.
