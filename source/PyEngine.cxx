@@ -1,8 +1,8 @@
 #include <Milsim/PyEngine.hxx>
 #include <Milsim/Engine.hxx>
 
-template<typename T> inline T PyDictLargestKey(PyObject * dict) {
-    T retval = -1;
+template<typename T> inline T PyDictLargestKey(PyObject * dict, T minimum = -1) {
+    T retval = minimum;
 
     Py_ssize_t i = 0; PyObject * k, * v;
 
