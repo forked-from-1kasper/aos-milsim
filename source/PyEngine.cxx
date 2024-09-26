@@ -1,6 +1,17 @@
 #include <Milsim/PyEngine.hxx>
 #include <Milsim/Engine.hxx>
 
+template<typename T> inline T PyDictLargestKey(PyObject * dict) {
+    T retval = -1;
+
+    Py_ssize_t i = 0; PyObject * k, * v;
+
+    while (PyDict_Next(dict, &i, &k, &v))
+        retval = std::max<T>(retval, PyDecode<T>(k));
+
+    return retval;
+}
+
 template<> inline Vector3i PyDecode<Vector3i>(PyObject * o) {
     Vector3i v;
 
@@ -293,7 +304,7 @@ static PyObject * PyEngineOnSpawn(PyEngine * self, PyObject * w) {
 
     PyOwnedRef ds(self->ref->protocol, "players"); RETZIFZ(ds);
 
-    self->ref->players.resize(dictLargestKey<int>(ds) + 1);
+    self->ref->players.resize(PyDictLargestKey<int>(ds) + 1);
 
     auto o = PyDict_GetItem(ds, PyOwnedRef(PyEncode<size_t>(i))); RETZIFZ(o);
 
@@ -325,7 +336,7 @@ static PyObject * PyEngineOnDespawn(PyEngine * self, PyObject * w) {
     player.set_orientation(nullptr);
 
     PyOwnedRef ds(self->ref->protocol, "players"); RETZIFZ(ds);
-    self->ref->players.resize(dictLargestKey<int>(ds) + 1);
+    self->ref->players.resize(PyDictLargestKey<int>(ds) + 1);
 
     Py_RETURN_NONE;
 }

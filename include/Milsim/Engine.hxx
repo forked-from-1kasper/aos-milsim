@@ -133,17 +133,6 @@ public:
     }
 };
 
-template<typename T> inline T dictLargestKey(PyObject * dict) {
-    T retval = -1;
-
-    Py_ssize_t i = 0; PyObject * k, * v;
-
-    while (PyDict_Next(dict, &i, &k, &v))
-        retval = std::max<T>(retval, PyDecode<T>(k));
-
-    return retval;
-}
-
 struct Engine {
 public:
     PyOwnedRef protocol;
