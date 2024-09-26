@@ -1,13 +1,12 @@
-from random import randint, Random
+from random import Random as RNG
 from colorsys import hsv_to_rgb
 from itertools import product
+from random import randint
 from math import radians
 
-from pyspades.constants import *
-from milsim.vxl import VxlData
-
 from milsim.types import StaticWeather
-from milsim.common import *
+from milsim.vxl import VxlData
+from milsim.maptools import *
 
 name    = 'HallwayPinpoint2'
 version = '1.0'
@@ -75,7 +74,7 @@ def defaults():
 def on_map_generation(dirname, seed):
     vxl = VxlData()
 
-    rgen = Random(seed)
+    rgen = RNG(seed)
     hue = rgen.uniform(0, 1)
 
     water = gen_color(rgen, hue, minsat = 0.5, maxsat = 0.7)
@@ -115,7 +114,7 @@ def on_map_generation(dirname, seed):
 def on_environment_generation(dirname, seed):
     weather = StaticWeather()
 
-    rgen = Random(seed)
+    rgen = RNG(seed)
     hue = rgen.uniform(0, 1) # TODO: deduplicate
     weather.clear_sky_fog = gen_color(rgen, hue, minsat = 0.1, maxsat = 0.4)
 

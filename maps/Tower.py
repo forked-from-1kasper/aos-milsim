@@ -2,10 +2,8 @@ from random import randint, random
 from itertools import product
 from math import radians
 
-from pyspades.constants import *
 from milsim.vxl import VxlData
-
-from milsim.common import *
+from milsim.maptools import *
 
 name    = 'Tower'
 version = '1.0'
