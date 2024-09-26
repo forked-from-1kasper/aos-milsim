@@ -224,17 +224,6 @@ def mail(conn, *w):
         conn.lastmail = timestamp
         return "Message sent."
 
-def format_exception(exc):
-    return "{}: {}".format(type(exc).__name__, exc)
-
-def c_locals(connection, vs = {}):
-    vs.update(
-        connection = connection,
-        protocol   = connection.protocol
-    )
-
-    return vs
-
 @command('eval', admin_only = True)
 def c_eval(connection, *w):
     """
@@ -243,9 +232,9 @@ def c_eval(connection, *w):
     """
 
     try:
-        return str(eval(' '.join(w), globals(), c_locals(connection)))
+        return str(connection.eval(' '.join(w)))
     except Exception as exc:
-        return format_exception(exc)
+        return connection.protocol.format_exception(exc)
 
 @command('exec', admin_only = True)
 def c_exec(connection, *w):
@@ -255,9 +244,9 @@ def c_exec(connection, *w):
     """
 
     try:
-        exec(' '.join(w), globals(), c_locals(connection))
+        connection.exec(' '.join(w))
     except Exception as exc:
-        return format_exception(exc)
+        return connection.protocol.format_exception(exc)
 
 from gc import collect
 @command(admin_only = True)
@@ -270,7 +259,20 @@ def gc(connection):
     return str(collect())
 
 def apply_script(protocol, connection, config):
+    from piqueserver.console import ConsoleInput
+
     class ToolboxConnection(connection):
+        def __init__(self, *w, **kw):
+            connection.__init__(self, *w, **kw)
+
+            self.variables = dict(connection = self, protocol = self.protocol)
+
+        def eval(self, expr):
+            return eval(expr, globals(), self.variables)
+
+        def exec(self, stmt):
+            exec(stmt, globals(), self.variables)
+
         def on_connect(self):
             self.lastmail = -inf
 
@@ -281,4 +283,15 @@ def apply_script(protocol, connection, config):
 
             connection.on_connect(self)
 
-    return protocol, ToolboxConnection
+    class ToolboxProtocol(protocol):
+        def __init__(self, *w, **kw):
+            protocol.__init__(self, *w, **kw)
+
+            ConsoleInput.variables = dict(connection = None, protocol = self)
+            ConsoleInput.eval      = self.connection_class.eval
+            ConsoleInput.exec      = self.connection_class.exec
+
+        def format_exception(self, exc):
+            return "{}: {}".format(type(exc).__name__, exc)
+
+    return ToolboxProtocol, ToolboxConnection

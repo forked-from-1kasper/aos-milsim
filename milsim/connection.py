@@ -13,9 +13,10 @@ from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 
-from milsim.common import grenade_zone, TNT, gram, BandageItem, TourniquetItem, SplintItem
 from milsim.blast import sendGrenadePacket, explode, flashbang_effect
+from milsim.items import BandageItem, TourniquetItem, SplintItem
 from milsim.types import Inventory, Body, randbool, logistic
+from milsim.common import grenade_zone, TNT, gram
 from milsim.constants import Limb
 
 GRENADE_LETHAL_RADIUS = 4

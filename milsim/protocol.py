@@ -19,7 +19,8 @@ from milsim.packets import (
     milsim_extensions
 )
 
-from milsim.weapon import GrenadeLauncher, GrenadeItem, FlashbangItem
+from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem
+from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.blast import sendGrenadePacket, explode
 from milsim.map import MapInfo, check_rotation

@@ -1,11 +1,15 @@
 from math import floor, fmod, acos, degrees
 from itertools import product, islice
 
-from piqueserver.commands import command, player_only
+from piqueserver.commands import command, get_player, player_only
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
-from milsim.weapon import GrenadeLauncher, GrenadeItem
+from milsim.items import (
+    BandageItem, TourniquetItem, SplintItem,
+    RangefinderItem, ProtractorItem, CompassItem
+)
+from milsim.underbarrel import GrenadeLauncher, GrenadeItem
 from milsim.engine import toMeters
 from milsim.constants import Limb
 from milsim.common import *
@@ -251,7 +255,7 @@ def grenade(conn):
     return apply_item(GrenadeLauncher, conn, errmsg = "You do not have a grenade launcher")
 
 @command('takegrenade', 'tg')
-def takegrenade(conn, n):
+def takegrenade(conn, n = 1):
     """
     Try to take a given number of grenades and a grenade launcher
     /tg [n] or /takegrenade
@@ -380,6 +384,29 @@ def prioritize(conn, ID):
     if o := conn.inventory[ID]:
         conn.inventory.remove(o)
         conn.inventory.push(o)
+
+@command(admin_only = True)
+def give(connection, nickname, *w):
+    """
+    Give an item to the specific player
+    /give <player> <item>
+    """
+    protocol = connection.protocol
+    player = get_player(protocol, nickname)
+
+    if not player.alive():
+        return
+
+    try:
+        o = connection.eval(' '.join(w))
+    except Exception as exc:
+        return protocol.format_exception(exc)
+
+    if not isinstance(o, Item):
+        return
+
+    player.inventory.push(o)
+    return "Given {} to {}".format(format_item(o), player.name)
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):

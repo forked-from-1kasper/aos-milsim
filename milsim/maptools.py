@@ -6,6 +6,7 @@ import os
 from pyspades.constants import BLUE_FLAG, GREEN_FLAG, BLUE_BASE, GREEN_BASE
 
 from milsim.vxl import VxlData
+from milsim.builtin import *
 from milsim.common import *
 
 def failure(conn):
