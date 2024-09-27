@@ -40,7 +40,10 @@ class TourniquetItem(Item):
 
                 return f"You put a tourniquet on your {P.label}"
 
-        return "You are not bleeding"
+        if player.body.bleeding():
+            return "To stop venous bleeding use /bandage /b"
+        else:
+            return "You are not bleeding"
 
 class SplintItem(Item):
     name = "Splint"

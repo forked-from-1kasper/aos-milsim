@@ -6,9 +6,10 @@ from milsim.types import StaticWeather
 from milsim.vxl import VxlData
 from milsim.maptools import *
 
-name    = 'PinpointCompact'
-version = '1.0'
-author  = 'Siegmentation Fault'
+name        = "PinpointCompact"
+version     = "1.0"
+author      = "Siegmentation Fault"
+description = "Miniature version of the famous 'Pinpoint' map originally by izzy"
 
 rgen = RNG(self.seed)
 huef = rgen.uniform(0.0, 1.0)
