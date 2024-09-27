@@ -63,13 +63,13 @@ def defaults():
                 yield (x1 + Δx, y, z), StrongBricks
                 yield (x2 - Δx, y, z), StrongBricks
 
+rgen = RNG(self.seed)
+huef = rgen.uniform(0, 1)
+
 def on_map_generation(dirname, seed):
     vxl = VxlData()
 
-    rgen = RNG(seed)
-    hue = rgen.uniform(0, 1)
-
-    water = rgen.hsvi(0.5, 0.7, hue = hue)
+    water = rgen.hsvi(0.5, 0.7, hue = huef)
 
     for x, y in product(range(512), range(512)):
         vxl.set_point(x, y, 63, water)
@@ -83,12 +83,12 @@ def on_map_generation(dirname, seed):
         vxl.set_column_fast(x, 256 - Δy, 0, z, 0, 0)
         vxl.set_column_fast(x, 256 + Δy, 0, z, 0, 0)
 
-        vxl.set_point(x, 256 - Δy, 63 - z, rgen.hsvi(hue = hue))
-        vxl.set_point(x, 256 - Δy, z,      rgen.hsvi(hue = hue))
-        vxl.set_point(x, 256 - Δy, 0,      rgen.hsvi(hue = hue))
-        vxl.set_point(x, 256 + Δy, 63 - z, rgen.hsvi(hue = hue))
-        vxl.set_point(x, 256 + Δy, z,      rgen.hsvi(hue = hue))
-        vxl.set_point(x, 256 + Δy, 0,      rgen.hsvi(hue = hue))
+        vxl.set_point(x, 256 - Δy, 63 - z, rgen.hsvi(hue = huef))
+        vxl.set_point(x, 256 - Δy, z,      rgen.hsvi(hue = huef))
+        vxl.set_point(x, 256 - Δy, 0,      rgen.hsvi(hue = huef))
+        vxl.set_point(x, 256 + Δy, 63 - z, rgen.hsvi(hue = huef))
+        vxl.set_point(x, 256 + Δy, z,      rgen.hsvi(hue = huef))
+        vxl.set_point(x, 256 + Δy, 0,      rgen.hsvi(hue = huef))
 
     for y in range(256 - 64, 256 + 65):
         x1, x2 = wall1(y), wall2(y)
@@ -98,17 +98,14 @@ def on_map_generation(dirname, seed):
 
         if x1 < x2:
             for z, Δx in product(range(64), range(8)):
-                vxl.set_point(x1 + Δx, y, z, rgen.hsvi(hue = hue))
-                vxl.set_point(x2 - Δx, y, z, rgen.hsvi(hue = hue))
+                vxl.set_point(x1 + Δx, y, z, rgen.hsvi(hue = huef))
+                vxl.set_point(x2 - Δx, y, z, rgen.hsvi(hue = huef))
 
     return vxl
 
 def on_environment_generation(dirname, seed):
     weather = StaticWeather()
-
-    rgen = RNG(seed)
-    hue = rgen.uniform(0, 1) # TODO: deduplicate
-    weather.clear_sky_fog = rgen.hsvi(0.1, 0.4, hue = hue)
+    weather.clear_sky_fog = rgen.hsvi(0.1, 0.4, hue = huef)
 
     return Environment(
         default  = Dirt,

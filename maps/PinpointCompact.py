@@ -10,19 +10,14 @@ name    = 'PinpointCompact'
 version = '1.0'
 author  = 'Siegmentation Fault'
 
-def gen_palette(rgen):
-    hue = rgen.uniform(0.0, 1.0)
+rgen = RNG(self.seed)
+huef = rgen.uniform(0.0, 1.0)
 
-    water    = rgen.hsvi(0.5, 0.7, hue = hue)
-    concrete = rgen.hsvi(0.0, 0.3, hue = hue)
-    fog      = rgen.hsvi(0.1, 0.4, hue = hue)
-
-    return water, concrete, fog
+water    = rgen.hsvi(0.5, 0.7, hue = huef)
+concrete = rgen.hsvi(0.0, 0.3, hue = huef)
+fog      = rgen.hsvi(0.1, 0.4, hue = huef)
 
 def on_map_generation(dirname, seed):
-    rgen = RNG(seed)
-    water, concrete, fog = gen_palette(rgen)
-
     vxl = VxlData()
 
     for x, y in product(range(512), range(512)):
@@ -45,20 +40,14 @@ def on_map_generation(dirname, seed):
 
 def on_environment_generation(dirname, seed):
     weather = StaticWeather()
-
-    rgen = RNG(seed)
-    water, concrete, fog = gen_palette(rgen)
-
     weather.clear_sky_fog = fog
-
-    palette = {make_color(*concrete): Concrete}
 
     return Environment(
         default  = Dirt,
         build    = Sand,
         water    = Water,
         weather  = weather,
-        palette  = palette
+        palette  = {make_color(*concrete): Concrete}
     )
 
 get_entity_location = Entity(

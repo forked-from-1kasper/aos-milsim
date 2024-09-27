@@ -28,7 +28,7 @@ class RotationInfo:
         self.name = name.strip()
 
         if seed is None:
-            pass
+            self.seed = None
         elif seed.isnumeric():
             self.seed = int(seed)
         else:
@@ -41,18 +41,27 @@ class RotationInfo:
         return os.path.join(dirname, self.get_filename(dirname))
 
 class MapInfo:
-    name = "(unnamed)"
-
     def __init__(self, rot_info, dirname):
         filepath = rot_info.get_filepath(dirname)
 
-        self.attributes = dict(
+        try:
+            fin = open(filepath, 'r')
+        except OSError:
+            raise MapNotFound(filepath)
+
+        self.__dict__.update(
             __file__            = filepath,
             __name__            = "__main__",
-            author              = '(unknown)',
-            version             = '1.0',
-            description         = '',
+            name                = rot_info.name,
+            short_name          = rot_info.name,
+            author              = "(unknown)",
+            version             = "1.0",
+            description         = "",
+            seed                = rot_info.seed or seed(),
             extensions          = dict(),
+            load_dir            = dirname,
+            load_path           = filepath,
+            rot_info            = rot_info,
             time_limit          = None,
             cap_limit           = None,
             get_spawn_location  = None,
@@ -61,32 +70,20 @@ class MapInfo:
             on_map_leave        = None,
             on_flag_capture     = None,
             on_block_destroy    = None,
-            is_indestructable   = None
+            is_indestructable   = None,
+            info                = self, # for the backward compatibility reasons
+            self                = self
         )
 
-        try:
-            fin = open(filepath, 'r')
-        except OSError:
-            raise MapNotFound(filepath)
+        log.info("Loading map “{map_name}”...", map_name = self.name)
 
         try:
             exec(
                 compile(fin.read(), rot_info.get_filename(dirname), 'exec'),
-                self.attributes
+                self.__dict__
             )
         finally:
             fin.close()
-
-        self.info      = self # for the backward compatibility reasons
-        self.load_dir  = dirname
-        self.load_path = filepath
-        self.rot_info  = rot_info
-
-        self.seed       = getattr(self.rot_info, 'seed', seed())
-        self.name       = self.attributes.get('name', rot_info.name)
-        self.short_name = self.name
-
-        log.info("Loading map “{map_name}”...", map_name = self.name)
 
         t1 = monotonic()
 
@@ -105,9 +102,6 @@ class MapInfo:
             )
 
     def __getattr__(self, attr):
-        if attr in self.attributes:
-            return self.attributes[attr]
-
         raise AttributeError(
             "name “{}” is not defined in the map “{}”".format(attr, self.name)
         )
