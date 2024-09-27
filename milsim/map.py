@@ -99,7 +99,9 @@ class MapInfo:
 
         if not isinstance(self.environment, Environment):
             raise TypeError(
-                "“on_environment_generation” result expected to be of the type milsim.types.Environment"
+                "expected milsim.types.Environment instance, found {}: {}".format(
+                    type(self.environment), self.environment
+                )
             )
 
     def __getattr__(self, attr):

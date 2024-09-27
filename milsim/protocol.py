@@ -21,140 +21,14 @@ from milsim.packets import (
 
 from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem
 from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
+from milsim.weapon import ABCWeapon, Rifle, SMG, Shotgun, HEIMagazine
+from milsim.builtin import Buckshot0000, Buckshot00, Bullet
 from milsim.vxl import onDeleteQueue, deleteQueueClear
-from milsim.blast import sendGrenadePacket, explode
 from milsim.map import MapInfo, check_rotation
 from milsim.constants import Limb, HitEffect
+from milsim.types import CartridgeBox
 from milsim.engine import Engine
-from milsim.weapon import ABCWeapon
 from milsim.common import *
-
-def icons(x, xs):
-    yield x
-    yield from xs
-
-class DetachableMagazineItem:
-    def reserve(self):
-        return filter(
-            lambda o: isinstance(o, self.magazine_class),
-            self.player.inventory
-        )
-
-    def restock(self):
-        self.magazine = self.default_magazine()
-        self.magazine.mark_renewable()
-
-    def refill(self):
-        i = self.player.inventory
-        for k in range(self.default_magazine_count):
-            i.append(self.default_magazine().mark_renewable())
-
-    def format_ammo(self):
-        it = icons(
-            "{}*".format(self.magazine.current()),
-            map(lambda o: "{}".format(o.current()), self.reserve())
-        )
-
-        return "Magazines: {}".format(", ".join(it))
-
-class IntegralMagazineItem:
-    def reserve(self):
-        return filter(
-            lambda o: isinstance(o, CartridgeBox) and
-                      isinstance(o.object, self.cartridge_class),
-            self.player.inventory
-        )
-
-    def restock(self):
-        self.magazine = self.default_magazine()
-        self.magazine.mark_renewable()
-
-        for k in range(self.magazine.capacity):
-            self.magazine.push(self.default_cartridge)
-
-    def refill(self):
-        i = self.player.inventory
-        i.append(CartridgeBox(self.default_cartridge, self.default_reserve).mark_renewable())
-
-Buckshot1 = Shotshell(name = "0000 Buckshot", muzzle = 457.00, effmass = grain(82.000),  totmass = gram(150.00), grouping = isosceles(yard(25), inch(40)), deviation = 0.10, diameter = mm(9.65), pellets = 15)
-Buckshot2 = Shotshell(name = "00 Buckshot",   muzzle = 396.24, effmass = grain(350.000), totmass = gram(170.00), grouping = isosceles(yard(25), inch(40)), deviation = 0.10, diameter = mm(8.38), pellets = 5)
-Bullet    = Shotshell(name = "Bullet",        muzzle = 540.00, effmass = grain(109.375), totmass = gram(20.00),  grouping = 0,                             deviation = 0.10, diameter = mm(10.4), pellets = 1)
-
-class G7HEI(G7):
-    def explode(self, protocol, player_id, r):
-        if player := protocol.players.get(player_id):
-            sendGrenadePacket(protocol, player_id, r, Vertex3(1, 0, 0), -1)
-            explode(4, 20, player, r)
-
-            return True
-
-    def on_block_hit(self, protocol, r, v, X, Y, Z, thrower, E, A):
-        return self.explode(protocol, thrower, r)
-
-    def on_player_hit(self, protocol, r, v, X, Y, Z, thrower, E, A, target, limb_index):
-        return self.explode(protocol, thrower, r)
-
-R145x114mm = G1(name = "R145x114mm", muzzle = 1000, effmass = gram(67.00), totmass = gram(191.00), grouping = MOA(0.7), deviation = 0.03, BC = 0.800, caliber = mm(14.50))
-R127x108mm = G1(name = "R127x108mm", muzzle = 900,  effmass = gram(50.00), totmass = gram(130.00), grouping = MOA(0.7), deviation = 0.03, BC = 0.732, caliber = mm(12.70))
-R762x54mm  = G7(name = "R762x54mm",  muzzle = 850,  effmass = gram(10.00), totmass = gram(22.00),  grouping = MOA(0.7), deviation = 0.03, BC = 0.187, caliber = mm(07.62))
-Parabellum = G1(name = "Parabellum", muzzle = 600,  effmass = gram(8.03),  totmass = gram(12.00),  grouping = MOA(2.5), deviation = 0.05, BC = 0.212, caliber = mm(09.00))
-
-HEI762x54mm = G7HEI(name = "HEI762x54mm", muzzle = 820, effmass = gram(160.00), totmass = gram(250.00), grouping = MOA(2.0), deviation = 0.07, BC = 0.190, caliber = mm(07.62))
-
-class RifleMagazine(BoxMagazine):
-    pass
-
-class R762Magazine(RifleMagazine):
-    _mass     = 0.227
-    _name     = "AA762R02"
-    capacity  = 10
-    cartridge = R762x54mm
-
-class HEIMagazine(RifleMagazine):
-    _mass     = 0.150
-    _name     = "AA762HEI"
-    capacity  = 5
-    cartridge = HEI762x54mm
-
-class Rifle(DetachableMagazineItem):
-    _mass                  = 4.220
-    name                   = "Rifle"
-    delay                  = 0.50
-    reload_time            = 2.5
-    magazine_class         = RifleMagazine
-    default_magazine       = R762Magazine
-    default_magazine_count = 5
-
-class SMGMagazine(BoxMagazine):
-    pass
-
-class ParabellumMagazine(SMGMagazine):
-    _mass     = 0.160
-    _name     = "MP5MAG30"
-    capacity  = 30
-    cartridge = Parabellum
-
-class SMG(DetachableMagazineItem):
-    _mass                  = 3.600
-    name                   = "SMG"
-    delay                  = 0.11
-    reload_time            = 2.5
-    magazine_class         = SMGMagazine
-    default_magazine       = ParabellumMagazine
-    default_magazine_count = 4
-
-class ShotgunMagazine(TubularMagazine):
-    capacity = 6
-
-class Shotgun(IntegralMagazineItem):
-    _mass             = 3.600
-    name              = "Shotgun"
-    delay             = 1.00
-    reload_time       = 0.5
-    cartridge_class   = Shotshell
-    default_magazine  = ShotgunMagazine
-    default_cartridge = Buckshot1
-    default_reserve   = 70
 
 log = Logger()
 
@@ -326,9 +200,9 @@ class MilsimProtocol(FeatureProtocol):
                     CompassItem(),
                     ProtractorItem(),
                     RangefinderItem(),
+                    CartridgeBox(Buckshot0000, 60),
+                    CartridgeBox(Buckshot00, 60),
                     CartridgeBox(Bullet, 50),
-                    CartridgeBox(Buckshot1, 60),
-                    CartridgeBox(Buckshot2, 60),
                     HEIMagazine()
                 )
 

@@ -1,6 +1,6 @@
-from random import Random as RNG
-from colorsys import hsv_to_rgb
 from itertools import product
+
+from pyspades.common import make_color
 
 from milsim.types import StaticWeather
 from milsim.vxl import VxlData
@@ -10,22 +10,12 @@ name    = 'PinpointCompact'
 version = '1.0'
 author  = 'Siegmentation Fault'
 
-byte = lambda x: int(x * 255)
-
-def BGRA(color):
-    r, g, b = color
-    return r << 16 | g << 8 | b
-
-def gen_color(rgen, hue, minsat = 0.5, maxsat = 1.0):
-    r, g, b = hsv_to_rgb(hue, rgen.uniform(minsat, maxsat), 1.0)
-    return byte(r), byte(g), byte(b)
-
 def gen_palette(rgen):
     hue = rgen.uniform(0.0, 1.0)
 
-    water    = gen_color(rgen, hue, minsat = 0.5, maxsat = 0.7)
-    concrete = gen_color(rgen, hue, minsat = 0.0, maxsat = 0.3)
-    fog      = gen_color(rgen, hue, minsat = 0.1, maxsat = 0.4)
+    water    = rgen.hsvi(0.5, 0.7, hue = hue)
+    concrete = rgen.hsvi(0.0, 0.3, hue = hue)
+    fog      = rgen.hsvi(0.1, 0.4, hue = hue)
 
     return water, concrete, fog
 
@@ -61,8 +51,7 @@ def on_environment_generation(dirname, seed):
 
     weather.clear_sky_fog = fog
 
-    palette = dict()
-    palette[BGRA(concrete)] = Concrete
+    palette = {make_color(*concrete): Concrete}
 
     return Environment(
         default  = Dirt,

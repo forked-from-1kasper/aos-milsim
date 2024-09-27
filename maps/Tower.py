@@ -37,13 +37,13 @@ def get_spawn_location(connection):
 
 def get_entity_location(team, entity_id):
     if entity_id == BLUE_FLAG:
-        return (256 - 34, 256 - 34, 60 - 8 * blue_floor)
+        return 256 - 34, 256 - 34, 60 - 8 * blue_floor
     if entity_id == BLUE_BASE:
-        return (256 - 50, 256 - 50, 60 - 8 * blue_floor)
+        return 256 - 50, 256 - 50, 60 - 8 * blue_floor
     if entity_id == GREEN_FLAG:
-        return (256 + 34, 256 + 34, 60 - 8 * green_floor)
+        return 256 + 34, 256 + 34, 60 - 8 * green_floor
     if entity_id == GREEN_BASE:
-        return (258 + 50, 256 + 50, 60 - 8 * green_floor)
+        return 258 + 50, 256 + 50, 60 - 8 * green_floor
 
 def on_flag_capture(conn):
     global green_floor

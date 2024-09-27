@@ -1,4 +1,5 @@
-from random import uniform, choice, shuffle
+from random import uniform, choice, Random as RandomClass
+from colorsys import hsv_to_rgb
 from itertools import product
 from math import floor
 import os
@@ -9,7 +10,17 @@ from milsim.vxl import VxlData
 from milsim.builtin import *
 from milsim.common import *
 
-def failure(conn):
+byte = lambda x: int(x * 255)
+
+class RNG(RandomClass):
+    def hsvf(self, a = 0.5, b = 1.0, *, hue, value = 1.0):
+        return hsv_to_rgb(hue, self.uniform(a, b), value)
+
+    def hsvi(self, a = 0.5, b = 1.0, *, hue, value = 1.0):
+        r, g, b = self.hsvf(a, b, hue = hue, value = value)
+        return byte(r), byte(g), byte(b)
+
+def failure(connection):
     return NotImplementedError
 
 def load_vxl(vxlpath):
@@ -23,7 +34,7 @@ def VXL(filename):
     return retfun
 
 def Location(x, y, z):
-    def retfun(conn):
+    def retfun(connection):
         return x, y, z
 
     return retfun
@@ -38,8 +49,8 @@ def Rectangle(x1 = 0, y1 = 0, x2 = 512, y2 = 512):
     xmin, xmax = min(x1, x2), max(x1, x2)
     ymin, ymax = min(y1, y2), max(y1, y2)
 
-    def retfun(conn):
-        return uniform2(conn.protocol.map, xmin, xmax, ymin, ymax)
+    def retfun(connection):
+        return uniform2(connection.protocol.map, xmin, xmax, ymin, ymax)
 
     return retfun
 
@@ -56,21 +67,25 @@ def Bitmap(x1 = 0, y1 = 0, x2 = 512, y2 = 512, zs = []):
 
     L0 = list(product(range(xmin, xmax + 1), range(ymin, ymax + 1), zs))
 
-    def retfun(conn):
+    def retfun(connection):
+        M = connection.protocol.map
+
         # Not the most performant solution but *seems* to be robust enough.
-        L = list(filter(lambda w: is_location_free(conn.protocol.map, w), L0))
-        return choice(L) if len(L) > 0 else uniform2(conn.protocol.map, xmin, xmax, ymin, ymax)
+        L = list(filter(lambda w: is_location_free(M, w), L0))
+        return choice(L) if len(L) > 0 else uniform2(M, xmin, xmax, ymin, ymax)
 
     return retfun
 
 def Team(blue = failure, green = failure):
-    def retfun(conn):
-        if conn.team is conn.protocol.green_team:
-            return green(conn)
-        elif conn.team is conn.protocol.blue_team:
-            return blue(conn)
+    def retfun(connection):
+        protocol = connection.protocol
+
+        if connection.team is protocol.green_team:
+            return green(connection)
+        elif connection.team is protocol.blue_team:
+            return blue(connection)
         else:
-            return conn.get_spawn_location()
+            return connection.get_spawn_location()
 
     return retfun
 

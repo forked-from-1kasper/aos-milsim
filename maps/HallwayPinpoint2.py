@@ -1,5 +1,3 @@
-from random import Random as RNG
-from colorsys import hsv_to_rgb
 from itertools import product
 from random import randint
 from math import radians
@@ -38,38 +36,32 @@ def get_spawn_location(connection):
 
 def get_entity_location(team, entity_id):
     if entity_id == BLUE_FLAG:
-        return (256 - 128, 256, 63 - height(256 - 128))
+        return 256 - 128, 256, 63 - height(256 - 128)
     if entity_id == BLUE_BASE:
-        return (256 - 146, 256, 63 - height(256 - 146))
+        return 256 - 146, 256, 63 - height(256 - 146)
     if entity_id == GREEN_FLAG:
-        return (256 + 128, 256, 63 - height(256 + 128))
+        return 256 + 128, 256, 63 - height(256 + 128)
     if entity_id == GREEN_BASE:
-        return (256 + 146, 256, 63 - height(256 + 146))
-
-byte = lambda x: int(x * 255)
-
-def gen_color(rgen, hue, minsat = 0.5, maxsat = 1.0):
-    r, g, b = hsv_to_rgb(hue, rgen.uniform(minsat, maxsat), 1.0)
-    return byte(r), byte(g), byte(b)
+        return 256 + 146, 256, 63 - height(256 + 146)
 
 def defaults():
     for x, Δy in product(range(512), range(64)):
         z = height(x)
 
-        yield ((x, 256 - Δy, 63 - z), StrongBricks)
-        yield ((x, 256 - Δy, z),      StrongBricks)
-        yield ((x, 256 - Δy, 0),      StrongBricks)
-        yield ((x, 256 + Δy, 63 - z), StrongBricks)
-        yield ((x, 256 + Δy, z),      StrongBricks)
-        yield ((x, 256 + Δy, 0),      StrongBricks)
+        yield (x, 256 - Δy, 63 - z), StrongBricks
+        yield (x, 256 - Δy, z),      StrongBricks
+        yield (x, 256 - Δy, 0),      StrongBricks
+        yield (x, 256 + Δy, 63 - z), StrongBricks
+        yield (x, 256 + Δy, z),      StrongBricks
+        yield (x, 256 + Δy, 0),      StrongBricks
 
     for y in range(256 - 64, 256 + 65):
         x1, x2 = wall1(y), wall2(y)
 
         if x1 < x2:
             for z, Δx in product(range(64), range(8)):
-                yield ((x1 + Δx, y, z), StrongBricks)
-                yield ((x2 - Δx, y, z), StrongBricks)
+                yield (x1 + Δx, y, z), StrongBricks
+                yield (x2 - Δx, y, z), StrongBricks
 
 def on_map_generation(dirname, seed):
     vxl = VxlData()
@@ -77,7 +69,7 @@ def on_map_generation(dirname, seed):
     rgen = RNG(seed)
     hue = rgen.uniform(0, 1)
 
-    water = gen_color(rgen, hue, minsat = 0.5, maxsat = 0.7)
+    water = rgen.hsvi(0.5, 0.7, hue = hue)
 
     for x, y in product(range(512), range(512)):
         vxl.set_point(x, y, 63, water)
@@ -91,12 +83,12 @@ def on_map_generation(dirname, seed):
         vxl.set_column_fast(x, 256 - Δy, 0, z, 0, 0)
         vxl.set_column_fast(x, 256 + Δy, 0, z, 0, 0)
 
-        vxl.set_point(x, 256 - Δy, 63 - z, gen_color(rgen, hue))
-        vxl.set_point(x, 256 - Δy, z,      gen_color(rgen, hue))
-        vxl.set_point(x, 256 - Δy, 0,      gen_color(rgen, hue))
-        vxl.set_point(x, 256 + Δy, 63 - z, gen_color(rgen, hue))
-        vxl.set_point(x, 256 + Δy, z,      gen_color(rgen, hue))
-        vxl.set_point(x, 256 + Δy, 0,      gen_color(rgen, hue))
+        vxl.set_point(x, 256 - Δy, 63 - z, rgen.hsvi(hue = hue))
+        vxl.set_point(x, 256 - Δy, z,      rgen.hsvi(hue = hue))
+        vxl.set_point(x, 256 - Δy, 0,      rgen.hsvi(hue = hue))
+        vxl.set_point(x, 256 + Δy, 63 - z, rgen.hsvi(hue = hue))
+        vxl.set_point(x, 256 + Δy, z,      rgen.hsvi(hue = hue))
+        vxl.set_point(x, 256 + Δy, 0,      rgen.hsvi(hue = hue))
 
     for y in range(256 - 64, 256 + 65):
         x1, x2 = wall1(y), wall2(y)
@@ -106,8 +98,8 @@ def on_map_generation(dirname, seed):
 
         if x1 < x2:
             for z, Δx in product(range(64), range(8)):
-                vxl.set_point(x1 + Δx, y, z, gen_color(rgen, hue))
-                vxl.set_point(x2 - Δx, y, z, gen_color(rgen, hue))
+                vxl.set_point(x1 + Δx, y, z, rgen.hsvi(hue = hue))
+                vxl.set_point(x2 - Δx, y, z, rgen.hsvi(hue = hue))
 
     return vxl
 
@@ -116,7 +108,7 @@ def on_environment_generation(dirname, seed):
 
     rgen = RNG(seed)
     hue = rgen.uniform(0, 1) # TODO: deduplicate
-    weather.clear_sky_fog = gen_color(rgen, hue, minsat = 0.1, maxsat = 0.4)
+    weather.clear_sky_fog = rgen.hsvi(0.1, 0.4, hue = hue)
 
     return Environment(
         default  = Dirt,

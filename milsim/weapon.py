@@ -2,9 +2,10 @@ from math import inf
 
 from twisted.internet import reactor
 
-from pyspades.world import Grenade
 from pyspades.constants import *
 
+from milsim.types import CartridgeBox, BoxMagazine, TubularMagazine, Shotshell
+from milsim.builtin import R762x54mm, HEI762x54mm, Parabellum, Buckshot0000
 from milsim.engine import cone
 from milsim.common import *
 
@@ -153,3 +154,101 @@ class ABCWeapon(Tool):
 
     def format_ammo(self):
         return None
+
+class DetachableMagazineItem:
+    def reserve(self):
+        return filter(
+            lambda o: isinstance(o, self.magazine_class),
+            self.player.inventory
+        )
+
+    def restock(self):
+        self.magazine = self.default_magazine()
+        self.magazine.mark_renewable()
+
+    def refill(self):
+        i = self.player.inventory
+        for k in range(self.default_magazine_count):
+            i.append(self.default_magazine().mark_renewable())
+
+    def format_ammo(self):
+        it = icons(
+            "{}*".format(self.magazine.current()),
+            map(lambda o: "{}".format(o.current()), self.reserve())
+        )
+
+        return "Magazines: {}".format(", ".join(it))
+
+class IntegralMagazineItem:
+    def reserve(self):
+        return filter(
+            lambda o: isinstance(o, CartridgeBox) and
+                      isinstance(o.object, self.cartridge_class),
+            self.player.inventory
+        )
+
+    def restock(self):
+        self.magazine = self.default_magazine()
+        self.magazine.mark_renewable()
+
+        for k in range(self.magazine.capacity):
+            self.magazine.push(self.default_cartridge)
+
+    def refill(self):
+        i = self.player.inventory
+        i.append(CartridgeBox(self.default_cartridge, self.default_reserve).mark_renewable())
+
+class RifleMagazine(BoxMagazine):
+    pass
+
+class R762Magazine(RifleMagazine):
+    _mass     = 0.227
+    _name     = "AA762R02"
+    capacity  = 10
+    cartridge = R762x54mm
+
+class HEIMagazine(RifleMagazine):
+    _mass     = 0.150
+    _name     = "AA762HEI"
+    capacity  = 5
+    cartridge = HEI762x54mm
+
+class Rifle(DetachableMagazineItem):
+    _mass                  = 4.220
+    name                   = "Rifle"
+    delay                  = 0.50
+    reload_time            = 2.5
+    magazine_class         = RifleMagazine
+    default_magazine       = R762Magazine
+    default_magazine_count = 5
+
+class SMGMagazine(BoxMagazine):
+    pass
+
+class ParabellumMagazine(SMGMagazine):
+    _mass     = 0.160
+    _name     = "MP5MAG30"
+    capacity  = 30
+    cartridge = Parabellum
+
+class SMG(DetachableMagazineItem):
+    _mass                  = 3.600
+    name                   = "SMG"
+    delay                  = 0.11
+    reload_time            = 2.5
+    magazine_class         = SMGMagazine
+    default_magazine       = ParabellumMagazine
+    default_magazine_count = 4
+
+class ShotgunMagazine(TubularMagazine):
+    capacity = 6
+
+class Shotgun(IntegralMagazineItem):
+    _mass             = 3.600
+    name              = "Shotgun"
+    delay             = 1.00
+    reload_time       = 0.5
+    cartridge_class   = Shotshell
+    default_magazine  = ShotgunMagazine
+    default_cartridge = Buckshot0000
+    default_reserve   = 70

@@ -89,8 +89,8 @@ class Engine:
         return "Removed {} object(s)".format(alive)
 
 @command('engine', admin_only = True)
-def engine(conn, subcmd, *w):
-    protocol = conn.protocol
+def engine(connection, subcmd, *w):
+    protocol = connection.protocol
 
     if attr := getattr(Engine, subcmd, None):
         try:
@@ -150,112 +150,112 @@ limbs = {
 
 @command()
 @alive_only
-def fracture(conn, target = None):
+def fracture(player, target = None):
     """
     Break the specified limb (useful for debug)
     /fracture
     """
     if limb := limbs.get(target):
-        conn.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
+        player.hit(5, kill_type = MELEE_KILL, fractured = True, limb = limb)
     else:
         return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
 
 @command()
 @alive_only
-def vein(conn, target = None):
+def vein(player, target = None):
     """
     Cut a vein in the specified limb (useful for debug)
     /vein
     """
     if limb := limbs.get(target):
-        conn.body[limb].venous = True
+        player.body[limb].venous = True
     else:
         return "Usage: /vein (torso|head|arml|armr|legl|legr)"
 
 @command()
 @alive_only
-def artery(conn, target = None):
+def artery(player, target = None):
     """
     Cut an artery in the specified limb (useful for debug)
     /artery
     """
     if limb := limbs.get(target):
-        conn.body[limb].arterial = True
+        player.body[limb].arterial = True
     else:
         return "Usage: /artery (torso|head|arml|armr|legl|legr)"
 
 @command('bandage', 'b')
 @alive_only
-def bandage(conn):
+def bandage(player):
     """
     Put the bandage (used to stop venous bleeding)
     /b or /bandage
     """
-    return apply_item(BandageItem, conn, errmsg = "You do not have a bandage")
+    return apply_item(BandageItem, player, errmsg = "You do not have a bandage")
 
 @command('tourniquet', 't')
 @alive_only
-def tourniquet(conn):
+def tourniquet(player):
     """
     Put the tourniquet (used to stop arterial bleeding)
     /t or /tourniquet
     """
-    return apply_item(TourniquetItem, conn, errmsg = "You do not have a tourniquet")
+    return apply_item(TourniquetItem, player, errmsg = "You do not have a tourniquet")
 
 @command('splint', 's')
 @alive_only
-def splint(conn):
+def splint(player):
     """
     Splint a broken limb
     /s or /splint
     """
-    return apply_item(SplintItem, conn, errmsg = "You do not have a splint")
+    return apply_item(SplintItem, player, errmsg = "You do not have a splint")
 
 @command('rangefinder', 'rf')
 @alive_only
-def rangefinder(conn):
+def rangefinder(player):
     """
     Measure the distance between the player and a given point
     /rangefinder
     """
-    return apply_item(RangefinderItem, conn, errmsg = "You do not have a rangefinder")
+    return apply_item(RangefinderItem, player, errmsg = "You do not have a rangefinder")
 
 @command()
 @alive_only
-def protractor(conn):
+def protractor(player):
     """
     Measure the angle between the player and two specified points
     /protractor
     """
-    return apply_item(ProtractorItem, conn, errmsg = "You do not have a protractor")
+    return apply_item(ProtractorItem, player, errmsg = "You do not have a protractor")
 
 @command()
 @alive_only
-def compass(conn):
+def compass(player):
     """
     Print the current azimuth
     /compass
     """
-    return apply_item(CompassItem, conn, errmsg = "You do not have a compass")
+    return apply_item(CompassItem, player, errmsg = "You do not have a compass")
 
 @command('grenade', 'gr')
-def grenade(conn):
+def grenade(player):
     """
     Load a grenade into a grenade launcher
     /gr or /grenade
     """
-    return apply_item(GrenadeItem, conn, errmsg = "You do not have a grenade")
+    return apply_item(GrenadeItem, player, errmsg = "You do not have a grenade")
 
 @command('launcher', 'gl')
-def grenade(conn):
+def grenade(player):
     """
     Equip a grenade launcher
     /gl or /launcher
     """
-    return apply_item(GrenadeLauncher, conn, errmsg = "You do not have a grenade launcher")
+    return apply_item(GrenadeLauncher, player, errmsg = "You do not have a grenade launcher")
 
 @command('takegrenade', 'tg')
-def takegrenade(conn, n = 1):
+def takegrenade(player, n = 1):
     """
     Try to take a given number of grenades and a grenade launcher
     /tg [n] or /takegrenade
@@ -264,17 +264,17 @@ def takegrenade(conn, n = 1):
 
     if n <= 0: return "Invalid number of grenades"
 
-    iu = conn.weapon_object.item_underbarrel
+    iu = player.weapon_object.item_underbarrel
 
-    if not isinstance(iu, GrenadeLauncher) and not has_item(conn, GrenadeLauncher):
-       take_item(conn, GrenadeLauncher)
+    if not isinstance(iu, GrenadeLauncher) and not has_item(player, GrenadeLauncher):
+       take_item(player, GrenadeLauncher)
 
-    take_items(conn, GrenadeItem, n, 5)
+    take_items(player, GrenadeItem, n, 5)
 
 @command()
 @alive_only
-def packload(conn):
-    return "{:.3f} kg".format(conn.gear_mass())
+def packload(player):
+    return "{:.3f} kg".format(player.gear_mass())
 
 def format_item(o):
     if o.persistent:
@@ -307,27 +307,27 @@ def scroll(player, argval = None, direction = 0):
 
 @command('next', 'n')
 @alive_only
-def c_next(conn, argval = None):
+def c_next(player, argval = None):
     """
     Scroll to the next or specified page
     /n [page number | search query] or /next
     """
-    conn.page = scroll(conn, argval, +1)
-    return format_page(conn.page, available(conn))
+    player.page = scroll(player, argval, +1)
+    return format_page(player.page, available(player))
 
 @command('prev', 'p')
 @alive_only
-def c_prev(conn, argval = None):
+def c_prev(player, argval = None):
     """
     Scroll to the previous or specified page
     /p [page number | search qeury] or /prev
     """
-    conn.page = scroll(conn, argval, -1)
-    return format_page(conn.page, available(conn))
+    player.page = scroll(player, argval, -1)
+    return format_page(player.page, available(player))
 
 @command('backpack', 'bp')
 @alive_only
-def c_backpack(conn, argval = None):
+def c_backpack(player, argval = None):
     """
     Print specified page in the player's inventory
     /bp [page number | search query] or /backpack
@@ -337,43 +337,43 @@ def c_backpack(conn, argval = None):
     elif argval.isdigit():
         page = int(argval)
     else:
-        page = query(argval, conn.inventory)
+        page = query(argval, player.inventory)
 
-    return format_page(page, conn.inventory)
+    return format_page(page, player.inventory)
 
 @command()
 @alive_only
-def take(conn, ID):
+def take(player, ID):
     """
     Take an item with the given ID to the inventory
     /take (ID)
     """
-    for i in conn.get_available_inventory():
+    for i in player.get_available_inventory():
         if o := i[ID]:
             i.remove(o)
-            conn.inventory.push(o)
-            conn.sendWeaponReloadPacket()
+            player.inventory.push(o)
+            player.sendWeaponReloadPacket()
 
             return
 
 @command()
 @alive_only
-def drop(conn, ID):
+def drop(player, ID):
     """
     Drop an item with the given ID from the inventory
     /drop (ID)
     """
-    conn.drop(ID)
+    player.drop(ID)
 
 @command('use', 'u')
 @alive_only
-def use(conn, ID):
+def use(player, ID):
     """
     Use an item from the inventory with the given ID
     /u (ID) or /use
     """
-    if o := conn.inventory[ID]:
-        return o.apply(conn)
+    if o := player.inventory[ID]:
+        return o.apply(player)
 
 @command('prioritize', 'pr')
 def prioritize(conn, ID):
@@ -394,19 +394,21 @@ def give(connection, nickname, *w):
     protocol = connection.protocol
     player = get_player(protocol, nickname)
 
-    if not player.alive():
-        return
+    if player.alive():
+        try:
+            o = connection.eval(' '.join(w))
+        except Exception as exc:
+            return protocol.format_exception(exc)
 
-    try:
-        o = connection.eval(' '.join(w))
-    except Exception as exc:
-        return protocol.format_exception(exc)
+        if isinstance(o, Item):
+            player.inventory.push(o)
+            player.sendWeaponReloadPacket()
 
-    if not isinstance(o, Item):
-        return
-
-    player.inventory.push(o)
-    return "Given {} to {}".format(format_item(o), player.name)
+            return "Given {} to {}".format(format_item(o), player.name)
+        else:
+            return "milsim.types.Item instance expected, got {}: {}".format(
+                type(o).__name__, o
+            )
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):

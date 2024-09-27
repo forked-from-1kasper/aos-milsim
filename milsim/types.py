@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from collections.abc import Iterable
 from collections import deque
 
-from math import pi, exp, log, inf, floor, prod, sin, cos
+from math import pi, exp, log, inf, nan, floor, prod, sin, cos
 from random import random, gauss
 
 from pyspades.color import interpolate_rgb
@@ -176,7 +176,7 @@ class Shotshell(Cartridge):
     pellets  : int   # Number of pellets in the single shell
 
     model     = 3
-    ballistic = 0.0
+    ballistic = nan
 
     def __post_init__(self):
         self.area = 0.25 * pi * self.diameter * self.diameter

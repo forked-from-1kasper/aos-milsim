@@ -81,3 +81,7 @@ def needle(φ):
     Δφ    = tau / N
     t     = (φ + Δφ / 2) / Δφ
     return label[floor(t) % N]
+
+def icons(x, xs):
+    yield x
+    yield from xs
