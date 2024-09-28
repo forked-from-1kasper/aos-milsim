@@ -113,3 +113,13 @@ class RangefinderItem(Item):
                 return "{:.0f} m".format(M)
         else:
             return "Too far."
+
+class HandgrenadeItem(Item):
+    pass
+
+class F1GrenadeItem(HandgrenadeItem):
+    name = "F-1 Grenade"
+    mass = 0.600
+
+    def on_explosion(self, player):
+        return player.grenade_exploded

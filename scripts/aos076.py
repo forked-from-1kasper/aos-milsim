@@ -55,10 +55,10 @@ class WorldUpdate:
 
 @command()
 @player_only
-def sync(conn):
+def wusync(conn):
     """
-    Enforce to send the complete WorldUpdate packet.
-    /sync
+    Enforce to send the complete WorldUpdate packet
+    /wusync
     """
     conn.send_contained(WorldUpdate(conn.protocol))
     return "OK"

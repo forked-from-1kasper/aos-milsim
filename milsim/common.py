@@ -85,3 +85,6 @@ def needle(φ):
 def icons(x, xs):
     yield x
     yield from xs
+
+ilen   = lambda it: sum(1 for o in it)
+iempty = lambda it: next(it, None) is None

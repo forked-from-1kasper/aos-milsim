@@ -48,6 +48,9 @@ class ABCWeapon(Tool):
     def refill(self):
         raise NotImplementedError
 
+    def enabled(self):
+        return 0 < self.magazine.current() or 0 < self.reserved()
+
     @property
     def mass(self):
         return self._mass + self.magazine.mass + getattr(self.item_underbarrel, 'mass', 0)

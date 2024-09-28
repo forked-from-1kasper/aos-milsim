@@ -602,13 +602,14 @@ class BlockTool(Tool):
     def __init__(self, player):
         self.player = player
 
+    def enabled(self):
+        return self.player.blocks > 0
+
 class GrenadeTool(Tool):
+    mass = 0
+
     def __init__(self, player):
         self.player = player
-
-    @property
-    def mass(self):
-        return 0.600 * self.player.grenades
 
 class TileEntity:
     def __init__(self, protocol, position):

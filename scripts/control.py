@@ -352,7 +352,7 @@ def take(player, ID):
         if o := i[ID]:
             i.remove(o)
             player.inventory.push(o)
-            player.sendWeaponReloadPacket()
+            player.sync()
 
             return
 
@@ -402,13 +402,22 @@ def give(connection, nickname, *w):
 
         if isinstance(o, Item):
             player.inventory.push(o)
-            player.sendWeaponReloadPacket()
+            player.sync()
 
             return "Given {} to {}".format(format_item(o), player.name)
         else:
             return "milsim.types.Item instance expected, got {}: {}".format(
                 type(o).__name__, o
             )
+
+@command()
+@alive_only
+def sync(connection):
+    """
+    Restore block count
+    /sync
+    """
+    connection.sync()
 
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):

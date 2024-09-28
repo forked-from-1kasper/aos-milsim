@@ -6,17 +6,18 @@ from twisted.internet import reactor
 
 from pyspades.collision import collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
+from pyspades.world import cube_line, Grenade
 from pyspades import contained as loaders
-from pyspades.world import cube_line
+from pyspades.player import check_nan
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 
+from milsim.items import BandageItem, TourniquetItem, SplintItem, HandgrenadeItem, F1GrenadeItem
 from milsim.blast import sendGrenadePacket, explode, flashbang_effect
-from milsim.items import BandageItem, TourniquetItem, SplintItem
+from milsim.common import grenade_zone, TNT, gram, ilen, iempty
 from milsim.types import Inventory, Body, randbool, logistic
-from milsim.common import grenade_zone, TNT, gram
 from milsim.constants import Limb
 
 GRENADE_LETHAL_RADIUS = 4
@@ -70,6 +71,36 @@ class MilsimConnection(FeatureConnection):
         contained.clip_ammo    = self.weapon_object.magazine.current()
         contained.reserve_ammo = self.weapon_object.reserved()
         self.send_contained(contained)
+
+    def handgrenades(self):
+        return filter(lambda o: isinstance(o, HandgrenadeItem), self.inventory)
+
+    def sync(self):
+        if self.blocks <= 0 or self.grenades <= 0 and not iempty(self.handgrenades()):
+            self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
+            self.grenades = 3 # this is what shown to player, not the actual count
+
+            self.send_contained(loaders.Restock())
+
+            if self.hp != 100:
+                contained          = loaders.SetHP()
+                contained.hp       = self.hp
+                contained.source_x = 0
+                contained.source_y = 0
+                contained.source_z = 0
+                contained.not_fall = False
+                self.send_contained(contained)
+
+        self.sendWeaponReloadPacket()
+
+        if self.tool == GRENADE_TOOL and iempty(self.handgrenades()):
+            # make GRENADE_TOOL unavailable to user
+            if self.weapon_object.enabled():
+                self.set_tool(WEAPON_TOOL)
+            elif self.block_tool.enabled():
+                self.set_tool(BLOCK_TOOL)
+            else:
+                self.set_tool(SPADE_TOOL)
 
     def alive(self):
         return self.team is not None and not self.team.spectator and \
@@ -136,7 +167,7 @@ class MilsimConnection(FeatureConnection):
                 self.get_drop_inventory().push(o)
 
             self.inventory.remove(o)
-            self.sendWeaponReloadPacket()
+            self.sync()
 
     def drop_inventory(self):
         if self.world_object is not None:
@@ -207,25 +238,19 @@ class MilsimConnection(FeatureConnection):
         return retval
 
     def on_block_build(self, x, y, z):
-        self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
         FeatureConnection.on_block_build(self, x, y, z)
 
     def on_line_build(self, points):
-        self.blocks = 50
         FeatureConnection.on_line_build(self, points)
 
     def on_tool_set_attempt(self, tool):
         if self.body.arml.fractured or self.body.armr.fractured:
             return False
-        else:
-            return FeatureConnection.on_tool_set_attempt(self, tool)
 
-    def on_grenade(self, fuse):
-        if not self.spade_object.enabled():
-            self.send_chat_error("How did you do that??")
+        if tool == GRENADE_TOOL and iempty(self.handgrenades()):
             return False
 
-        return FeatureConnection.on_grenade(self, fuse)
+        return FeatureConnection.on_tool_set_attempt(self, tool)
 
     def on_flag_capture(self):
         if map_on_flag_capture := self.protocol.map_info.on_flag_capture:
@@ -243,7 +268,10 @@ class MilsimConnection(FeatureConnection):
 
         self.last_hp_update = reactor.seconds()
         self.body.reset()
-        self.hp = 100
+
+        self.hp       = 100
+        self.blocks   = 50
+        self.grenades = 3
 
         self.sendWeaponReloadPacket()
 
@@ -387,7 +415,10 @@ class MilsimConnection(FeatureConnection):
             BandageItem().mark_renewable(),
             TourniquetItem().mark_renewable(),
             TourniquetItem().mark_renewable(),
-            SplintItem().mark_renewable()
+            SplintItem().mark_renewable(),
+            F1GrenadeItem().mark_renewable(),
+            F1GrenadeItem().mark_renewable(),
+            F1GrenadeItem().mark_renewable()
         )
 
     def refill(self, local = False):
@@ -398,20 +429,11 @@ class MilsimConnection(FeatureConnection):
             P.arterial = False
             P.venous   = False
 
-        self.grenades = 3
-        self.blocks   = 50
-
         self.inventory.remove_if(lambda o: not o.persistent)
         self.weapon_object.refill()
         self.on_refill()
 
-        if not local:
-            self.send_contained(loaders.Restock())
-            self.sendWeaponReloadPacket()
-
-            hp = self.body.average()
-            if hp != 100: # loaders.Restock() reverts hp to 100
-                self.set_hp(hp, kill_type = MELEE_KILL)
+        if not local: self.sync()
 
     def hit(self, value, hit_by = None, kill_type = WEAPON_KILL, limb = Limb.torso,
             venous = False, arterial = False, fractured = False):
@@ -442,7 +464,8 @@ class MilsimConnection(FeatureConnection):
             P.fractured = P.fractured or fractured
 
     def _on_fall(self, damage):
-        if not self.hp: return
+        if not self.alive():
+            return
 
         retval = self.on_fall(damage)
 
@@ -466,21 +489,24 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.SetTool)
     def on_tool_change_recieved(self, contained):
-        if not self.hp:
+        if not self.alive():
             return
 
         if self.tool == contained.value:
             return
 
         if self.on_tool_set_attempt(contained.value) == False:
-            # Reset it back for the player.
+            # Reset tool back for the player.
             self.send_contained(self.newSetTool())
+            # Needed to keep server synchronized with the player’s UI.
+            self.last_tool_update = reactor.seconds()
         else:
             self.set_tool(contained.value)
 
     @register_packet_handler(loaders.WeaponInput)
     def on_weapon_input_recieved(self, contained):
-        if not self.hp: return
+        if not self.alive():
+            return
 
         primary   = contained.primary
         secondary = contained.secondary
@@ -514,7 +540,8 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.HitPacket)
     def on_hit_recieved(self, contained):
-        if not self.hp: return
+        if not self.alive():
+            return
 
         if contained.value == MELEE and self.spade_object.enabled():
             if player := self.protocol.players.get(contained.player_id):
@@ -525,11 +552,22 @@ class MilsimConnection(FeatureConnection):
                     venous = True, hit_by = self, kill_type = MELEE_KILL
                 )
 
-    @register_packet_handler(loaders.BlockLine)
-    def on_block_line_recieved(self, contained):
-        if not self.alive():
+    @register_packet_handler(loaders.ExistingPlayer)
+    @register_packet_handler(loaders.ShortPlayerData)
+    def on_new_player_recieved(self, contained):
+        if contained.team not in self.protocol.teams:
             return
 
+        FeatureConnection.on_new_player_recieved(self, contained)
+
+    @register_packet_handler(loaders.ChangeTeam)
+    def on_team_change_recieved(self, contained):
+        if contained.team not in self.protocol.teams:
+            return
+
+        FeatureConnection.on_team_change_recieved(self, contained)
+
+    def handle_block_line(self, x1, y1, z1, x2, y2, z2):
         if self.line_build_start_pos is None:
             return
 
@@ -537,9 +575,6 @@ class MilsimConnection(FeatureConnection):
             return
 
         M = self.protocol.map
-
-        x1, y1, z1 = contained.x1, contained.y1, contained.z1
-        x2, y2, z2 = contained.x2, contained.y2, contained.z2
 
         # Coordinates are out of bounds.
         if not M.is_valid_position(x1, y1, z1):
@@ -569,12 +604,6 @@ class MilsimConnection(FeatureConnection):
 
         locs = [(x, y, z) for x, y, z in cube_line(x1, y1, z1, x2, y2, z2) if not M.get_solid(x, y, z)]
 
-        if locs is None:
-            return
-
-        if len(locs) > self.blocks + BUILD_TOLERANCE:
-            return
-
         if self.on_line_build_attempt(locs) is False:
             return
 
@@ -582,38 +611,114 @@ class MilsimConnection(FeatureConnection):
             if not M.build_point(x, y, z, self.color):
                 break
 
-        self.blocks -= len(locs)
         self.on_line_build(locs)
 
+        contained = loaders.BlockLine()
         contained.player_id = self.player_id
+        contained.x1, contained.y1, contained.z1 = x1, y1, z1
+        contained.x2, contained.y2, contained.z2 = x2, y2, z2
+
         self.protocol.broadcast_contained(contained, save = True)
         self.protocol.update_entities()
 
         for x, y, z in locs:
             self.protocol.on_block_build(x, y, z)
 
-    @register_packet_handler(loaders.ExistingPlayer)
-    @register_packet_handler(loaders.ShortPlayerData)
-    def on_new_player_recieved(self, contained):
-        if contained.team not in self.protocol.teams:
+    @register_packet_handler(loaders.BlockLine)
+    def on_block_line_recieved(self, contained):
+        if not self.alive():
             return
 
-        FeatureConnection.on_new_player_recieved(self, contained)
+        x1, y1, z1 = contained.x1, contained.y1, contained.z1
+        x2, y2, z2 = contained.x2, contained.y2, contained.z2
 
-    @register_packet_handler(loaders.ChangeTeam)
-    def on_team_change_recieved(self, contained):
-        if contained.team not in self.protocol.teams:
-            return
+        blocks = self.blocks
 
-        FeatureConnection.on_team_change_recieved(self, contained)
+        if self.spade_object.enabled():
+            self.handle_block_line(x1, y1, z1, x2, y2, z2)
+
+        self.blocks = max(0, blocks - len(cube_line(x1, y1, z1, x2, y2, z2)))
+        if self.blocks <= 0:
+            self.sync()
 
     @register_packet_handler(loaders.BlockAction)
     def on_block_action_recieved(self, contained):
-        # Everything else is handled server-side.
-        if contained.value == BUILD_BLOCK:
-            if self.protocol.map.get_solid(contained.x, contained.y, contained.z):
-                return
+        if not self.alive():
+            return
 
+        # Everything else is handled server-side.
+        if contained.value != BUILD_BLOCK:
+            return
+
+        if self.protocol.map.get_solid(contained.x, contained.y, contained.z):
+            return
+
+        blocks = self.blocks
+
+        if self.spade_object.enabled():
             FeatureConnection.on_block_action_recieved(self, contained)
+
+        self.blocks = max(0, blocks - 1)
+        if self.blocks <= 0:
+            self.sync()
+
+    def handle_grenade_packet(self, x, y, z, vx, vy, vz, fuse):
+        if check_nan(x, y, z, vx, vy, vz, fuse):
+            return
+
+        if not self.check_speedhack(x, y, z):
+            x, y, z = self.world_object.position.get()
+
+        if self.tool != GRENADE_TOOL:
+            return
+
+        if self.on_grenade(fuse) == False:
+            return
+
+        fuse = min(fuse, 3.0)
+
+        r = Vertex3(x, y, z)
+        u = Vertex3(vx, vy, vz) - self.world_object.velocity
+        v = u.normal() * min(u.length(), 2.0) + self.world_object.velocity
+
+        if check_nan(v.length()):
+            return
+
+        if o := next(self.handgrenades(), None):
+            self.inventory.remove(o)
+
+            grenade = self.protocol.world.create_object(
+                Grenade, fuse, r, None, v, o.on_explosion(self)
+            )
+            grenade.team = self.team
+
+            self.on_grenade_thrown(grenade)
+
+            if not self.filter_visibility_data:
+                contained           = loaders.GrenadePacket()
+                contained.player_id = self.player_id
+                contained.value     = fuse
+                contained.position  = r.get()
+                contained.velocity  = v.get()
+
+                self.protocol.broadcast_contained(contained, sender = self)
+
+    @register_packet_handler(loaders.GrenadePacket)
+    def on_grenade_recieved(self, contained):
+        if not self.alive():
+            return
+
+        self.grenades -= 1
+
+        x, y, z = contained.position
+        vx, vy, vz = contained.velocity
+
+        self.handle_grenade_packet(x, y, z, vx, vy, vz, contained.value)
+
+        rem = ilen(self.handgrenades())
+        self.send_chat("{} grenade(s) left".format(rem))
+
+        if self.grenades <= 0 or rem <= 0:
+            self.sync()
 
 assert MilsimConnection.on_connect is FeatureConnection.on_connect
