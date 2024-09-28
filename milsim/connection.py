@@ -646,6 +646,9 @@ class MilsimConnection(FeatureConnection):
         if not self.alive():
             return
 
+        if self.tool == SPADE_TOOL and contained.value == DESTROY_BLOCK:
+            self.blocks = min(50, self.blocks + 1)
+
         # Everything else is handled server-side.
         if contained.value != BUILD_BLOCK:
             return
