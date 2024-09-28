@@ -258,6 +258,26 @@ def gc(connection):
 
     return str(collect())
 
+@command()
+def say(connection, *w):
+    """
+    Say something in chat
+    /say <text>
+    """
+
+    protocol = connection.protocol
+
+    contained       = loaders.ChatMessage()
+    contained.value = ' '.join(w)
+
+    if isinstance(connection, protocol.connection_class):
+        contained.player_id = connection.player_id
+        contained.chat_type = CHAT_ALL
+    else:
+        contained.chat_type = CHAT_SYSTEM
+
+    protocol.broadcast_contained(contained)
+
 def apply_script(protocol, connection, config):
     from piqueserver.console import ConsoleInput
 
