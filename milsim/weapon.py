@@ -53,7 +53,7 @@ class ABCWeapon(Tool):
 
     @property
     def mass(self):
-        return self._mass + self.magazine.mass + getattr(self.item_underbarrel, 'mass', 0)
+        return self.basemass + self.magazine.mass + getattr(self.item_underbarrel, 'mass', 0)
 
     def is_empty(self, tolerance = 0):
         return self.magazine.current() <= 0
@@ -205,20 +205,20 @@ class RifleMagazine(BoxMagazine):
     pass
 
 class R762Magazine(RifleMagazine):
-    _mass     = 0.227
-    _name     = "AA762R02"
+    basemass  = 0.227
+    basename  = "AA762R02"
     capacity  = 10
     cartridge = R762x54mm
 
 class HEIMagazine(RifleMagazine):
-    _mass     = 0.150
-    _name     = "AA762HEI"
+    basemass  = 0.150
+    basename  = "AA762HEI"
     capacity  = 5
     cartridge = HEI762x54mm
 
 class Rifle(DetachableMagazineItem):
-    _mass                  = 4.220
     name                   = "Rifle"
+    basemass               = 4.220
     delay                  = 0.50
     reload_time            = 2.5
     magazine_class         = RifleMagazine
@@ -229,14 +229,14 @@ class SMGMagazine(BoxMagazine):
     pass
 
 class ParabellumMagazine(SMGMagazine):
-    _mass     = 0.160
-    _name     = "MP5MAG30"
+    basemass  = 0.160
+    basename  = "MP5MAG30"
     capacity  = 30
     cartridge = Parabellum
 
 class SMG(DetachableMagazineItem):
-    _mass                  = 3.600
     name                   = "SMG"
+    basemass               = 3.600
     delay                  = 0.11
     reload_time            = 2.5
     magazine_class         = SMGMagazine
@@ -247,8 +247,8 @@ class ShotgunMagazine(TubularMagazine):
     capacity = 6
 
 class Shotgun(IntegralMagazineItem):
-    _mass             = 3.600
     name              = "Shotgun"
+    basemass          = 3.600
     delay             = 1.00
     reload_time       = 0.5
     cartridge_class   = Shotshell

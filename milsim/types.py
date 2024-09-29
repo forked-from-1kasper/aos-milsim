@@ -475,6 +475,8 @@ class Magazine(Item):
 
 class BoxMagazine(Magazine):
     continuous = False
+    basemass   = NotImplemented
+    basename   = NotImplemented
     cartridge  = NotImplemented
 
     def __init__(self):
@@ -495,11 +497,11 @@ class BoxMagazine(Magazine):
 
     @property
     def mass(self):
-        return self._mass + self._current * self.cartridge.totmass
+        return self.basemass + self._current * self.cartridge.totmass
 
     @property
     def name(self):
-        return f"{self._name} ({self._current})"
+        return f"{self.basename} ({self._current})"
 
 class TubularMagazine(Magazine):
     continuous = True

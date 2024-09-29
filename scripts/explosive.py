@@ -5,8 +5,8 @@ from pyspades.common import Vertex3
 from piqueserver.commands import command, player_only
 
 from milsim.common import alive_only, apply_item, has_item, take_item, take_items
-from milsim.types import TileEntity, Item
 from milsim.blast import sendGrenadePacket
+from milsim.types import TileEntity, Item
 
 class Explosive(TileEntity):
     Δx = +0.5
@@ -14,8 +14,8 @@ class Explosive(TileEntity):
     Δz = -0.5
 
     def __init__(self, protocol, position, player_id):
-        self.player_id = player_id
         TileEntity.__init__(self, protocol, position)
+        self.player_id = player_id
 
     def explode(self):
         self.protocol.remove_tile_entity(*self.position)
@@ -39,6 +39,8 @@ class Charge(Explosive):
     on_destroy   = Explosive.explode
 
 class ExplosiveItem(Item):
+    tile_entity_class = NotImplemented
+
     def apply(self, player):
         if loc := player.world_object.cast_ray(7):
             x, y, z = loc
@@ -53,15 +55,15 @@ class ExplosiveItem(Item):
 
         protocol = player.protocol
         protocol.add_tile_entity(
-            self.tileEntityClass, protocol, (x, y, z), player.player_id
+            self.tile_entity_class, protocol, (x, y, z), player.player_id
         )
 
         return "{} placed at ({}, {}, {})".format(self.name, x, y, z)
 
 class LandmineItem(ExplosiveItem):
-    tileEntityClass = Landmine
-    name            = "Landmine"
-    mass            = 0.550
+    tile_entity_class = Landmine
+    name              = "Landmine"
+    mass              = 0.550
 
     def spawn(self, player, x, y, z):
         if e := player.protocol.get_tile_entity(x, y, z):
@@ -104,9 +106,9 @@ class DetonatorItem(Item):
         self.targets = []
 
 class ChargeItem(ExplosiveItem):
-    tileEntityClass = Charge
-    name            = "Charge"
-    mass            = 0.700
+    tile_entity_class = Charge
+    name              = "Charge"
+    mass              = 0.700
 
     def spawn(self, player, x, y, z):
         if player.protocol.get_tile_entity(x, y, z) is not None:

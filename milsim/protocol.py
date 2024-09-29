@@ -6,7 +6,7 @@ import os
 from twisted.internet import reactor, threads
 from twisted.logger import Logger
 
-from pyspades import contained as loaders
+import pyspades.contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
