@@ -18,57 +18,57 @@ def cube(u, v):
 
     return product(edge(x1, x2), edge(y1, y2), edge(z1, z2))
 
-def cast_ray(conn, limit = 128):
-    if o := conn.world_object:
+def cast_ray(connection, limit = 128):
+    if o := connection.world_object:
         return o.cast_ray(limit)
 
 @command('cast', admin_only = True)
 @player_only
-def cast(conn):
+def cast(connection):
     """
     Prints the coordinates of the block under sight
     /cast
     """
-    if loc := cast_ray(conn):
+    if loc := cast_ray(connection):
         return f"{loc}"
 
 @command('/pos1', admin_only = True)
 @player_only
-def pos1(conn):
+def pos1(connection):
     """
     Selects the first block
     //pos1
     """
-    if loc := cast_ray(conn):
-        conn.pos1 = loc
+    if loc := cast_ray(connection):
+        connection.pos1 = loc
         return "First position set to {}".format(loc)
 
 @command('/pos2', admin_only = True)
 @player_only
-def pos2(conn):
+def pos2(connection):
     """
     Selects the second block
     //pos2
     """
-    if loc := cast_ray(conn):
-        conn.pos2 = loc
+    if loc := cast_ray(connection):
+        connection.pos2 = loc
         return "Second position set to {}".format(loc)
 
 @command('/sel', admin_only = True)
 @player_only
-def sel(conn):
+def sel(connection):
     """
     Prints the coordinates of the selected blocks
     //sel
     """
-    if conn.pos1 and conn.pos2:
-        return "{} -> {}".format(conn.pos1, conn.pos2)
+    if connection.pos1 and connection.pos2:
+        return "{} -> {}".format(connection.pos1, connection.pos2)
     else:
         return "No active selection."
 
-def blockAction(conn, value, pos1, pos2):
+def blockAction(connection, value, pos1, pos2):
     contained           = loaders.BlockAction()
-    contained.player_id = conn.player_id
+    contained.player_id = connection.player_id
     contained.value     = value
 
     N = 0
@@ -79,16 +79,16 @@ def blockAction(conn, value, pos1, pos2):
         contained.z = z
 
         if value == DESTROY_BLOCK:
-            if conn.protocol.map.destroy_point(x, y, z):
-                conn.protocol.broadcast_contained(contained)
-                conn.on_block_removed(x, y, z)
+            if connection.protocol.map.destroy_point(x, y, z):
+                connection.protocol.broadcast_contained(contained)
+                connection.on_block_removed(x, y, z)
 
                 N += 1
 
         if value == BUILD_BLOCK:
-            conn.protocol.map.set_point(x, y, z, conn.color)
-            conn.protocol.broadcast_contained(contained)
-            conn.on_block_build(x, y, z)
+            connection.protocol.map.set_point(x, y, z, connection.color)
+            connection.protocol.broadcast_contained(contained)
+            connection.on_block_build(x, y, z)
 
             N += 1
 
@@ -96,50 +96,49 @@ def blockAction(conn, value, pos1, pos2):
 
 @command('/set', admin_only = True)
 @player_only
-def set_block(conn, action = "1"):
+def set_block(connection, action = "1"):
     """
     Destroys or builds in the selected region
     //set (0|1)
     """
-    if not (conn.pos1 and conn.pos2): return
-
-    value = DESTROY_BLOCK if action == "0" else BUILD_BLOCK
-    return blockAction(conn, value, conn.pos1, conn.pos2)
+    if connection.pos1 and connection.pos2:
+        value = DESTROY_BLOCK if action == "0" else BUILD_BLOCK
+        return blockAction(connection, value, connection.pos1, connection.pos2)
 
 @command(admin_only = True)
 @player_only
-def elevate(conn):
+def elevate(connection):
     """
     Teleports to the maximum available height
     /elevate
     """
-    if not conn.hp: return
+    if not connection.hp: return
 
-    x, y, _ = conn.world_object.position.get()
-    z = conn.protocol.map.get_z(x, y) - 3
+    x, y, _ = connection.world_object.position.get()
+    z = connection.protocol.map.get_z(x, y) - 3
 
-    conn.set_location_safe((x, y, z))
+    connection.set_location_safe((x, y, z))
 
 @command(admin_only = True)
 @player_only
-def get_z(conn):
+def get_z(connection):
     """
     Returns the Z-coordinate of the first block underfoot
     /get_z
     """
-    x, y, _ = conn.world_object.position.get()
-    return f"z = {conn.protocol.map.get_z(x, y)}"
+    x, y, _ = connection.world_object.position.get()
+    return f"z = {connection.protocol.map.get_z(x, y)}"
 
 @command()
 @player_only
-def printcolor(conn):
+def printcolor(connection):
     """
     Print the selected color
     /printcolor
     """
 
-    if conn.color is not None:
-        r, g, b = conn.color
+    if connection.color is not None:
+        r, g, b = connection.color
         return f"#{r:02x}{g:02x}{b:02x}"
 
 def randbyte():
@@ -158,7 +157,7 @@ class StressPacket:
 
 @command()
 @player_only
-def stress(conn, pid = None, length = None):
+def stress(connection, pid = None, length = None):
     """
     Sends random data with a given packet id.
     /stress [packet id] [packet length]
@@ -179,20 +178,20 @@ def stress(conn, pid = None, length = None):
     except ValueError:
         return "Packet length expected to be a positive integer."
 
-    conn.send_contained(StressPacket(pid, length))
+    connection.send_contained(StressPacket(pid, length))
 
 discord     = config.section("discord")
 invite      = discord.option("invite", "<no invite>").get()
 description = discord.option("description", "Discord").get()
 
 @command()
-def discord(conn):
+def discord(connection):
     """
     Print the information about server's discord.
     /discord
     """
 
-    return "%s: %s" % (description, invite)
+    return "{}: {}".format(description, invite)
 
 mailbox   = config.section("mailbox")
 mailfile  = mailbox.option("file", "mailbox.txt").get()
@@ -200,7 +199,7 @@ maildelay = mailbox.option("delay", 90).get()
 
 @command('mail', 'admin')
 @player_only
-def mail(conn, *w):
+def mail(connection, *w):
     """
     Leaves a message to the server administrator
     /mail <your message>
@@ -211,17 +210,17 @@ def mail(conn, *w):
     if not message:
         return "Do not send empty messages (admins can see your IP)."
 
-    ip, port = conn.address
+    ip, port = connection.address
 
     timestamp = time()
 
-    dt = timestamp - conn.lastmail
+    dt = timestamp - connection.lastmail
     if dt < maildelay:
         return "Do not write too often: wait %.1f seconds." % (maildelay - dt)
 
     with open(mailfile, 'a') as fout:
-        fout.write("%.2f: %s (%s): %s\n" % (timestamp, conn.name, ip, message))
-        conn.lastmail = timestamp
+        fout.write("{:.2f}: {} ({}): {}\n".format(timestamp, connection.name, ip, message))
+        connection.lastmail = timestamp
         return "Message sent."
 
 @command('eval', admin_only = True)
