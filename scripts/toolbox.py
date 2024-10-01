@@ -6,17 +6,18 @@ from math import inf
 from piqueserver.commands import command, player_only, join_arguments
 from piqueserver.config import config
 
+from pyspades.common import get_color, make_color
 from pyspades import contained as loaders
 from pyspades.constants import *
 
-def edge(a, b):
+def irange(a, b):
     return range(min(a, b), max(a, b) + 1)
 
-def cube(u, v):
+def icube(u, v):
     x1, y1, z1 = u
     x2, y2, z2 = v
 
-    return product(edge(x1, x2), edge(y1, y2), edge(z1, z2))
+    return product(irange(x1, x2), irange(y1, y2), irange(z1, z2))
 
 def cast_ray(connection, limit = 128):
     if o := connection.world_object:
@@ -64,70 +65,118 @@ def sel(connection):
     if connection.pos1 and connection.pos2:
         return "{} -> {}".format(connection.pos1, connection.pos2)
     else:
-        return "No active selection."
+        return "No active selection"
 
-def blockAction(connection, value, pos1, pos2):
+def newSetColor(player_id, color):
+    contained           = loaders.SetColor()
+    contained.player_id = player_id
+    contained.value     = make_color(*color)
+
+    return contained
+
+def sendBuildBlock(connection, color, region):
+    protocol = connection.protocol
+    M = protocol.map
+
+    protocol.broadcast_contained(newSetColor(connection.player_id, color))
+
     contained           = loaders.BlockAction()
     contained.player_id = connection.player_id
-    contained.value     = value
+    contained.value     = BUILD_BLOCK
 
     N = 0
 
-    for x, y, z in cube(pos1, pos2):
+    for x, y, z in region:
         contained.x = x
         contained.y = y
         contained.z = z
 
-        if value == DESTROY_BLOCK:
-            if connection.protocol.map.destroy_point(x, y, z):
-                connection.protocol.broadcast_contained(contained)
-                connection.on_block_removed(x, y, z)
+        protocol.broadcast_contained(contained)
 
-                N += 1
+        M.set_point(x, y, z, color)
+        connection.on_block_build(x, y, z)
 
-        if value == BUILD_BLOCK:
-            connection.protocol.map.set_point(x, y, z, connection.color)
-            connection.protocol.broadcast_contained(contained)
-            connection.on_block_build(x, y, z)
+        N += 1
 
-            N += 1
+    protocol.broadcast_contained(newSetColor(connection.player_id, connection.color))
 
-    return "Set {} blocks.".format(N)
+    return N
+
+def sendDestroyBlock(connection, region):
+    protocol = connection.protocol
+    M = protocol.map
+
+    contained           = loaders.BlockAction()
+    contained.player_id = connection.player_id
+    contained.value     = DESTROY_BLOCK
+
+    N = 0
+
+    for x, y, z in region:
+        contained.x = x
+        contained.y = y
+        contained.z = z
+
+        protocol.broadcast_contained(contained)
+
+        M.destroy_point(x, y, z)
+        connection.on_block_removed(x, y, z)
+
+        N += 1
+
+    return N
 
 @command('/set', admin_only = True)
 @player_only
-def set_block(connection, action = "1"):
+def set_block(connection, argval = None):
     """
-    Destroys or builds in the selected region
-    //set (0|1)
+    Fill the selected region with the given color
+    //set or //set RRGGBB
     """
+    if argval is None:
+        color = connection.color
+    else:
+        color = get_color(int(argval, 16))
+
     if connection.pos1 and connection.pos2:
-        value = DESTROY_BLOCK if action == "0" else BUILD_BLOCK
-        return blockAction(connection, value, connection.pos1, connection.pos2)
+        N = sendBuildBlock(connection, color, icube(connection.pos1, connection.pos2))
+        return "Set {} block(s)".format(N)
+
+@command('/del', admin_only = True)
+@player_only
+def del_block(connection):
+    """
+    Destroy selected region
+    //del
+    """
+
+    if connection.pos1 and connection.pos2:
+        N = sendDestroyBlock(connection, icube(connection.pos1, connection.pos2))
+        return "Removed {} block(s)".format(N)
 
 @command(admin_only = True)
 @player_only
 def elevate(connection):
     """
-    Teleports to the maximum available height
+    Teleport to the maximum available height
     /elevate
     """
-    if not connection.hp: return
+    if wo := connection.world_object:
+        x, y, _ = connection.world_object.position.get()
+        z = connection.protocol.map.get_z(x, y) - 3
 
-    x, y, _ = connection.world_object.position.get()
-    z = connection.protocol.map.get_z(x, y) - 3
-
-    connection.set_location_safe((x, y, z))
+        connection.set_location_safe((x, y, z))
 
 @command(admin_only = True)
 @player_only
-def get_z(connection):
+def elevation(connection):
     """
     Returns the Z-coordinate of the first block underfoot
-    /get_z
+    /elevation
     """
-    x, y, _ = connection.world_object.position.get()
-    return f"z = {connection.protocol.map.get_z(x, y)}"
+    if wo := connection.world_object:
+        x, y, z = wo.position.get()
+        return f"z = {connection.protocol.map.get_z(x, y)}"
 
 @command()
 @player_only
@@ -159,7 +208,7 @@ class StressPacket:
 @player_only
 def stress(connection, pid = None, length = None):
     """
-    Sends random data with a given packet id.
+    Sends random data with a given packet id
     /stress [packet id] [packet length]
     """
 
@@ -167,7 +216,7 @@ def stress(connection, pid = None, length = None):
         if pid is not None:
             pid = int(pid)
     except ValueError:
-        return "Packet id expected to be an integer."
+        return "Packet id expected to be an integer"
 
     try:
         if length is not None:
@@ -176,7 +225,7 @@ def stress(connection, pid = None, length = None):
             if length < 0:
                 raise ValueError
     except ValueError:
-        return "Packet length expected to be a positive integer."
+        return "Packet length expected to be a positive integer"
 
     connection.send_contained(StressPacket(pid, length))
 
@@ -187,7 +236,7 @@ description = discord.option("description", "Discord").get()
 @command()
 def discord(connection):
     """
-    Print the information about server's discord.
+    Print the information about server's discord
     /discord
     """
 
@@ -205,23 +254,32 @@ def mail(connection, *w):
     /mail <your message>
     """
 
-    message = join_arguments(w)
+    message = join_arguments(w).strip()
 
-    if not message:
-        return "Do not send empty messages (admins can see your IP)."
+    if len(message) <= 0:
+        return "Do not send empty messages (admins can see your IP)"
 
     ip, port = connection.address
 
     timestamp = time()
 
-    dt = timestamp - connection.lastmail
+    dt = timestamp - getattr(connection, 'lastmail', -inf)
+
     if dt < maildelay:
-        return "Do not write too often: wait %.1f seconds." % (maildelay - dt)
+        return "Do not write too often: wait {:.1f} seconds".format(maildelay - dt)
 
     with open(mailfile, 'a') as fout:
-        fout.write("{:.2f}: {} ({}): {}\n".format(timestamp, connection.name, ip, message))
+        fmtd = "{timestamp:.2f}: {nickname} ({ip}): {message}\n".format(
+            timestamp = timestamp,
+            nickname  = connection.name,
+            ip        = ip,
+            message   = message
+        )
+
+        fout.write(fmtd)
         connection.lastmail = timestamp
-        return "Message sent."
+
+        return "Message sent"
 
 @command('eval', admin_only = True)
 def c_eval(connection, *w):
@@ -293,8 +351,6 @@ def apply_script(protocol, connection, config):
             exec(stmt, globals(), self.variables)
 
         def on_connect(self):
-            self.lastmail = -inf
-
             self.chat_limiter._seconds = 1
 
             self.pos1 = None
