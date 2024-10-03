@@ -26,7 +26,7 @@ class StressPacket:
 @player_only
 def stress(connection, pid = None, length = None):
     """
-    Sends random data with a given packet id
+    Send random data with a given packet id
     /stress [packet id] [packet length]
     """
 
@@ -68,7 +68,7 @@ maildelay = mailbox.option("delay", 90).get()
 @player_only
 def mail(connection, *w):
     """
-    Leaves a message to the server administrator
+    Leave a message to the server administrator
     /mail <your message>
     """
 
@@ -102,7 +102,7 @@ def mail(connection, *w):
 @command('eval', admin_only = True)
 def c_eval(connection, *w):
     """
-    Evaluates arbitrary Python code
+    Evaluate arbitrary Python code
     /eval <code>
     """
 
@@ -114,7 +114,7 @@ def c_eval(connection, *w):
 @command('exec', admin_only = True)
 def c_exec(connection, *w):
     """
-    Executes arbitrary Python code
+    Execute arbitrary Python code
     /exec <code>
     """
 
