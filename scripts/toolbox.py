@@ -54,7 +54,7 @@ description = discord.option("description", "Discord").get()
 @command()
 def discord(connection):
     """
-    Print the information about server's discord
+    Information on where to find administrators in Discord
     /discord
     """
 
@@ -68,7 +68,7 @@ maildelay = mailbox.option("delay", 90).get()
 @player_only
 def mail(connection, *w):
     """
-    Leave a message to the server administrator
+    Leave a message to the server administrator even if he is offline
     /mail <your message>
     """
 
