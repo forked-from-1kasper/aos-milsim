@@ -3,7 +3,7 @@ from time import monotonic
 from random import choice
 import os
 
-from twisted.internet import reactor, threads
+from twisted.internet import threads
 from twisted.logger import Logger
 
 import pyspades.contained as loaders
@@ -43,7 +43,7 @@ class MilsimProtocol(FeatureProtocol):
 
         self.environment = None
         self.engine      = Engine(self)
-        self.time        = reactor.seconds()
+        self.time        = monotonic()
 
         self.tile_entities = {}
         self.item_entities = {}
@@ -87,13 +87,13 @@ class MilsimProtocol(FeatureProtocol):
                 yield player
 
     def take_player(self, player_id):
-        if player_id not in self.players:
-            ids = list(self.players.keys())
-
-            if len(ids) > 0:
-                return self.players[choice(ids)]
+        if player := self.players.get(player_id):
+            return player
         else:
-            return self.players[player_id]
+            ids = list(self.players.keys())
+            if len(ids) <= 0: return
+
+            return self.players[choice(ids)]
 
     def add_tile_entity(self, klass, *w, **kw):
         entity = klass(*w, **kw)
@@ -127,8 +127,8 @@ class MilsimProtocol(FeatureProtocol):
             z2 = self.map.get_z(x, y, z1)
             if z1 == z2: return
 
-            self.new_item_entity(x, y, z2).extend(o)
             self.remove_item_entity(x, y, z1)
+            self.new_item_entity(x, y, z2).extend(o)
 
     def clear_entities(self):
         self.tile_entities.clear()
@@ -151,17 +151,6 @@ class MilsimProtocol(FeatureProtocol):
         o.apply(self.engine)
 
         self.update_weather()
-
-    def on_engine_update(self):
-        t = reactor.seconds()
-        dt = t - self.time
-
-        if self.environment is not None:
-            if self.environment.weather.update(dt):
-                self.update_weather()
-
-        self.engine.step(self.time, t)
-        self.time = t
 
     def on_block_build(self, x, y, z):
         self.engine[x, y, z] = self.build_material
@@ -222,15 +211,22 @@ class MilsimProtocol(FeatureProtocol):
         log.info("Environment loading took {duration:.2f} s", duration = t2 - t1)
 
     def on_world_update(self):
-        self.on_engine_update()
+        t = monotonic()
+
+        if o := self.environment:
+            dt = t - self.time
+
+            if o.weather.update(dt):
+                self.update_weather()
+
+        self.engine.step(self.time, t)
+        self.time = t
 
         for x, y, z in islice(onDeleteQueue(), 50):
             if e := self.get_tile_entity(x, y, z):
                 e.on_destroy()
 
             self.drop_item_entity(x, y, z)
-
-        t = reactor.seconds()
 
         for player in self.living():
             dt = t - player.last_hp_update

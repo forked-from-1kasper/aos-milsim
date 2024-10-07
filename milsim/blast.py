@@ -2,8 +2,6 @@ from math import sqrt, pi, sin, cos
 from random import choice, uniform
 from time import sleep
 
-from twisted.internet import reactor
-
 from pyspades.collision import distance_3d_vector
 from pyspades.constants import GRENADE_KILL
 
@@ -49,7 +47,6 @@ def damage(M, o, r, inner, outer):
 
 def explode(inner, outer, connection, r):
     protocol = connection.protocol
-    timestamp = reactor.seconds()
 
     for player in protocol.living():
         D = damage(protocol.map, player.world_object, r, inner, outer)

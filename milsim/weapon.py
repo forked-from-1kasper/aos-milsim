@@ -1,6 +1,5 @@
+from time import monotonic
 from math import inf
-
-from twisted.internet import reactor
 
 from pyspades.constants import *
 
@@ -69,7 +68,7 @@ class ABCWeapon(Tool):
             return
 
         if self.can_reload():
-            self.weapon_reload_timer = reactor.seconds()
+            self.weapon_reload_timer = monotonic()
             self.reloading = True
 
     def update(self, t):

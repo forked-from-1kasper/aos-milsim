@@ -1,6 +1,7 @@
 from random import choice, uniform
 from itertools import product
 from math import floor, inf
+from time import monotonic
 
 from twisted.internet import reactor
 
@@ -225,7 +226,7 @@ class MilsimConnection(FeatureConnection):
             jump, crouch, sneak, sprint = retval
 
         if self.world_object.sprint and not sprint:
-            self.last_sprint = reactor.seconds()
+            self.last_sprint = monotonic()
 
         if self.world_object.sneak != sneak:
             if sneak:
@@ -266,7 +267,7 @@ class MilsimConnection(FeatureConnection):
         self.last_sprint      = -inf
         self.last_tool_update = -inf
 
-        self.last_hp_update = reactor.seconds()
+        self.last_hp_update = monotonic()
         self.body.reset()
 
         self.hp       = 100
@@ -301,7 +302,7 @@ class MilsimConnection(FeatureConnection):
 
     def set_tool(self, tool):
         self.tool             = tool
-        self.last_tool_update = reactor.seconds()
+        self.last_tool_update = monotonic()
 
         if tool == SPADE_TOOL:
             self.tool_object = self.spade_object
@@ -499,7 +500,7 @@ class MilsimConnection(FeatureConnection):
             # Reset tool back for the player.
             self.send_contained(self.newSetTool())
             # Needed to keep server synchronized with the player’s UI.
-            self.last_tool_update = reactor.seconds()
+            self.last_tool_update = monotonic()
         else:
             self.set_tool(contained.value)
 
