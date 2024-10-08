@@ -154,7 +154,7 @@ def use_detonator(conn):
 
 @command('takecharge', 'tc')
 @alive_only
-def take_charge(conn, n):
+def take_charge(conn, n = 1):
     """
     Try to take a given number of charges and a detonator
     /tc [n] or /takecharge
