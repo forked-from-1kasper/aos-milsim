@@ -1,4 +1,5 @@
 from math import floor, inf, isinf, isnan
+from time import monotonic
 from random import choice
 
 from twisted.internet.error import AlreadyCalled, AlreadyCancelled
@@ -42,7 +43,7 @@ class ExplosiveBelt:
         if fuse < 0 or fuse > kamikaze_max_fuse:
             return "Delay should be non-negative and less than {}.".format(kamikaze_max_fuse)
 
-        dt = reactor.seconds() - self.last
+        dt = monotonic() - self.last
 
         if dt < kamikaze_delay:
             return "Wait {:.1f} seconds.".format(kamikaze_delay - dt)
@@ -56,11 +57,11 @@ class ExplosiveBelt:
             except (AlreadyCalled, AlreadyCancelled):
                 pass
 
-            self.last  = reactor.seconds()
+            self.last  = monotonic()
             self.defer = None
 
     def callback(self):
-        self.last  = reactor.seconds()
+        self.last  = monotonic()
         self.defer = None
 
         if self.alive() and kamikaze_message:

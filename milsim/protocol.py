@@ -296,11 +296,11 @@ class MilsimProtocol(FeatureProtocol):
             rule = hasTraceExtension
         )
 
-    def onDestroy(self, pid, x, y, z):
-        if pid not in self.players:
+    def onDestroy(self, player_id, x, y, z):
+        if player_id not in self.players:
             return
 
-        player = self.players[pid]
+        player = self.players[player_id]
 
         count = self.map.destroy_point(x, y, z)
 
@@ -310,7 +310,7 @@ class MilsimProtocol(FeatureProtocol):
             contained.y         = y
             contained.z         = z
             contained.value     = DESTROY_BLOCK
-            contained.player_id = pid
+            contained.player_id = player_id
 
             self.broadcast_contained(contained, save = True)
             self.update_entities()
