@@ -99,7 +99,7 @@ class Drone:
             self.report("Don't see {}. Awaiting for further instructions".format(target.name))
             return self.free()
 
-        if not target.alive():
+        if target.dead():
             self.callback = reactor.callLater(drone_rate, self.ping)
             return
 

@@ -107,6 +107,9 @@ class MilsimConnection(FeatureConnection):
         return self.team is not None and not self.team.spectator and \
                self.world_object is not None and not self.world_object.dead
 
+    def dead(self):
+        return not self.alive()
+
     def moving(self):
         return self.world_object.up or self.world_object.down or \
                self.world_object.left or self.world_object.right
@@ -336,7 +339,7 @@ class MilsimConnection(FeatureConnection):
         return False
 
     def take_flag(self):
-        if not self.alive(): return
+        if self.dead(): return
 
         flag = self.team.other.flag
 
@@ -465,8 +468,7 @@ class MilsimConnection(FeatureConnection):
             P.fractured = P.fractured or fractured
 
     def _on_fall(self, damage):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         retval = self.on_fall(damage)
 
@@ -490,8 +492,7 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.SetTool)
     def on_tool_change_recieved(self, contained):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         if self.tool == contained.value:
             return
@@ -506,8 +507,7 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.WeaponInput)
     def on_weapon_input_recieved(self, contained):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         primary   = contained.primary
         secondary = contained.secondary
@@ -541,8 +541,7 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.HitPacket)
     def on_hit_recieved(self, contained):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         if contained.value == MELEE and self.spade_object.enabled():
             if player := self.protocol.players.get(contained.player_id):
@@ -627,8 +626,7 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.BlockLine)
     def on_block_line_recieved(self, contained):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         x1, y1, z1 = contained.x1, contained.y1, contained.z1
         x2, y2, z2 = contained.x2, contained.y2, contained.z2
@@ -644,8 +642,7 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.BlockAction)
     def on_block_action_recieved(self, contained):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         if self.tool == SPADE_TOOL and contained.value == DESTROY_BLOCK:
             self.blocks = min(50, self.blocks + 1)
@@ -709,8 +706,7 @@ class MilsimConnection(FeatureConnection):
 
     @register_packet_handler(loaders.GrenadePacket)
     def on_grenade_recieved(self, contained):
-        if not self.alive():
-            return
+        if self.dead(): return
 
         self.grenades -= 1
 
