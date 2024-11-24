@@ -419,6 +419,17 @@ def sync(connection):
     """
     connection.sync()
 
+@command('togglespade', 'ts')
+@player_only
+def togglespade(connection):
+    """
+    Toggle spade friendly fire
+    /togglespade /ts
+    """
+
+    connection.spade_friendly_fire = not connection.spade_friendly_fire
+    return "Spade friendly fire is {} now".format("enabled" if connection.spade_friendly_fire else "disabled")
+
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):
         def __init__(self, *w, **kw):

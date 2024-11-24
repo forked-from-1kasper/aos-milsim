@@ -53,6 +53,8 @@ class MilsimConnection(FeatureConnection):
 
         self.previous_floor_position = None
 
+        self.spade_friendly_fire = False
+
     def on_reload_complete(self):
         pass
 
@@ -441,10 +443,12 @@ class MilsimConnection(FeatureConnection):
 
     def hit(self, value, hit_by = None, kill_type = WEAPON_KILL, limb = Limb.torso,
             venous = False, arterial = False, fractured = False):
-        if hit_by is not None:
-            if self.team is hit_by.team:
-                if kill_type == MELEE_KILL: return
-                if not self.protocol.friendly_fire: return
+        if hit_by is not None and hit_by.team is self.team:
+            if self.protocol.friendly_fire is False:
+                return
+
+            if kill_type == MELEE_KILL and hit_by.spade_friendly_fire is False:
+                return
 
         P = self.body[limb]
 
