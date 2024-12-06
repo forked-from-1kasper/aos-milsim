@@ -4,6 +4,7 @@ from math import floor, inf
 from time import monotonic
 
 from twisted.internet import reactor
+from twisted.logger import Logger
 
 from pyspades.collision import collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
@@ -36,6 +37,8 @@ fracture_warning = {
 }
 
 bleeding_warning = "You're bleeding."
+
+log = Logger()
 
 class MilsimConnection(FeatureConnection):
     body_mass = 70
@@ -263,6 +266,14 @@ class MilsimConnection(FeatureConnection):
             map_on_flag_capture(self)
 
         FeatureConnection.on_flag_capture(self)
+
+    def on_client_info(self):
+        log.info("{address} connected with {client}",
+            address  = self.address[0],
+            client   = self.client_string
+        )
+
+        FeatureConnection.on_client_info(self)
 
     def on_spawn(self, pos):
         self.previous_floor_position = self.floor()
