@@ -316,7 +316,7 @@ class MilsimConnection(FeatureConnection):
 
         FeatureConnection.reset(self)
 
-    def set_tool(self, tool):
+    def set_tool(self, tool, sender = None):
         self.tool             = tool
         self.last_tool_update = monotonic()
 
@@ -335,7 +335,7 @@ class MilsimConnection(FeatureConnection):
         if self.filter_visibility_data or self.filter_animation_data:
             return
 
-        self.protocol.broadcast_contained(self.newSetTool(), save = True)
+        self.protocol.broadcast_contained(self.newSetTool(), sender = sender, save = True)
 
     def on_tool_rapid_hack(self, tool):
         t1, t2 = self.last_block, reactor.seconds()
@@ -518,7 +518,7 @@ class MilsimConnection(FeatureConnection):
             # Needed to keep server synchronized with the player’s UI.
             self.last_tool_update = monotonic()
         else:
-            self.set_tool(contained.value)
+            self.set_tool(contained.value, sender = self)
 
     @register_packet_handler(loaders.WeaponInput)
     def on_weapon_input_recieved(self, contained):
