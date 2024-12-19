@@ -103,7 +103,7 @@ class MilsimConnection(FeatureConnection):
             # make GRENADE_TOOL unavailable to user
             if self.weapon_object.enabled():
                 self.set_tool(WEAPON_TOOL)
-            elif self.block_tool.enabled():
+            elif self.block_object.enabled():
                 self.set_tool(BLOCK_TOOL)
             else:
                 self.set_tool(SPADE_TOOL)
