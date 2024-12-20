@@ -173,6 +173,9 @@ def apply_script(protocol, connection, config):
 
             connection.on_connect(self)
 
+        def existing_player_sent(self):
+            return self.name is not None and self.team is not None
+
     class ToolboxProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
@@ -183,5 +186,8 @@ def apply_script(protocol, connection, config):
 
         def format_exception(self, exc):
             return "{}: {}".format(type(exc).__name__, exc)
+
+        def get_player_count(self):
+            return sum(connection.existing_player_sent() for connection in self.connections.values())
 
     return ToolboxProtocol, ToolboxConnection
