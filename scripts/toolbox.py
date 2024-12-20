@@ -176,6 +176,12 @@ def apply_script(protocol, connection, config):
         def existing_player_sent(self):
             return self.name is not None and self.team is not None
 
+        # TODO: this *should* be fixed in the piqueserver itself
+        def on_reset(self):
+            self.kills = 0
+
+            connection.on_reset(self)
+
     class ToolboxProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
