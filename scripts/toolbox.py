@@ -176,6 +176,11 @@ def apply_script(protocol, connection, config):
         def existing_player_sent(self):
             return self.name is not None and self.team is not None
 
+        def on_login(self, name):
+            self.protocol.update_master()
+
+            connection.on_login(self, name)
+
         # TODO: this *should* be fixed in the piqueserver itself
         def on_reset(self):
             self.kills = 0
