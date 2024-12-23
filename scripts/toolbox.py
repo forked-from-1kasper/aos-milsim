@@ -153,6 +153,25 @@ def say(connection, *w):
 
     protocol.broadcast_contained(contained)
 
+from pyspades.master import MasterPool
+
+# TODO: remove this
+master_pool_update_player_count = MasterPool.update_player_count
+master_pool_on_master_connect = MasterPool.on_master_connect
+
+def update_player_count(self, count):
+    master_pool_update_player_count(self, count)
+
+    self.player_count = count
+
+def on_master_connect(self, client):
+    master_pool_on_master_connect(self, client)
+
+    client.update_player_count(getattr(self, 'player_count', 0))
+
+MasterPool.update_player_count = update_player_count
+MasterPool.on_master_connect = on_master_connect
+
 def apply_script(protocol, connection, config):
     from piqueserver.console import ConsoleInput
 
