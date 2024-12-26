@@ -458,9 +458,6 @@ class MilsimConnection(FeatureConnection):
             if self.protocol.friendly_fire is False:
                 return
 
-            if kill_type == MELEE_KILL and hit_by.spade_friendly_fire is False:
-                return
-
         P = self.body[limb]
 
         P.hit(value)
@@ -558,8 +555,17 @@ class MilsimConnection(FeatureConnection):
     def on_hit_recieved(self, contained):
         if self.dead(): return
 
-        if contained.value == MELEE and self.spade_object.enabled():
+        if contained.value == MELEE and self.tool == SPADE_TOOL and self.spade_object.enabled():
             if player := self.protocol.players.get(contained.player_id):
+                if player.dead(): return
+
+                if self.team is player.team and self.spade_friendly_fire is False:
+                    return
+
+                x, y, z = player.world_object.position.get()
+                if not self.world_object.can_see(x, y, z):
+                    return
+
                 damage = floor(uniform(SHOVEL_GUARANTEED_DAMAGE, 100))
 
                 player.hit(
