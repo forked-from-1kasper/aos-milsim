@@ -17,8 +17,8 @@ from pyspades.constants import *
 from piqueserver.player import FeatureConnection
 
 from milsim.items import BandageItem, TourniquetItem, SplintItem, HandgrenadeItem, F1GrenadeItem
+from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3
 from milsim.blast import sendGrenadePacket, explode, flashbang_effect
-from milsim.common import grenade_zone, TNT, gram, ilen, iempty
 from milsim.types import Inventory, Body, randbool, logistic
 from milsim.constants import Limb
 
@@ -129,18 +129,14 @@ class MilsimConnection(FeatureConnection):
 
     def floor(self):
         if o := self.world_object:
+            x, y, z = floor3(o.position)
+
             Δz = 2 if o.crouch else 3
-            return (
-                floor(o.position.x),
-                floor(o.position.y),
-                floor(o.position.z) + Δz
-            )
+            return x, y, z + Δz
 
     def get_drop_inventory(self):
         if wo := self.world_object:
-            x = floor(wo.position.x)
-            y = floor(wo.position.y)
-            z = floor(wo.position.z)
+            x, y, z = floor3(wo.position)
 
             return self.protocol.new_item_entity(
                 x, y, self.protocol.map.get_z(x, y, z)
@@ -148,9 +144,7 @@ class MilsimConnection(FeatureConnection):
 
     def get_available_inventory(self):
         if wo := self.world_object:
-            x = floor(wo.position.x)
-            y = floor(wo.position.y)
-            z = floor(wo.position.z)
+            x, y, z = floor3(wo.position)
 
             for X, Y in product(range(x - 1, x + 2), range(y - 1, y + 2)):
                 for Z in range(z, z + 4):

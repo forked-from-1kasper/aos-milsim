@@ -46,6 +46,9 @@ def take_items(player, klass, n, nmax):
     if nmax <= n + navail: return
     for k in range(n): take_item(player, klass)
 
+def floor3(v):
+    return floor(v.x), floor(v.y), floor(v.z)
+
 toMeters3 = lambda v: Vertex3(toMeters(v.x), toMeters(v.y), toMeters(v.z))
 
 mm    = lambda s: s / 1000

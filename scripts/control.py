@@ -440,7 +440,7 @@ def apply_script(protocol, connection, config):
 
         def on_position_update(self):
             r = self.world_object.position
-            grid_position = (floor(r.x), floor(r.y), floor(r.z))
+            grid_position = floor3(r)
 
             if grid_position != self.previous_grid_position:
                 self.page = 0
@@ -456,8 +456,7 @@ def apply_script(protocol, connection, config):
             connection.on_reload_complete(self)
 
         def on_flag_taken(self):
-            flag = self.team.other.flag
-            x, y, z = floor(flag.x), floor(flag.y), floor(flag.z)
+            x, y, z = floor3(self.team.other.flag)
 
             for Δx, Δy in product(range(-1, 2), range(-1, 2)):
                 if e := self.protocol.get_tile_entity(x + Δx, y + Δy, z):
