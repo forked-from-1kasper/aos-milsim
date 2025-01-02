@@ -2,8 +2,13 @@ from math import radians, log, isfinite
 from random import weibullvariate
 import requests
 
+from twisted.internet import threads
+from twisted.logger import Logger
+
 from milsim.types import Weather
 from milsim.common import clamp
+
+logger = Logger()
 
 class Stopwatch:
     def __init__(self, delay, pingback):
@@ -56,6 +61,9 @@ class OpenMeteo(Weather):
         self.w = (v, self.wind_direction)
 
     def download(self):
+        threads.deferToThread(self.web_task)
+
+    def web_task(self):
         variables = [
             'temperature_2m',
             'relative_humidity_2m',
@@ -69,14 +77,20 @@ class OpenMeteo(Weather):
         payload = {
             'latitude':           self.latitude,
             'longitude':          self.longitude,
-            'current':            ",".join(variables),
+            'current':            ','.join(variables),
             'temperature_unit':   'celsius',
             'precipitation_unit': 'mm',
             'wind_speed_unit':    'ms'
         }
 
-        resp = requests.get(self.url, params = payload)
+        resp = requests.get(self.url, params = payload, timeout = 10.0)
         json = resp.json()['current']
+
+        logger.info('GET {url} ({status}) took {duration:.2f} s',
+            url      = self.url,
+            status   = resp.status_code,
+            duration = resp.elapsed.total_seconds()
+        )
 
         self.t = float(json['temperature_2m'])              # Celsius
         self.φ = float(json['relative_humidity_2m']) / 100  # % -> 1

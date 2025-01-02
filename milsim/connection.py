@@ -28,15 +28,15 @@ GRENADE_SAFETY_RADIUS = 30
 SHOVEL_GUARANTEED_DAMAGE = 50
 
 fracture_warning = {
-    Limb.torso: "You broke your spine.",
-    Limb.head:  "You broke your neck.",
-    Limb.arml:  "You broke your left arm.",
-    Limb.armr:  "You broke your right arm.",
-    Limb.legl:  "You broke your left leg.",
-    Limb.legr:  "You broke your right leg."
+    Limb.torso: "You broke your spine",
+    Limb.head:  "You broke your neck",
+    Limb.arml:  "You broke your left arm",
+    Limb.armr:  "You broke your right arm",
+    Limb.legl:  "You broke your left leg",
+    Limb.legr:  "You broke your right leg"
 }
 
-bleeding_warning = "You're bleeding."
+bleeding_warning = "You're bleeding"
 
 log = Logger()
 

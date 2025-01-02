@@ -320,7 +320,7 @@ def c_next(player, argval = None):
 def c_prev(player, argval = None):
     """
     Scroll to the previous or specified page
-    /p [page number | search qeury] or /prev
+    /p [page number | search query] or /prev
     """
     player.page = scroll(player, argval, -1)
     return format_page(player.page, available(player))
