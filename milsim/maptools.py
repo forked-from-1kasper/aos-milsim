@@ -76,7 +76,7 @@ def Bitmap(x1 = 0, y1 = 0, x2 = 512, y2 = 512, zs = []):
 
     return retfun
 
-def Team(blue = failure, green = failure):
+def Team(*, blue, green):
     def retfun(connection):
         protocol = connection.protocol
 
