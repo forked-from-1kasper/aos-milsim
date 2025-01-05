@@ -17,7 +17,7 @@ from pyspades.constants import *
 from piqueserver.player import FeatureConnection
 
 from milsim.items import BandageItem, TourniquetItem, SplintItem, HandgrenadeItem, F1GrenadeItem
-from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3
+from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
 from milsim.blast import sendGrenadePacket, explode, flashbang_effect
 from milsim.types import Inventory, Body, randbool, logistic
 from milsim.constants import Limb
@@ -41,6 +41,10 @@ bleeding_warning = "You're bleeding"
 log = Logger()
 
 class MilsimConnection(FeatureConnection):
+    last_killer     = None
+    last_death_type = None
+    last_death_time = -inf
+
     body_mass = 70
 
     def __init__(self, *w, **kw):
@@ -270,6 +274,8 @@ class MilsimConnection(FeatureConnection):
         FeatureConnection.on_client_info(self)
 
     def on_spawn(self, pos):
+        self.last_spawn_time = monotonic()
+
         self.previous_floor_position = self.floor()
 
         self.tool_object = self.weapon_object
@@ -295,6 +301,25 @@ class MilsimConnection(FeatureConnection):
 
         self.protocol.engine.on_despawn(self.player_id)
         self.drop_inventory()
+
+        self.last_killer     = killer
+        self.last_death_type = kill_type
+        self.last_death_time = monotonic()
+
+    def get_respawn_time(self):
+        if self.respawn_time is None:
+            return 0
+
+        if self.protocol.respawn_waves:
+            offset = self.last_death_time % self.respawn_time
+            return self.respawn_time - offset
+        else:
+            if self.last_killer is self:
+                return self.respawn_time
+            elif self.last_death_type == TEAM_CHANGE_KILL or self.last_death_type == CLASS_CHANGE_KILL:
+                return self.respawn_time
+            else:
+                return clamp(0, self.respawn_time, self.last_death_time - self.last_spawn_time)
 
     def on_disconnect(self):
         if o := self.weapon_object:
