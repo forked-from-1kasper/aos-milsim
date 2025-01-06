@@ -1,5 +1,6 @@
 from math import atan, atan2, tau, floor
 from itertools import product
+from inspect import signature
 import functools
 
 from pyspades.common import Vertex3
@@ -14,10 +15,12 @@ def alive_only(func):
     @functools.wraps(func)
     def _decorated(connection, *w, **kw):
         if connection not in connection.protocol.players.values():
-            raise CommandError("only players can use this command")
+            raise CommandError("Only players can use this command.")
 
         if connection.alive():
             return func(connection, *w, **kw)
+
+    _decorated.__signature__ = signature(func)
 
     return _decorated
 
