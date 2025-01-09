@@ -1,3 +1,6 @@
+from math import inf
+
+from pyspades.constants import UPDATE_FREQUENCY
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
 
@@ -19,19 +22,14 @@ class GrenadeLauncher(UnderbarrelItem):
             wo = player.world_object
 
             r = wo.position.copy()
+            v = wo.orientation.normal().copy() * (o.muzzle / 32)
 
-            fuse = 1.0
-            if loc := wo.cast_ray(256):
-                d = (r - Vertex3(*loc)).length()
-                fuse = d / o.muzzle
-
-            v = wo.orientation.normal().copy()
-            v *= o.muzzle / 32
-
-            player.protocol.world.create_object(
-                Grenade, fuse, r, None, v, o.on_explosion(player)
+            go = player.protocol.world.create_object(
+                Grenade, inf, r, None, v, o.on_explosion(player)
             )
-            sendGrenadePacket(player.protocol, player.player_id, r, v, fuse)
+
+            go.fuse, _, _, _ = go.get_next_collision(UPDATE_FREQUENCY)
+            sendGrenadePacket(player.protocol, player.player_id, r, v, go.fuse)
 
     @property
     def mass(self):
