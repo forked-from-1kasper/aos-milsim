@@ -9,7 +9,7 @@ from milsim.weapon import UnderbarrelItem
 from milsim.types import Item
 
 class GrenadeLauncher(UnderbarrelItem):
-    name = "Grenade Launcher"
+    basename = "Grenade Launcher"
 
     def __init__(self):
         UnderbarrelItem.__init__(self)
@@ -30,6 +30,13 @@ class GrenadeLauncher(UnderbarrelItem):
 
             go.fuse, _, _, _ = go.get_next_collision(UPDATE_FREQUENCY)
             sendGrenadePacket(player.protocol, player.player_id, r, v, go.fuse)
+
+    @property
+    def name(self):
+        if o := self.grenade:
+            return "{} + {}".format(self.basename, o.name)
+        else:
+            return self.basename
 
     @property
     def mass(self):

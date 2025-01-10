@@ -16,6 +16,12 @@ from milsim.common import *
 
 yn = lambda b: "yes" if b else "no"
 
+def format_item(o):
+    if o.persistent:
+        return "[{}] {}".format(o.id, o.name)
+    else:
+        return "{{{}}} {}".format(o.id, o.name)
+
 def ppBodyPart(P):
     label = P.abbrev.upper() if P.fractured and not P.splint else P.abbrev
     suffix = ite(P.venous, "*", "") + ite(P.arterial, "**", "")
@@ -239,6 +245,7 @@ def compass(player):
     return apply_item(CompassItem, player, errmsg = "You do not have a compass")
 
 @command('grenade', 'gr')
+@alive_only
 def grenade(player):
     """
     Load a grenade into a grenade launcher
@@ -247,6 +254,7 @@ def grenade(player):
     return apply_item(GrenadeItem, player, errmsg = "You do not have a grenade")
 
 @command('launcher', 'gl')
+@alive_only
 def grenade(player):
     """
     Equip a grenade launcher
@@ -255,6 +263,7 @@ def grenade(player):
     return apply_item(GrenadeLauncher, player, errmsg = "You do not have a grenade launcher")
 
 @command('takegrenade', 'tg')
+@alive_only
 def takegrenade(player, n = 1):
     """
     Try to take a given number of grenades and a grenade launcher
@@ -271,16 +280,20 @@ def takegrenade(player, n = 1):
 
     take_items(player, GrenadeItem, n, 5)
 
+@command('underbarrel', 'ub')
+@alive_only
+def underbarrel(player):
+    """
+    Print equipped underbarrel item
+    /ub or /underbarrel
+    """
+
+    return "Underbarrel: {}".format(format_item(player.weapon_object.item_underbarrel))
+
 @command()
 @alive_only
 def packload(player):
     return "{:.3f} kg".format(player.gear_mass())
-
-def format_item(o):
-    if o.persistent:
-        return "[{}] {}".format(o.id, o.name)
-    else:
-        return "{{{}}} {}".format(o.id, o.name)
 
 items_per_page = 3
 
