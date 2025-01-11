@@ -19,7 +19,7 @@ from milsim.packets import (
     milsim_extensions
 )
 
-from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem
+from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem, StunHandgrenadeItem
 from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.weapon import ABCWeapon, Rifle, SMG, Shotgun, HEIMagazine
 from milsim.builtin import Buckshot0000, Buckshot00, Bullet
@@ -192,7 +192,8 @@ class MilsimProtocol(FeatureProtocol):
                     CartridgeBox(Buckshot0000, 60),
                     CartridgeBox(Buckshot00, 60),
                     CartridgeBox(Bullet, 50),
-                    HEIMagazine()
+                    HEIMagazine(),
+                    StunHandgrenadeItem()
                 )
 
             i.append(

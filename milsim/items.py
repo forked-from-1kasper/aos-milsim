@@ -123,3 +123,10 @@ class F1GrenadeItem(HandgrenadeItem):
 
     def on_explosion(self, player):
         return player.grenade_exploded
+
+class StunHandgrenadeItem(HandgrenadeItem):
+    name = "M84 Stun Grenade"
+    mass = 0.370
+
+    def on_explosion(self, player):
+        return player.flashbang_exploded
