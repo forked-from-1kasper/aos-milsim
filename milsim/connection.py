@@ -244,12 +244,6 @@ class MilsimConnection(FeatureConnection):
 
         return retval
 
-    def on_block_build(self, x, y, z):
-        FeatureConnection.on_block_build(self, x, y, z)
-
-    def on_line_build(self, points):
-        FeatureConnection.on_line_build(self, points)
-
     def on_tool_set_attempt(self, tool):
         if self.body.arml.fractured or self.body.armr.fractured:
             return False
