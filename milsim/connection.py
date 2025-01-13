@@ -41,6 +41,9 @@ bleeding_warning = "You're bleeding"
 log = Logger()
 
 class MilsimConnection(FeatureConnection):
+    lmb_spade_speed = 1.0
+    rmb_spade_speed = 0.7
+
     last_killer     = None
     last_death_type = None
     last_death_time = -inf

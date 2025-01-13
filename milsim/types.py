@@ -588,15 +588,17 @@ class SpadeTool(Tool):
     def on_lmb_hold(self, t, dt):
         if self.enabled():
             if loc := self.player.world_object.cast_ray(4.0):
-                dig(self.player, dt, 1.0, *loc)
+                dig(self.player, dt, self.player.lmb_spade_speed, *loc)
 
     def on_rmb_hold(self, t, dt):
         if self.enabled():
             if loc := self.player.world_object.cast_ray(4.0):
                 x, y, z = loc
-                dig(self.player, dt, 0.7, x, y, z - 1)
-                dig(self.player, dt, 0.7, x, y, z)
-                dig(self.player, dt, 0.7, x, y, z + 1)
+
+                mu = self.player.rmb_spade_speed
+                dig(self.player, dt, mu, x, y, z - 1)
+                dig(self.player, dt, mu, x, y, z)
+                dig(self.player, dt, mu, x, y, z + 1)
 
 class BlockTool(Tool):
     mass = 0
