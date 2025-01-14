@@ -389,14 +389,17 @@ def use(player, ID):
         return o.apply(player)
 
 @command('prioritize', 'pr')
-def prioritize(conn, ID):
+@alive_only
+def prioritize(player, ID):
     """
     Give the highest priority to an item with the given ID
     /pr (ID) or /priority
     """
-    if o := conn.inventory[ID]:
-        conn.inventory.remove(o)
-        conn.inventory.push(o)
+    i = player.inventory
+
+    if o := i[ID]:
+        i.remove(o)
+        i.push(o)
 
 @command(admin_only = True)
 def give(connection, nickname, *w):
