@@ -1,4 +1,4 @@
-from pyspades.vxl cimport VXLData, MapData
+from pyspades.vxl cimport VXLData, MapData, get_solid
 
 cdef extern from "VXL.hxx":
     int traverseNode(int, int, int, MapData *, int)
@@ -8,6 +8,13 @@ cdef extern from "VXL.hxx":
 cdef class VxlData(VXLData):
     cpdef int check_node(self, int x, int y, int z, bint destroy = False):
         return traverseNode(x, y, z, self.map, destroy)
+
+    cpdef int get_z(self, int x, int y, int zmin = 0, int zmax = 64, int zerr = 0):
+        for z in range(zmin, zmax):
+            if get_solid(x, y, z, self.map):
+                return z
+
+        return zerr
 
 cdef extern from "vxl_c.h":
     void get_xyz(int, int *, int *, int *)

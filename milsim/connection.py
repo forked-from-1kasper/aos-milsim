@@ -154,12 +154,9 @@ class MilsimConnection(FeatureConnection):
             x, y, z = floor3(wo.position)
 
             for X, Y in product(range(x - 1, x + 2), range(y - 1, y + 2)):
-                for Z in range(z, z + 4):
-                    if self.protocol.map.get_solid(X, Y, Z):
-                        if i := self.protocol.get_item_entity(X, Y, Z):
-                            yield i
-
-                        break
+                if Z := self.protocol.map.get_z(X, Y, zmin = z, zmax = z + 4):
+                    if i := self.protocol.get_item_entity(X, Y, Z):
+                        yield i
 
             if vector_collision(wo.position, self.protocol.team_1.base):
                 yield self.protocol.team1_tent_inventory
