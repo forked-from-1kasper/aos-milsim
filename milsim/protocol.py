@@ -19,16 +19,44 @@ from milsim.packets import (
     milsim_extensions
 )
 
-from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem, StunHandgrenadeItem
-from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.weapon import ABCWeapon, Rifle, SMG, Shotgun, HEIMagazine
-from milsim.builtin import Buckshot0000, Buckshot00, Bullet
 from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.map import MapInfo, check_rotation
 from milsim.constants import Limb, HitEffect
-from milsim.types import CartridgeBox
 from milsim.engine import Engine
 from milsim.common import *
+
+from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem, StunHandgrenadeItem
+from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
+from milsim.builtin import Buckshot0000, Buckshot00, Bullet
+from milsim.types import CartridgeBox
+
+def default_tent_loadout():
+    for k in range(90):
+        yield from (
+            GrenadeLauncher(),
+            GrenadeItem(),
+            GrenadeItem(),
+            GrenadeItem(),
+            FlashbangItem(),
+            CompassItem(),
+            ProtractorItem(),
+            RangefinderItem(),
+            CartridgeBox(Buckshot0000, 60),
+            CartridgeBox(Buckshot00, 60),
+            CartridgeBox(Bullet, 50),
+            HEIMagazine(),
+            StunHandgrenadeItem()
+        )
+
+    yield from (
+        Kettlebell(1),
+        Kettlebell(5),
+        Kettlebell(10),
+        Kettlebell(15),
+        Kettlebell(30),
+        Kettlebell(50)
+    )
 
 log = Logger()
 
@@ -47,6 +75,8 @@ class MilsimProtocol(FeatureProtocol):
 
         self.tile_entities = {}
         self.item_entities = {}
+
+        self.default_tent_loadout = default_tent_loadout
 
         self.team1_tent_inventory = Inventory()
         self.team2_tent_inventory = Inventory()
@@ -179,31 +209,7 @@ class MilsimProtocol(FeatureProtocol):
         FeatureProtocol.on_map_change(self, M)
 
         for i in self.team1_tent_inventory, self.team2_tent_inventory:
-            for k in range(90):
-                i.append(
-                    GrenadeLauncher(),
-                    GrenadeItem(),
-                    GrenadeItem(),
-                    GrenadeItem(),
-                    FlashbangItem(),
-                    CompassItem(),
-                    ProtractorItem(),
-                    RangefinderItem(),
-                    CartridgeBox(Buckshot0000, 60),
-                    CartridgeBox(Buckshot00, 60),
-                    CartridgeBox(Bullet, 50),
-                    HEIMagazine(),
-                    StunHandgrenadeItem()
-                )
-
-            i.append(
-                Kettlebell(1),
-                Kettlebell(5),
-                Kettlebell(10),
-                Kettlebell(15),
-                Kettlebell(30),
-                Kettlebell(50)
-            )
+            i.extend(self.default_tent_loadout())
 
         t1 = monotonic()
         self.on_environment_change(self.map_info.environment)

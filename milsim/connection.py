@@ -16,10 +16,10 @@ from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 
-from milsim.items import BandageItem, TourniquetItem, SplintItem, HandgrenadeItem, F1GrenadeItem
 from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
 from milsim.blast import sendGrenadePacket, explode, flashbang_effect
 from milsim.types import Inventory, Body, randbool, logistic
+from milsim.items import HandgrenadeItem
 from milsim.constants import Limb
 
 GRENADE_LETHAL_RADIUS = 4
@@ -38,6 +38,22 @@ fracture_warning = {
 
 bleeding_warning = "You're bleeding"
 
+from milsim.items import BandageItem, TourniquetItem, SplintItem, F1GrenadeItem
+
+def default_loadout():
+    yield BandageItem()
+    yield BandageItem()
+    yield BandageItem()
+
+    yield TourniquetItem()
+    yield TourniquetItem()
+
+    yield SplintItem()
+
+    yield F1GrenadeItem()
+    yield F1GrenadeItem()
+    yield F1GrenadeItem()
+
 log = Logger()
 
 class MilsimConnection(FeatureConnection):
@@ -52,6 +68,8 @@ class MilsimConnection(FeatureConnection):
 
     def __init__(self, *w, **kw):
         FeatureConnection.__init__(self, *w, **kw)
+
+        self.default_loadout = default_loadout
 
         self.spade_object   = self.protocol.SpadeTool(self)
         self.block_object   = self.protocol.BlockTool(self)
@@ -439,17 +457,7 @@ class MilsimConnection(FeatureConnection):
                 if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
 
     def on_refill(self):
-        self.inventory.append(
-            BandageItem().mark_renewable(),
-            BandageItem().mark_renewable(),
-            BandageItem().mark_renewable(),
-            TourniquetItem().mark_renewable(),
-            TourniquetItem().mark_renewable(),
-            SplintItem().mark_renewable(),
-            F1GrenadeItem().mark_renewable(),
-            F1GrenadeItem().mark_renewable(),
-            F1GrenadeItem().mark_renewable()
-        )
+        self.inventory.extend(io.mark_renewable() for io in self.default_loadout())
 
     def refill(self, local = False):
         for P in self.body.values():
