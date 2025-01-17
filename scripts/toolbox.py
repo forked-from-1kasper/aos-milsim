@@ -153,6 +153,42 @@ def say(connection, *w):
 
     protocol.broadcast_contained(contained)
 
+@command('showrotation', 'shr')
+def show_rotation(connection, argval = None):
+    """
+    Scroll through the current map rotation
+    /shr [page number | query] or /shr * or /showrotation
+    """
+
+    maps = connection.protocol.get_map_rotation()
+
+    page_size = 5
+    total = len(maps) // page_size + 1
+
+    if argval == "*":
+        return ", ".join(maps)
+
+    npage = None
+
+    if argval is None:
+        npage = getattr(connection, 'show_rotation_page', 0)
+    elif argval.isdigit():
+        npage = max(1, min(total, int(argval))) - 1
+    else:
+        query = argval.lower()
+
+        out = (i for i, map_name in enumerate(maps) if query in map_name.lower())
+
+        if i := next(out, None):
+            npage = i // page_size
+        else:
+            return "'{}' map not found".format(query)
+
+    connection.show_rotation_page = (npage + 1) % total
+
+    i1, i2 = npage * page_size, (npage + 1) * page_size
+    return "{}/{}) {}".format(npage + 1, total, ", ".join(maps[i1 : i2]))
+
 def apply_script(protocol, connection, config):
     from piqueserver.console import ConsoleInput
 
