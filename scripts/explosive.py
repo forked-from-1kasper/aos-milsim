@@ -169,6 +169,21 @@ def take_charge(conn, n = 1):
     take_items(conn, ChargeItem, n, 5)
 
 def apply_script(protocol, connection, config):
+    def explosive_default_tent_loadout(self):
+        yield from protocol.default_tent_loadout(self)
+
+        for k in range(100):
+            yield LandmineItem()
+            yield DetonatorItem()
+            yield ChargeItem()
+            yield ChargeItem()
+
+    def explosive_default_loadout(self):
+        yield from connection.default_loadout(self)
+
+        for k in range(2):
+            yield LandmineItem()
+
     class MineGrenadeTool(protocol.GrenadeTool):
         def on_rmb_press(self):
             protocol.GrenadeTool.on_rmb_press(self)
@@ -177,25 +192,11 @@ def apply_script(protocol, connection, config):
                 self.player.send_chat(reply)
 
     class ExplosiveProtocol(protocol):
+        default_tent_loadout = explosive_default_tent_loadout
+
         GrenadeTool = MineGrenadeTool
 
-        def on_map_change(self, M):
-            protocol.on_map_change(self, M)
-
-            for i in self.team1_tent_inventory, self.team2_tent_inventory:
-                for k in range(100):
-                    i.append(
-                        LandmineItem(),
-                        DetonatorItem(),
-                        ChargeItem(),
-                        ChargeItem()
-                    )
-
     class ExplosiveConnection(connection):
-        def on_refill(self):
-            connection.on_refill(self)
-
-            for k in range(2):
-                self.inventory.append(LandmineItem().mark_renewable())
+        default_loadout = explosive_default_loadout
 
     return ExplosiveProtocol, ExplosiveConnection

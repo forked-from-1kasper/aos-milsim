@@ -40,7 +40,7 @@ bleeding_warning = "You're bleeding"
 
 from milsim.items import BandageItem, TourniquetItem, SplintItem, F1GrenadeItem
 
-def default_loadout():
+def milsim_default_loadout(self):
     yield BandageItem()
     yield BandageItem()
     yield BandageItem()
@@ -57,6 +57,8 @@ def default_loadout():
 log = Logger()
 
 class MilsimConnection(FeatureConnection):
+    default_loadout = milsim_default_loadout
+
     lmb_spade_speed = 1.0
     rmb_spade_speed = 0.7
 
@@ -68,8 +70,6 @@ class MilsimConnection(FeatureConnection):
 
     def __init__(self, *w, **kw):
         FeatureConnection.__init__(self, *w, **kw)
-
-        self.default_loadout = default_loadout
 
         self.spade_object   = self.protocol.SpadeTool(self)
         self.block_object   = self.protocol.BlockTool(self)

@@ -31,7 +31,7 @@ from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.builtin import Buckshot0000, Buckshot00, Bullet
 from milsim.types import CartridgeBox
 
-def default_tent_loadout():
+def milsim_default_tent_loadout(self):
     for k in range(90):
         yield from (
             GrenadeLauncher(),
@@ -61,6 +61,8 @@ def default_tent_loadout():
 log = Logger()
 
 class MilsimProtocol(FeatureProtocol):
+    default_tent_loadout = milsim_default_tent_loadout
+
     WeaponTool  = ABCWeapon
     SpadeTool   = SpadeTool
     BlockTool   = BlockTool
@@ -75,8 +77,6 @@ class MilsimProtocol(FeatureProtocol):
 
         self.tile_entities = {}
         self.item_entities = {}
-
-        self.default_tent_loadout = default_tent_loadout
 
         self.team1_tent_inventory = Inventory()
         self.team2_tent_inventory = Inventory()
@@ -304,14 +304,14 @@ class MilsimProtocol(FeatureProtocol):
         )
 
     def onDestroy(self, player_id, x, y, z):
-        if player_id not in self.players:
-            return
+        player = self.players.get(player_id)
 
-        player = self.players[player_id]
+        if player is None:
+            return
 
         count = self.map.destroy_point(x, y, z)
 
-        if count:
+        if count > 0:
             contained           = loaders.BlockAction()
             contained.x         = x
             contained.y         = y
