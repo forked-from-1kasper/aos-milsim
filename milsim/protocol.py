@@ -240,7 +240,7 @@ class MilsimProtocol(FeatureProtocol):
 
             player.body.update(dt)
 
-            if player.moving():
+            if player.moving() and not player.world_object.airborne:
                 for leg in player.body.legs():
                     if leg.fractured:
                         if player.world_object.sprint:
