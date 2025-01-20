@@ -99,6 +99,24 @@ def mail(connection, *w):
 
         return "Message sent"
 
+def c_getattr(o, k, v):
+    retval = getattr(o, k, v)
+    setattr(o, k, retval)
+    return retval
+
+def c_globals(connection):
+    ds = c_getattr(connection, 'globals', dict())
+
+    ds.update(
+        connection = connection,
+        protocol   = connection.protocol
+    )
+
+    return ds
+
+def format_exception(exc):
+    return "{}: {}".format(type(exc).__name__, exc)
+
 @command('eval', admin_only = True)
 def c_eval(connection, *w):
     """
@@ -106,10 +124,12 @@ def c_eval(connection, *w):
     /eval <code>
     """
 
+    expr = ' '.join(w)
+
     try:
-        return str(connection.eval(' '.join(w)))
+        return str(eval(expr, c_globals(connection)))
     except Exception as exc:
-        return connection.protocol.format_exception(exc)
+        return format_exception(exc)
 
 @command('exec', admin_only = True)
 def c_exec(connection, *w):
@@ -118,10 +138,21 @@ def c_exec(connection, *w):
     /exec <code>
     """
 
+    stmt = ' '.join(w)
+
     try:
-        connection.exec(' '.join(w))
+        exec(stmt, c_globals(connection))
     except Exception as exc:
-        return connection.protocol.format_exception(exc)
+        return format_exception(exc)
+
+@command('delenv', admin_only = True)
+def c_delenv(connection):
+    """
+    Clear /eval & /exec environment
+    /delenv
+    """
+
+    c_globals(connection).clear()
 
 from gc import collect
 @command(admin_only = True)
@@ -190,20 +221,7 @@ def show_rotation(connection, argval = None):
     return "{}/{}) {}".format(npage + 1, total, ", ".join(maps[i1 : i2]))
 
 def apply_script(protocol, connection, config):
-    from piqueserver.console import ConsoleInput
-
     class ToolboxConnection(connection):
-        def __init__(self, *w, **kw):
-            connection.__init__(self, *w, **kw)
-
-            self.variables = dict(connection = self, protocol = self.protocol)
-
-        def eval(self, expr):
-            return eval(expr, globals(), self.variables)
-
-        def exec(self, stmt):
-            exec(stmt, globals(), self.variables)
-
         def on_connect(self):
             self.chat_limiter._seconds = 1
 
@@ -224,16 +242,6 @@ def apply_script(protocol, connection, config):
             connection.on_reset(self)
 
     class ToolboxProtocol(protocol):
-        def __init__(self, *w, **kw):
-            protocol.__init__(self, *w, **kw)
-
-            ConsoleInput.variables = dict(connection = None, protocol = self)
-            ConsoleInput.eval      = self.connection_class.eval
-            ConsoleInput.exec      = self.connection_class.exec
-
-        def format_exception(self, exc):
-            return "{}: {}".format(type(exc).__name__, exc)
-
         def get_player_count(self):
             return sum(connection.existing_player_sent() for connection in self.connections.values())
 
