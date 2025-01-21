@@ -1,6 +1,8 @@
 from math import floor, fmod, acos, degrees
 from itertools import product, islice
 
+import inspect
+
 from piqueserver.commands import command, get_player, player_only
 from pyspades.common import Vertex3
 from pyspades.constants import *
@@ -380,13 +382,20 @@ def drop(player, ID):
 
 @command('use', 'u')
 @alive_only
-def use(player, ID):
+def use(player, ID, *w, **kw):
     """
     Use an item from the inventory with the given ID
     /u (ID) or /use
     """
     if o := player.inventory[ID]:
-        return o.apply(player)
+        sig = inspect.signature(o.apply)
+
+        try:
+            b = sig.bind(player, *w, **kw)
+        except TypeError:
+            return "Wrong number of arguments"
+
+        return o.apply(*b.args, **b.kwargs)
 
 @command('prioritize', 'pr')
 @alive_only
@@ -401,6 +410,8 @@ def prioritize(player, ID):
         i.remove(o)
         i.push(o)
 
+from scripts.toolbox import c_globals, format_exception
+
 @command(admin_only = True)
 def give(connection, nickname, *w):
     """
@@ -412,9 +423,9 @@ def give(connection, nickname, *w):
 
     if player.alive():
         try:
-            o = connection.eval(' '.join(w))
+            o = eval(' '.join(w), c_globals(connection))
         except Exception as exc:
-            return protocol.format_exception(exc)
+            return format_exception(exc)
 
         if isinstance(o, Item):
             player.inventory.push(o)
