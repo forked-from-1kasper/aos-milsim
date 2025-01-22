@@ -65,7 +65,7 @@ def formatBytes(x):
 
 class Engine:
     @staticmethod
-    def debug(protocol, value):
+    def debug(protocol, value = None):
         o = protocol.engine
 
         if value == 'on':
@@ -97,14 +97,18 @@ class Engine:
         return "Removed {} object(s)".format(alive)
 
 @command('engine', admin_only = True)
-def engine(connection, subcmd, *w):
+def engine(connection, subcmd, *w, **kw):
     protocol = connection.protocol
 
-    if attr := getattr(Engine, subcmd, None):
+    if method := getattr(Engine, subcmd, None):
+        sig = inspect.signature(method)
+
         try:
-            return attr(protocol, *w)
-        except Exception as e:
-            return str(e)
+            b = sig.bind(protocol, *w, **kw)
+        except TypeError:
+            return "Wrong number of arguments"
+
+        return method(*b.args, **b.kwargs)
     else:
         return "Unknown command: {}".format(subcmd)
 
