@@ -169,17 +169,19 @@ class MilsimConnection(FeatureConnection):
 
     def get_available_inventory(self):
         if wo := self.world_object:
-            x, y, z = floor3(wo.position)
+            r = wo.position
+
+            x, y, z = floor3(r)
 
             for X, Y in product(range(x - 1, x + 2), range(y - 1, y + 2)):
                 if Z := self.protocol.map.get_z(X, Y, zmin = z, zmax = z + 4):
                     if i := self.protocol.get_item_entity(X, Y, Z):
                         yield i
 
-            if vector_collision(wo.position, self.protocol.team_1.base):
+            if vector_collision(r, self.protocol.team_1.base):
                 yield self.protocol.team1_tent_inventory
 
-            if vector_collision(wo.position, self.protocol.team_2.base):
+            if vector_collision(r, self.protocol.team_2.base):
                 yield self.protocol.team2_tent_inventory
 
     def get_available_items(self):
@@ -233,7 +235,7 @@ class MilsimConnection(FeatureConnection):
     def on_orientation_update(self, x, y, z):
         retval = FeatureConnection.on_orientation_update(self, x, y, z)
 
-        if retval == False:
+        if retval is False:
             return False
 
         torso = self.body.torso
@@ -705,20 +707,20 @@ class MilsimConnection(FeatureConnection):
         if self.blocks <= 0:
             self.sync()
 
-    def handle_grenade_packet(self, x, y, z, vx, vy, vz, fuse):
-        if check_nan(x, y, z, vx, vy, vz, fuse):
+    def handle_grenade_packet(self, x, y, z, vx, vy, vz, value):
+        if self.tool != GRENADE_TOOL:
+            return
+
+        if check_nan(x, y, z, vx, vy, vz, value):
             return
 
         if not self.check_speedhack(x, y, z):
             x, y, z = self.world_object.position.get()
 
-        if self.tool != GRENADE_TOOL:
-            return
+        fuse = clamp(0.0, 3.0, value)
 
-        if self.on_grenade(fuse) == False:
+        if self.on_grenade(fuse) is False:
             return
-
-        fuse = min(fuse, 3.0)
 
         r = Vertex3(x, y, z)
         u = Vertex3(vx, vy, vz) - self.world_object.velocity
@@ -750,7 +752,7 @@ class MilsimConnection(FeatureConnection):
     def on_grenade_recieved(self, contained):
         if self.dead(): return
 
-        self.grenades -= 1
+        self.grenades = max(0, self.grenades - 1)
 
         x, y, z = contained.position
         vx, vy, vz = contained.velocity
