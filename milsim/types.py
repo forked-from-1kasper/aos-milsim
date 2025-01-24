@@ -15,6 +15,7 @@ from milsim.engine import Material
 
 randbool = lambda prob: random() <= prob
 
+impl = lambda P, Q: not P or Q
 ite = lambda b, v1, v2: v1 if b else v2
 
 @dataclass
@@ -567,12 +568,13 @@ class Tool:
         pass
 
 def dig(player, mu, dt, x, y, z):
-    if not player.world_object or player.world_object.dead: return
+    if wo := player.world_object:
+        if wo.dead: return
 
-    sigma = 0.01 if player.world_object.crouch else 0.05
-    value = max(0, gauss(mu = mu, sigma = sigma) * dt)
+        sigma = 0.01 if wo.crouch else 0.05
+        value = max(0, gauss(mu = mu, sigma = sigma) * dt)
 
-    player.protocol.engine.dig(player.player_id, x, y, z, value)
+        player.protocol.engine.dig(player.player_id, x, y, z, value)
 
 class SpadeTool(Tool):
     mass = 0.750
@@ -582,8 +584,8 @@ class SpadeTool(Tool):
 
     def enabled(self):
         arml, armr = self.player.body.arml, self.player.body.armr
-        return (not arml.fractured or arml.splint) and \
-               (not armr.fractured or armr.splint)
+        return impl(arml.fractured, arml.splint) and \
+               impl(armr.fractured, armr.splint)
 
     def on_lmb_hold(self, t, dt):
         if self.enabled():
