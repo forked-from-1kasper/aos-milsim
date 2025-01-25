@@ -9,7 +9,7 @@ from milsim.weapon import UnderbarrelItem
 from milsim.types import Item
 
 class GrenadeLauncher(UnderbarrelItem):
-    basename = "Grenade Launcher"
+    basename = "M203 Grenade Launcher"
 
     def __init__(self):
         UnderbarrelItem.__init__(self)
@@ -55,7 +55,7 @@ class GrenadeCartridge(Item):
             w.item_underbarrel.grenade = self
 
 class GrenadeItem(GrenadeCartridge):
-    name   = "Grenade"
+    name   = "M433 Grenade"
     mass   = 0.230
     muzzle = 120
 
