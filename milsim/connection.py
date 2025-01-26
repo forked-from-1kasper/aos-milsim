@@ -515,13 +515,22 @@ class MilsimConnection(FeatureConnection):
         if damage > 0:
             legl, legr = self.body.legl, self.body.legr
 
+            P = not legl.fractured and randbool(logistic(legl.fall(damage)))
+
+            if P: legl.fractured = True
             legl.hit(damage)
+
+            Q = not legr.fractured and randbool(logistic(legr.fall(damage)))
+
+            if Q: legr.fractured = True
             legr.hit(damage)
 
-            if randbool(logistic(legl.fall(damage))):
-                legl.fractured = True
-                legr.fractured = True
-                self.send_chat_status("You broke your legs.")
+            if P and Q:
+                self.send_chat_status("You broke your legs")
+            elif P:
+                self.send_chat_status("You broke your left leg")
+            elif Q:
+                self.send_chat_status("You broke your right leg")
 
             self.set_hp(self.body.average(), kill_type = FALL_KILL)
 
