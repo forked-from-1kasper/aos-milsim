@@ -10,8 +10,8 @@ from pyspades.constants import *
 
 from piqueserver.commands import _alias_map, _commands
 
-@command()
-def alias(connection, argval):
+@command('listalias', 'alias', 'lsal')
+def c_alias(connection, argval):
     """
     List all aliases to the given command
     /alias <command>
