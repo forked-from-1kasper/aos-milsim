@@ -81,7 +81,7 @@ class ExplosiveBelt:
         self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3))
         explode(BELT_GUARANTEED_KILL_RADIUS, BELT_KILL_RADIUS, self.conn, r)
 
-@command('boom', 'a')
+@command('boom', 'a', 'aa')
 @player_only
 def boom(player, fuse = 0):
     """

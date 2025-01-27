@@ -8,6 +8,23 @@ from piqueserver.config import config
 from pyspades import contained as loaders
 from pyspades.constants import *
 
+from piqueserver.commands import _alias_map, _commands
+
+@command()
+def alias(connection, argval):
+    """
+    List all aliases to the given command
+    /alias <command>
+    """
+
+    cmd = _alias_map.get(argval, argval)
+
+    if cmd in _commands:
+        cmds = ", ".join("/{}".format(k) for k, v in _alias_map.items() if v == cmd)
+        return "{}: {}".format(cmd, cmds)
+    else:
+        return "Unknown command: {}".format(argval)
+
 def randbyte():
     return randint(0, 255)
 
