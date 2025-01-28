@@ -1,3 +1,4 @@
+from itertools import islice
 from random import randint
 from time import time
 from math import inf
@@ -9,6 +10,9 @@ from pyspades import contained as loaders
 from pyspades.constants import *
 
 from piqueserver.commands import _alias_map, _commands
+
+def inth(iterator, n):
+    return next(islice(iterator, max(0, n - 1), None), None)
 
 @command('listalias', 'alias', 'lsal')
 def c_alias(connection, argval):
@@ -237,6 +241,35 @@ def show_rotation(connection, argval = None):
     i1, i2 = npage * page_size, (npage + 1) * page_size
     return "{}/{}) {}".format(npage + 1, total, ", ".join(maps[i1 : i2]))
 
+@command('advancemap', 'advance', 'adv', admin_only = True)
+def advance(connection, argval = 1):
+    """
+    Force the next map to be immediately loaded instead of waiting for the time limit to end
+    /advancemap [number of maps to skip] or /adv
+    """
+
+    protocol = connection.protocol
+
+    skipn = int(argval)
+
+    protocol.planned_map = inth(protocol.map_rotator, skipn)
+    protocol.advance_rotation('Map advance forced.')
+
+@command('advancecancel', 'advca', 'adc', admin_only = True)
+def advancecancel(connection):
+    """
+    Cancel map /advance
+    /advancecancel or /adc
+    """
+
+    protocol = connection.protocol
+
+    if defer := protocol.advance_deferred:
+        if not defer.called:
+            defer.cancel()
+
+            protocol.broadcast_chat('Map advance cancelled.')
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
@@ -258,7 +291,22 @@ def apply_script(protocol, connection, config):
 
             connection.on_reset(self)
 
+    from twisted.internet.defer import CancelledError
+
     class ToolboxProtocol(protocol):
+        advance_deferred = None
+
+        def advance_rotation(self, message = None):
+            if defer := self.advance_deferred:
+                defer.cancel()
+
+            defer = protocol.advance_rotation(self, message).addErrback(
+                lambda failure: failure.trap(CancelledError)
+            )
+
+            self.advance_deferred = defer
+            return defer
+
         def get_player_count(self):
             return sum(connection.existing_player_sent() for connection in self.connections.values())
 
