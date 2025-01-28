@@ -9,8 +9,6 @@ from piqueserver.config import config
 from pyspades import contained as loaders
 from pyspades.constants import *
 
-from piqueserver.commands import _alias_map, _commands
-
 def inth(iterator, n):
     return next(islice(iterator, max(0, n - 1), None), None)
 
@@ -170,6 +168,8 @@ def gc(connection):
 
     return str(collect())
 
+from piqueserver.commands import _alias_map, _commands
+
 @command('listalias', 'alias', 'lsal')
 def c_alias(connection, argval):
     """
@@ -182,6 +182,29 @@ def c_alias(connection, argval):
     if cmd in _commands:
         cmds = ", ".join("/{}".format(k) for k, v in _alias_map.items() if v == cmd)
         return "{}: {}".format(cmd, cmds)
+    else:
+        return "Unknown command: {}".format(argval)
+
+from piqueserver.commands import get_command_help
+
+@command('help', 'info')
+def c_help(connection, argval = None):
+    """
+    Gives description and usage info for a command
+    /help <command name>
+    """
+
+    if argval is None:
+        if msg := connection.protocol.help:
+            connection.send_lines(msg, "help")
+
+        return
+
+    cmdname = _alias_map.get(argval, argval)
+
+    if func := _commands.get(cmdname):
+        desc, usage, _ = get_command_help(func)
+        return "Description: {}\nUsage: {}".format(desc, usage)
     else:
         return "Unknown command: {}".format(argval)
 
