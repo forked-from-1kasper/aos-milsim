@@ -14,21 +14,6 @@ from piqueserver.commands import _alias_map, _commands
 def inth(iterator, n):
     return next(islice(iterator, max(0, n - 1), None), None)
 
-@command('listalias', 'alias', 'lsal')
-def c_alias(connection, argval):
-    """
-    List all aliases to the given command
-    /alias <command>
-    """
-
-    cmd = _alias_map.get(argval, argval)
-
-    if cmd in _commands:
-        cmds = ", ".join("/{}".format(k) for k, v in _alias_map.items() if v == cmd)
-        return "{}: {}".format(cmd, cmds)
-    else:
-        return "Unknown command: {}".format(argval)
-
 def randbyte():
     return randint(0, 255)
 
@@ -184,6 +169,21 @@ def gc(connection):
     """
 
     return str(collect())
+
+@command('listalias', 'alias', 'lsal')
+def c_alias(connection, argval):
+    """
+    List all aliases to the given command
+    /alias <command>
+    """
+
+    cmd = _alias_map.get(argval, argval)
+
+    if cmd in _commands:
+        cmds = ", ".join("/{}".format(k) for k, v in _alias_map.items() if v == cmd)
+        return "{}: {}".format(cmd, cmds)
+    else:
+        return "Unknown command: {}".format(argval)
 
 @command()
 def say(connection, *w):
