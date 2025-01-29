@@ -319,13 +319,16 @@ def apply_script(protocol, connection, config):
     class ToolboxProtocol(protocol):
         advance_deferred = None
 
+        def advance_errback(self, failure):
+            self.advance_deferred = None
+            failure.trap(CancelledError)
+
         def advance_rotation(self, message = None):
             if defer := self.advance_deferred:
                 defer.cancel()
 
-            defer = protocol.advance_rotation(self, message).addErrback(
-                lambda failure: failure.trap(CancelledError)
-            )
+            defer = protocol.advance_rotation(self, message)
+            defer.addErrback(self.advance_errback)
 
             self.advance_deferred = defer
             return defer
