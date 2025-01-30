@@ -273,9 +273,9 @@ def advance(connection, argval = 1):
 
     protocol = connection.protocol
 
-    skipn = int(argval)
+    if protocol.planned_map is None:
+        protocol.planned_map = inth(protocol.map_rotator, int(argval))
 
-    protocol.planned_map = inth(protocol.map_rotator, skipn)
     protocol.advance_rotation('Map advance forced.')
 
 @command('advancecancel', 'advca', 'adc', admin_only = True)
