@@ -9,8 +9,8 @@ from piqueserver.config import config
 from pyspades import contained as loaders
 from pyspades.constants import *
 
-def inth(iterator, n):
-    return next(islice(iterator, max(0, n - 1), None), None)
+def take(iterator, n, default = None):
+    return next(islice(iterator, max(0, n - 1), None), default)
 
 def randbyte():
     return randint(0, 255)
@@ -274,7 +274,7 @@ def advance(connection, argval = 1):
     protocol = connection.protocol
 
     if protocol.planned_map is None:
-        protocol.planned_map = inth(protocol.map_rotator, int(argval))
+        protocol.planned_map = take(protocol.map_rotator, int(argval))
 
     protocol.advance_rotation('Map advance forced.')
 
