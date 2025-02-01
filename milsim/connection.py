@@ -1,7 +1,7 @@
 from random import choice, uniform
 from itertools import product
-from math import floor, inf
 from time import monotonic
+from math import floor
 
 from twisted.internet import reactor
 from twisted.logger import Logger
@@ -64,7 +64,8 @@ class MilsimConnection(FeatureConnection):
 
     last_killer     = None
     last_death_type = None
-    last_death_time = -inf
+    last_death_time = 0
+    last_spawn_time = 0
 
     body_mass = 70
 
@@ -75,8 +76,9 @@ class MilsimConnection(FeatureConnection):
         self.block_object   = self.protocol.BlockTool(self)
         self.grenade_object = self.protocol.GrenadeTool(self)
 
-        self.last_hp_update = -inf
         self.inventory      = Inventory()
+
+        self.last_hp_update = None
         self.body           = Body()
 
         self.previous_floor_position = None
@@ -294,8 +296,8 @@ class MilsimConnection(FeatureConnection):
 
         self.tool_object = self.weapon_object
 
-        self.last_sprint      = -inf
-        self.last_tool_update = -inf
+        self.last_sprint      = 0
+        self.last_tool_update = 0
 
         self.last_hp_update = monotonic()
         self.body.reset()
