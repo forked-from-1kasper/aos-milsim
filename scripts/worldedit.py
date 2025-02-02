@@ -30,7 +30,7 @@ def elevate(connection):
         x, y, _ = connection.world_object.position.get()
         z = connection.protocol.map.get_z(x, y) - 3
 
-        connection.set_location_safe((x, y, z))
+        connection.set_location((x, y, z))
 
 @command(admin_only = True)
 @player_only
