@@ -1,7 +1,7 @@
 from random import choice, uniform
+from math import floor, copysign
 from itertools import product
 from time import monotonic
-from math import floor
 
 from twisted.internet import reactor
 from twisted.logger import Logger
@@ -235,10 +235,15 @@ class MilsimConnection(FeatureConnection):
         FeatureConnection.on_position_update(self)
 
     def on_orientation_update(self, x, y, z):
+        ε = 1e-9
+
         retval = FeatureConnection.on_orientation_update(self, x, y, z)
 
-        if retval is False:
-            return False
+        if retval is False: return False
+
+        if retval is not None: x, y, z = retval
+
+        if -ε < x < ε: retval = copysign(ε, x), y, z
 
         torso = self.body.torso
 
