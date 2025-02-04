@@ -2,22 +2,24 @@ from operator import itemgetter
 from collections import Counter
 from math import ceil
 
+from pyspades.common import prettify_timespan
+
 from piqueserver.commands import command, player_only
-from piqueserver.config import config
+from piqueserver.config import config, cast_duration
 
 votemap_config = config.section('votemap')
 votemap_ratio = votemap_config.option('percentage', 60).get() / 100.0
 
-class VoteSkipCandidate:
-    name = '[Next Map]'
+votemap_extension_time = votemap_config.option(
+    'extension_time', default="15min", cast = lambda x: cast_duration(x) / 60
+).get() # minutes
 
-vote_skip_candidate = VoteSkipCandidate()
+class VotemapCandidate:
+    def __init__(self, label):
+        self.name = "[{}]".format(label)
 
-def get_vote_rotation_info(vote):
-    if vote is vote_skip_candidate:
-        return None # “protocol.advance_rotation” will take the next map from “protocol.map_rotator”
-    else:
-        return vote
+vote_extend_candidate = VotemapCandidate('Extend')
+vote_skip_candidate = VotemapCandidate('Next Map')
 
 def map_vote_iterator(protocol):
     for player in protocol.players.values():
@@ -41,8 +43,20 @@ def check_map_vote_end(protocol):
             for player in protocol.players.values():
                 player.map_vote = None
 
-            protocol.planned_map = get_vote_rotation_info(map_vote)
-            protocol.advance_rotation('Mapvote ended.')
+            if map_vote is vote_extend_candidate:
+                timelimit = protocol.set_time_limit(votemap_extension_time, True)
+
+                protocol.broadcast_chat(
+                    'Mapvote ended. Current map will continue for {}'.format(
+                        prettify_timespan(timelimit * 60)
+                    )
+                )
+            elif map_vote is vote_skip_candidate:
+                protocol.planned_map = None # “protocol.advance_rotation” will take the next map from “protocol.map_rotator”
+                protocol.advance_rotation('Mapvote ended.')
+            else:
+                protocol.planned_map = map_vote
+                protocol.advance_rotation('Mapvote ended.')
 
 @command('vote')
 @player_only
@@ -103,6 +117,26 @@ def c_voteskip(connection, *w):
 
     check_map_vote_end(protocol)
 
+@command('voteextend')
+@player_only
+def c_voteextend(connection, *w):
+    """
+    Vote to extend the current map
+    /voteextend
+    """
+
+    protocol = connection.protocol
+
+    if connection.map_vote is vote_extend_candidate:
+        return "You already voted to extend the current map"
+
+    connection.map_vote = vote_extend_candidate
+    protocol.broadcast_chat(
+        "{} voted to extend the current map".format(connection.name)
+    )
+
+    check_map_vote_end(protocol)
+
 @command('voteback')
 @player_only
 def c_voteback(connection, *w):
@@ -139,7 +173,7 @@ def c_votemap(connection):
             for map_vote, vote_count in vote_results.most_common(5)
         )
     else:
-        return "No one voted yet. Use /vote <map name> or /voteskip to be the first"
+        return "No one voted yet. Use /vote <map name>, /voteskip, or /voteextend to be the first"
 
 def apply_script(protocol, connection, config):
     class VotemapConnection(connection):
