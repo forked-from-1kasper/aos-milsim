@@ -11,7 +11,7 @@ votemap_config = config.section('votemap')
 votemap_ratio = votemap_config.option('percentage', 60).get() / 100.0
 
 votemap_extension_time = votemap_config.option(
-    'extension_time', default="15min", cast = lambda x: cast_duration(x) / 60
+    'extension_time', default = "15min", cast = lambda x: cast_duration(x) / 60
 ).get() # minutes
 
 class VotemapCandidate:
