@@ -48,7 +48,8 @@ def on_environment_generation(dirname, seed):
         build    = Sand,
         water    = Water,
         weather  = weather,
-        palette  = {make_color(*concrete): Concrete}
+        palette  = {make_color(*concrete): Concrete},
+        size     = Box(xmin = 256 - 127, xmax = 256 + 128, ymin = 256 - 40, ymax = 256 + 40),
     )
 
 get_entity_location = Entity(
