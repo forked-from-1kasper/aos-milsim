@@ -1,6 +1,7 @@
 from operator import itemgetter
 from collections import Counter
 from math import ceil
+import random
 
 from pyspades.common import prettify_timespan
 
@@ -66,7 +67,7 @@ def c_vote(connection, *w):
     /vote <map name>
     """
 
-    if len(w) <= 0: return "You can check available maps using /showrotation"
+    if len(w) <= 0: return "You can check available maps using /showrotation or /roll"
 
     protocol = connection.protocol
 
@@ -174,6 +175,19 @@ def c_votemap(connection):
         )
     else:
         return "No one voted yet. Use /vote <map name>, /voteskip, or /voteextend to be the first"
+
+@command('roll')
+def c_roll(connection):
+    """
+    Print 5 random maps from rotation
+    /roll
+    """
+
+    protocol = connection.protocol
+    rotation = protocol.maps
+
+    chosen = random.sample(rotation, min(len(rotation), 5))
+    return " ".join(rot_info.name for rot_info in chosen)
 
 def apply_script(protocol, connection, config):
     class VotemapConnection(connection):
