@@ -12,6 +12,10 @@ from pyspades.constants import *
 def take(iterator, n, default = None):
     return next(islice(iterator, max(0, n - 1), None), default)
 
+def ceildiv(n, d):
+    q, r = divmod(n, d)
+    return q + bool(r)
+
 def randbyte():
     return randint(0, 255)
 
@@ -235,10 +239,10 @@ def show_rotation(connection, argval = None):
     /shr [page number | query] or /shr * or /showrotation
     """
 
-    maps = connection.protocol.get_map_rotation()
-
     page_size = 5
-    total = len(maps) // page_size + 1
+
+    maps = connection.protocol.get_map_rotation()
+    total = ceildiv(len(maps), page_size)
 
     if argval == "*":
         return ", ".join(maps)
