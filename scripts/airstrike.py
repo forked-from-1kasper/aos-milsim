@@ -84,13 +84,16 @@ def do_airstrike(name, connection):
 def gift(connection):
     do_airstrike("Panavia Tornado ECR", connection)
 
-@command()
+@command('airstrike', 'air')
 @alive_only
-def air(player):
+def air(player, loc = None):
     """
     Report time before bomber's arrival
     /air
     """
+
+    if loc is not None:
+        return "To initiate an airstrike scope and then hold V. Use /air to check the readiness"
 
     if o := player.get_bomber():
         remaining = o.remaining()
