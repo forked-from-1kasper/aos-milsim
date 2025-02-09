@@ -53,7 +53,8 @@ def check_map_vote_end(protocol):
                     )
                 )
             elif map_vote is vote_skip_candidate:
-                protocol.planned_map = None # “protocol.advance_rotation” will take the next map from “protocol.map_rotator”
+                # “protocol.advance_rotation” will take the next map
+                # from “protocol.map_rotator” if `protocol.planned_map` was not chosen
                 protocol.advance_rotation('Mapvote ended.')
             else:
                 protocol.planned_map = map_vote

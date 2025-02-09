@@ -297,6 +297,15 @@ def advancecancel(connection):
 
             protocol.broadcast_chat('Map advance cancelled.')
 
+@command()
+def mapname(connection):
+    """
+    Print the name of the current map
+    /mapname
+    """
+    map_info = connection.protocol.map_info
+    return "{} by {}".format(map_info.name, map_info.author)
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
