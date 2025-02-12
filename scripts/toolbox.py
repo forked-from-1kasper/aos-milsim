@@ -3,7 +3,10 @@ from random import randint
 from time import time
 from math import inf
 
-from piqueserver.commands import command, player_only, join_arguments
+from piqueserver.commands import (
+    command, player_only, join_arguments,
+    handle_command, get_player
+)
 from piqueserver.config import config
 
 from pyspades import contained as loaders
@@ -54,6 +57,29 @@ def stress(connection, pid = None, length = None):
         return "Packet length expected to be a positive integer"
 
     connection.send_contained(StressPacket(pid, length))
+
+@command(admin_only = True)
+def runas(connection, nickname, cmdname, *params):
+    """
+    Run command as other player
+    /runas <nickname> <command> ...
+    """
+
+    player = get_player(connection.protocol, nickname)
+    return handle_command(player, cmdname, params)
+
+@command('listconnections', 'lscon')
+def c_lscon(connection):
+    """
+    List players online
+    /listconnections
+    """
+
+    protocol = connection.protocol
+    return ", ".join(
+        "{} (#{})".format(player.name, player.player_id)
+        for player in protocol.players.values()
+    )
 
 discord     = config.section("discord")
 invite      = discord.option("invite", "<no invite>").get()
