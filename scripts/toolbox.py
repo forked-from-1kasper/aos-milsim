@@ -141,9 +141,12 @@ def c_getattr(o, k, v):
 def c_globals(connection):
     ds = c_getattr(connection, 'globals', dict())
 
+    protocol = connection.protocol
+
     ds.update(
         connection = connection,
-        protocol   = connection.protocol
+        protocol   = protocol,
+        idx        = protocol.players.get,
     )
 
     return ds
@@ -161,7 +164,10 @@ def c_eval(connection, *w):
     expr = ' '.join(w)
 
     try:
-        return str(eval(expr, c_globals(connection)))
+        ds = c_globals(connection)
+
+        retval = ds['_'] = eval(expr, ds)
+        return str(retval)
     except Exception as exc:
         return format_exception(exc)
 
