@@ -286,6 +286,7 @@ class Leg(ABCLimb):
     fall               = Linear(1, 10)
     sprint_damage_rate = 7.5
     walk_damage_rate   = 3.5
+    jump_damage        = 9.0
 
 class Body:
     def __init__(self):

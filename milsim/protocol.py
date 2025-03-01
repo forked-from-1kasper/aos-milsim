@@ -240,13 +240,12 @@ class MilsimProtocol(FeatureProtocol):
 
             player.body.update(dt)
 
-            if player.moving() and not player.world_object.airborne:
-                for leg in player.body.legs():
-                    if leg.fractured:
-                        if player.world_object.sprint:
-                            leg.hit(leg.sprint_damage_rate * dt)
-                        elif not leg.splint:
-                            leg.hit(leg.walk_damage_rate * dt)
+            for leg in player.body.legs():
+                if leg.fractured and not player.world_object.airborne:
+                    if player.world_object.sprint:
+                        leg.hit(leg.sprint_damage_rate * dt)
+                    elif player.moving():
+                        if not leg.splint: leg.hit(leg.walk_damage_rate * dt)
 
             for arm in player.body.arms():
                 if player.world_object.primary_fire and arm.fractured:

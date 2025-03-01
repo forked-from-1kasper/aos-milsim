@@ -254,9 +254,7 @@ class MilsimConnection(FeatureConnection):
 
     def on_animation_update(self, jump, crouch, sneak, sprint):
         retval = FeatureConnection.on_animation_update(self, jump, crouch, sneak, sprint)
-
-        if retval is not None:
-            jump, crouch, sneak, sprint = retval
+        if retval is not None: jump, crouch, sneak, sprint = retval
 
         if self.world_object.sprint and not sprint:
             self.last_sprint = monotonic()
@@ -266,6 +264,11 @@ class MilsimConnection(FeatureConnection):
                 self.tool_object.on_sneak_press()
             else:
                 self.tool_object.on_sneak_release()
+
+        if not self.world_object.jump and jump:
+            for leg in self.body.legs():
+                if leg.fractured:
+                    leg.hit(leg.jump_damage)
 
         self.protocol.engine.set_animation(self.player_id, crouch)
 
