@@ -198,4 +198,16 @@ def apply_script(protocol, connection, config):
             connection.on_disconnect(self)
             check_map_vote_end(self.protocol)
 
-    return protocol, VotemapConnection
+    class VotemapProtocol(protocol):
+        def on_map_change(self, M):
+            for player in self.players.values():
+                # These votes where about the previous maps
+                if player.map_vote is vote_extend_candidate:
+                    player.map_vote = None
+
+                if player.map_vote is vote_skip_candidate:
+                    player.map_vote = None
+
+            protocol.on_map_change(self, M)
+
+    return VotemapProtocol, VotemapConnection
