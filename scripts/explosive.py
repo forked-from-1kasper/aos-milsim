@@ -4,7 +4,10 @@ from pyspades.common import Vertex3
 
 from piqueserver.commands import command, player_only
 
-from milsim.common import alive_only, apply_item, has_item, take_item, take_items
+from milsim.common import (
+    alive_only, apply_item, has_item,
+    take_item, take_items, format_taken_items
+)
 from milsim.blast import sendGrenadePacket
 from milsim.types import TileEntity, Item
 
@@ -127,46 +130,48 @@ class ChargeItem(ExplosiveItem):
 
 @command('mine', 'm')
 @alive_only
-def use_landmine(conn):
+def use_landmine(player):
     """
     Put a mine on the given block
     /m or /mine
     """
-    return apply_item(LandmineItem, conn, errmsg = "You do not have mines")
+    return apply_item(LandmineItem, player, errmsg = "You do not have mines")
 
 @command('charge', 'c')
 @alive_only
-def use_charge(conn):
+def use_charge(player):
     """
     Put a charge on the given block
     /c or /charge
     """
-    return apply_item(ChargeItem, conn, errmsg = "You do not have charges")
+    return apply_item(ChargeItem, player, errmsg = "You do not have charges")
 
 @command('detonate', 'de')
 @alive_only
-def use_detonator(conn):
+def use_detonator(player):
     """
     Activate a detonator
     /de or /detonate
     """
-    return apply_item(DetonatorItem, conn, errmsg = "You do not have a detonator")
+    return apply_item(DetonatorItem, player, errmsg = "You do not have a detonator")
+
+def take_detonator(player, n):
+    if not has_item(player, DetonatorItem):
+        yield from take_item(player, DetonatorItem)
+
+    yield from take_items(player, ChargeItem, n, 3)
 
 @command('takecharge', 'tc')
 @alive_only
-def take_charge(conn, n = 1):
+def take_charge(player, argval = 1):
     """
     Try to take a given number of charges and a detonator
     /tc [n] or /takecharge
     """
-    n = int(n)
+    n = int(argval)
 
     if n <= 0: return "Invalid number of charges"
-
-    if not has_item(conn, DetonatorItem):
-        take_item(conn, DetonatorItem)
-
-    take_items(conn, ChargeItem, n, 5)
+    return format_taken_items(take_detonator(player, n))
 
 def apply_script(protocol, connection, config):
     def explosive_default_tent_loadout(self):

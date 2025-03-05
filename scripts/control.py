@@ -18,12 +18,6 @@ from milsim.common import *
 
 yn = lambda b: "yes" if b else "no"
 
-def format_item(o):
-    if o.persistent:
-        return "[{}] {}".format(o.id, o.name)
-    else:
-        return "{{{}}} {}".format(o.id, o.name)
-
 def ppBodyPart(P):
     label = P.abbrev.upper() if P.fractured and not P.splint else P.abbrev
     suffix = ite(P.venous, "*", "") + ite(P.arterial, "**", "")
@@ -268,23 +262,25 @@ def grenade(player):
     """
     return apply_item(GrenadeLauncher, player, errmsg = "You do not have a grenade launcher")
 
+def take_grenade_launcher(player, n):
+    iu = player.weapon_object.item_underbarrel
+
+    if not isinstance(iu, GrenadeLauncher) and not has_item(player, GrenadeLauncher):
+       yield from take_item(player, GrenadeLauncher)
+
+    yield from take_items(player, GrenadeItem, n, 3)
+
 @command('takegrenade', 'tg')
 @alive_only
-def takegrenade(player, n = 1):
+def takegrenade(player, argval = 1):
     """
     Try to take a given number of grenades and a grenade launcher
     /tg [n] or /takegrenade
     """
-    n = int(n)
+    n = int(argval)
 
     if n <= 0: return "Invalid number of grenades"
-
-    iu = player.weapon_object.item_underbarrel
-
-    if not isinstance(iu, GrenadeLauncher) and not has_item(player, GrenadeLauncher):
-       take_item(player, GrenadeLauncher)
-
-    take_items(player, GrenadeItem, n, 5)
+    return format_taken_items(take_grenade_launcher(player, n))
 
 @command('underbarrel', 'ub')
 @alive_only
@@ -373,7 +369,9 @@ def take(player, ID):
             player.inventory.push(o)
             player.sync()
 
-            return
+            return "Taken {}".format(format_item(o))
+
+    return "There's no [{}] nearby".format(ID.upper())
 
 @command()
 @alive_only
@@ -382,7 +380,11 @@ def drop(player, ID):
     Drop an item with the given ID from the inventory
     /drop (ID)
     """
-    player.drop(ID)
+
+    if o := player.drop(ID):
+        return "Thrown away {}".format(format_item(o))
+    else:
+        return "There's no [{}] in your backpack".format(ID.upper())
 
 @command('use', 'u')
 @alive_only
@@ -391,6 +393,7 @@ def use(player, ID, *w, **kw):
     Use an item from the inventory with the given ID
     /u (ID) or /use
     """
+
     if o := player.inventory[ID]:
         sig = inspect.signature(o.apply)
 
@@ -400,6 +403,8 @@ def use(player, ID, *w, **kw):
             return "Wrong number of arguments"
 
         return o.apply(*b.args, **b.kwargs)
+    else:
+        return "There's no [{}] in your backpack".format(ID.upper())
 
 @command('prioritize', 'pr')
 @alive_only
@@ -413,6 +418,8 @@ def prioritize(player, ID):
     if o := i[ID]:
         i.remove(o)
         i.push(o)
+    else:
+        return "There's no [{}] in your backpack".format(ID.upper())
 
 from scripts.toolbox import c_globals, format_exception
 

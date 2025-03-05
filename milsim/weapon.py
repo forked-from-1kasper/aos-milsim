@@ -26,6 +26,8 @@ class UnderbarrelItem(Item):
 
         player.weapon_object.item_underbarrel = self
 
+        return "Equipped {}".format(format_item(self))
+
 class ABCWeapon(Tool):
     name        = NotImplemented
     delay       = NotImplemented

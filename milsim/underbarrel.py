@@ -6,6 +6,7 @@ from pyspades.world import Grenade
 
 from milsim.blast import sendGrenadePacket
 from milsim.weapon import UnderbarrelItem
+from milsim.common import format_item
 from milsim.types import Item
 
 class GrenadeLauncher(UnderbarrelItem):
@@ -53,6 +54,10 @@ class GrenadeCartridge(Item):
                 player.inventory.push(o)
 
             w.item_underbarrel.grenade = self
+
+            return "Loaded {}".format(format_item(self))
+        else:
+            return "No grenade launcher to load"
 
 class GrenadeItem(GrenadeCartridge):
     name   = "M433 Grenade"

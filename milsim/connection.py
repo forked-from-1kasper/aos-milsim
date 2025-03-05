@@ -198,6 +198,8 @@ class MilsimConnection(FeatureConnection):
             self.inventory.remove(o)
             self.sync()
 
+            return o
+
     def drop_inventory(self):
         if self.world_object is not None:
             self.get_drop_inventory().extend(

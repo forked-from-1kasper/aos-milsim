@@ -24,31 +24,6 @@ def alive_only(func):
 
     return _decorated
 
-def apply_item(klass, player, errmsg = None):
-    it = filter(lambda o: isinstance(o, klass), player.inventory)
-
-    if o := next(it, None):
-        return o.apply(player)
-    else:
-        return errmsg
-
-def has_item(player, klass):
-    return any(map(lambda o: isinstance(o, klass), player.inventory))
-
-def take_item(player, klass):
-    for i, o in player.get_available_items():
-        if isinstance(o, klass):
-            i.remove(o)
-            player.inventory.push(o)
-
-            return
-
-def take_items(player, klass, n, nmax):
-    navail = sum(map(lambda o: isinstance(o, klass), player.inventory))
-
-    if nmax <= n + navail: return
-    for k in range(n): take_item(player, klass)
-
 def floor3(v):
     return floor(v.x), floor(v.y), floor(v.z)
 
@@ -94,3 +69,40 @@ def icons(x, xs):
 
 ilen   = lambda it: sum(1 for o in it)
 iempty = lambda it: next(it, None) is None
+
+def apply_item(klass, player, errmsg = None):
+    it = filter(lambda o: isinstance(o, klass), player.inventory)
+
+    if o := next(it, None):
+        return o.apply(player)
+    else:
+        return errmsg
+
+def has_item(player, klass):
+    return any(map(lambda o: isinstance(o, klass), player.inventory))
+
+def take_item(player, klass):
+    for i, o in player.get_available_items():
+        if isinstance(o, klass):
+            i.remove(o); player.inventory.push(o)
+            yield o; return
+
+def take_items(player, klass, n, nmax):
+    navail = sum(map(lambda o: isinstance(o, klass), player.inventory))
+
+    for k in range(clamp(0, nmax - navail, n)):
+        yield from take_item(player, klass)
+
+def format_item(o):
+    if o.persistent:
+        return "[{}] {}".format(o.id, o.name)
+    else:
+        return "{{{}}} {}".format(o.id, o.name)
+
+def format_taken_items(os):
+    iss = ", ".join(format_item(o) for o in os)
+
+    if len(iss) <= 0:
+        return "No items taken"
+    else:
+        return "Taken {}".format(iss)
