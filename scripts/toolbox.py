@@ -338,6 +338,20 @@ def mapname(connection):
     map_info = connection.protocol.map_info
     return "{} by {}".format(map_info.name, map_info.author)
 
+@command('whatsnext', 'wsn')
+def c_whatsnext(connection):
+    """
+    Print name of the next map
+    /whatsnext
+    """
+
+    protocol = connection.protocol
+
+    if protocol.planned_map is None:
+        protocol.planned_map = next(protocol.map_rotator)
+
+    return "The next map is {}".format(protocol.planned_map.name)
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
