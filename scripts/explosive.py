@@ -8,13 +8,14 @@ from milsim.common import (
     alive_only, apply_item, has_item,
     take_item, take_items, format_taken_items
 )
-from milsim.blast import sendGrenadePacket
+from milsim.blast import sendGrenadePacket, explode
 from milsim.types import TileEntity, Item
 
 class Explosive(TileEntity):
-    Δx = +0.5
-    Δy = +0.5
-    Δz = -0.5
+    r1, r2 = 7.0, 30.0
+
+    Δx, Δy, Δz = 0, 0, 0
+    x0, y0, z0 = 0.5, 0.5, 0.5
 
     def __init__(self, protocol, position, player_id):
         TileEntity.__init__(self, protocol, position)
@@ -25,19 +26,25 @@ class Explosive(TileEntity):
 
         if player := self.protocol.take_player(self.player_id):
             x, y, z = self.position
-            loc = Vertex3(x + self.Δx, y + self.Δy, z + self.Δz)
 
-            player.grenade_explode(loc)
+            player.grenade_destroy(x + self.Δx, y + self.Δy, z + self.Δz)
+
+            loc = Vertex3(x + self.x0, y + self.y0, z + self.z0)
+            explode(self.r1, self.r2, player, loc)
+
             sendGrenadePacket(self.protocol, player.player_id, loc, Vertex3(0, 0, 0), 0)
 
 class Landmine(Explosive):
-    Δz = -1.0
+    Δz = -1
+    z0 = -0.5
 
     on_pressure  = Explosive.explode
     on_explosion = Explosive.explode
     on_destroy   = Explosive.explode
 
 class Charge(Explosive):
+    r1, r2 = 20.0, 60.0
+
     on_explosion = Explosive.explode
     on_destroy   = Explosive.explode
 
@@ -48,7 +55,7 @@ class ExplosiveItem(Item):
         if loc := player.world_object.cast_ray(7):
             x, y, z = loc
 
-            if z >= 63: return "{} cannot be placed on water".format(self.name)
+            if 63 <= z: return "{} cannot be placed on water".format(self.name)
             return self.spawn(player, x, y, z)
         else:
             return "{} cannot be placed that far away from you".format(self.name)

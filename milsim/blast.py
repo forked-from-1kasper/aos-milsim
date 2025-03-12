@@ -31,8 +31,8 @@ def flashbang_effect(protocol, player_id, position):
         sendGrenadePacket(protocol, player_id, r, Vertex3(0, 0, 0), 0.0)
 
 def damage(M, o, r, inner, outer):
-    x0, y0, z0 = r.x, r.y, min(62.9, r.z)
-    x1, y1, z1 = o.position.x, o.position.y, min(62.9, o.position.z)
+    x0, y0, z0 = o.position.x, o.position.y, min(62.9, o.position.z)
+    x1, y1, z1 = r.x, r.y, min(62.9, r.z)
 
     if not can_see(M, x0, y0, z0, x1, y1, z1):
         return 0
