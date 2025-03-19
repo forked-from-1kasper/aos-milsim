@@ -16,40 +16,77 @@ prohibited = {
 }
 
 @command(admin_only = True)
-def disconnect(conn, nickname):
+def disconnect(connection, nickname):
     """
     Silently disconnect a given player
     /disconnect <player>
     """
 
-    get_player(conn.protocol, nickname).disconnect(ERROR_UNDEFINED)
+    get_player(connection.protocol, nickname).disconnect(ERROR_UNDEFINED)
 
 @command(admin_only = True)
-def hardban(conn, nickname):
+def hardban(connection, nickname):
     """
     Hardban a given player
     /hardban <player>
     """
 
-    protocol = conn.protocol
+    protocol = connection.protocol
 
     player = get_player(protocol, nickname)
-    protocol.broadcast_chat(f'{conn.name} was hardbanned.')
+    protocol.broadcast_chat(f'{connection.name} was hardbanned.')
 
     protocol.hard_bans.add(player.address[0])
     player.disconnect(ERROR_BANNED)
 
+@command(admin_only = True)
+def unban(connection, nickname):
+    """
+    Unban a given player
+    /unban <player>
+    """
+
+    protocol = connection.protocol
+
+    player = get_player(protocol, nickname)
+    ip = player.address[0]
+
+    if ip in protocol.bans:
+        protocol.remove_ban(ip)
+        return "{} unbanned".format(player.name)
+    else:
+        return "{} is not banned".format(player.name)
+
+@command(admin_only = True)
+def unbanip(connection, ip):
+    """
+    Unban an ip
+    /unbanip <ip>
+    """
+
+    protocol = connection.protocol
+
+    if ip in protocol.bans:
+        protocol.remove_ban(ip)
+        return "{} unbanned".format(ip)
+    else:
+        return "{} is not banned".format(ip)
+
 @command()
-@player_only
-def status(conn, nickname = None):
+def status(connection, nickname = None):
     """
     Print ban expiry date
     /status [player]
     """
 
-    protocol = conn.protocol
+    protocol = connection.protocol
 
-    player = get_player(protocol, nickname) if nickname is not None else conn
+    if nickname is not None:
+        player = get_player(protocol, nickname)
+    elif isinstance(connection, ServerConnection):
+        player = connection
+    else:
+        return "Usage: /status [player]"
 
     ip = player.address[0]
     if ip in protocol.bans:
