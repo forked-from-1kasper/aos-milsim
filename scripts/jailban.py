@@ -96,12 +96,11 @@ def status(connection, nickname = None):
         if timestamp < time():
             protocol.remove_ban(ip)
             return f"Ban expired{reason}"
+        elif timestamp is not None:
+            expires = strftime("%b %d, %Y %H:%M:%S", gmtime(timestamp))
+            return f"Banned until {expires}{reason}"
         else:
-            if timestamp is not None:
-                expires = strftime("%b %d, %Y %H:%M:%S", gmtime(timestamp))
-                return f"Banned until {expires}{reason}"
-            else:
-                return f"Permabanned{reason}"
+            return f"Permabanned{reason}"
     else:
         return "Not banned"
 

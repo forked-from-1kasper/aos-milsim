@@ -201,7 +201,7 @@ def apply_script(protocol, connection, config):
     class VotemapProtocol(protocol):
         def on_map_change(self, M):
             for player in self.players.values():
-                # These votes where about the previous maps
+                # These votes were about the previous maps
                 if player.map_vote is vote_extend_candidate:
                     player.map_vote = None
 
