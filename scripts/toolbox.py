@@ -3,10 +3,7 @@ from random import randint
 from time import time
 from math import inf
 
-from piqueserver.commands import (
-    command, player_only, join_arguments,
-    handle_command, get_player
-)
+from piqueserver.commands import command, player_only, handle_command, get_player
 from piqueserver.config import config
 
 from pyspades import contained as loaders
@@ -106,7 +103,7 @@ def mail(connection, *w):
     /mail <your message>
     """
 
-    message = join_arguments(w).strip()
+    message = ' '.join(w).strip()
 
     if len(message) <= 0:
         return "Do not send empty messages (admins can see your IP)"
