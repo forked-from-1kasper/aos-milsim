@@ -2,6 +2,7 @@ from time import strftime, gmtime, time, monotonic
 from twisted.internet import reactor
 
 from piqueserver.commands import command, player_only, get_player
+from piqueserver.player import FeatureConnection
 
 from pyspades.player import ServerConnection
 from pyspades import contained as loaders
@@ -14,6 +15,22 @@ prohibited = {
     loaders.BlockAction.id,
     loaders.BlockLine.id
 }
+
+@command()
+def roles(connection, nickname):
+    """
+    List roles of the given player
+    /roles <player>
+    """
+
+    player = get_player(connection.protocol, nickname)
+
+    if bool(player.user_types):
+        return "{}: {}".format(
+            player.name, ", ".join(player.user_types)
+        )
+    else:
+        return "{} has no roles".format(player.name)
 
 @command(admin_only = True)
 def disconnect(connection, nickname):
@@ -119,6 +136,10 @@ def apply_script(protocol, connection, config):
             for player in self.players.values():
                 player.banned = player.address[0] in self.bans
 
+    assert connection.on_connect is FeatureConnection.on_connect, (
+        "“jailban” script is expected to be loaded before any other script that modifies `connection.on_connect`"
+    )
+
     class JailbanConnection(connection):
         command_whitelist = {
             "status",
@@ -133,6 +154,7 @@ def apply_script(protocol, connection, config):
 
         def on_connect(self):
             ServerConnection.on_connect(self)
+
             self.banned = self.address[0] in self.protocol.bans
 
         def on_command(self, command, parameters):
@@ -141,7 +163,7 @@ def apply_script(protocol, connection, config):
                     self.command_limiter.record_event(monotonic())
 
                 if not self.command_limiter.above_limit():
-                    self.send_chat("Use /status to check your ban expiry date.")
+                    self.send_chat("Use /status to check your ban expiry date")
 
                 return
 
