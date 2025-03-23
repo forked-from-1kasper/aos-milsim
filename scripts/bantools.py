@@ -227,7 +227,7 @@ def sanitize_message(text):
 def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_KICKREASON, 1)]
 
-    class JailbanProtocol(protocol):
+    class BantoolsProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
 
@@ -243,7 +243,7 @@ def apply_script(protocol, connection, config):
         "“jailban” script is expected to be loaded before any other script that modifies `connection.on_connect`"
     )
 
-    class JailbanConnection(connection):
+    class BantoolsConnection(connection):
         command_whitelist = {
             "status",
             "admin",
@@ -354,4 +354,4 @@ def apply_script(protocol, connection, config):
                 self.broadcast_chat(value, team = None if is_global_message else self.team)
                 self.on_chat_sent(value, is_global_message)
 
-    return JailbanProtocol, JailbanConnection
+    return BantoolsProtocol, BantoolsConnection
