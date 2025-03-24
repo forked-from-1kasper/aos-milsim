@@ -23,7 +23,7 @@ vote_extend_candidate = VotemapCandidate('Extend')
 vote_skip_candidate = VotemapCandidate('Next Map')
 
 def map_vote_iterator(protocol):
-    for player in protocol.players.values():
+    for player in protocol.connections.values():
         if map_vote := player.map_vote:
             yield map_vote
 
@@ -31,7 +31,7 @@ def map_vote_counter(protocol):
     return Counter(map_vote_iterator(protocol))
 
 def map_vote_threshold(protocol):
-    return ceil(len(protocol.players) * votemap_ratio)
+    return ceil(len(protocol.connections) * votemap_ratio)
 
 def check_map_vote_end(protocol):
     vote_results = map_vote_counter(protocol)
@@ -41,7 +41,7 @@ def check_map_vote_end(protocol):
         map_vote, vote_count = w
 
         if threshold <= vote_count:
-            for player in protocol.players.values():
+            for player in protocol.connections.values():
                 player.map_vote = None
 
             if map_vote is vote_extend_candidate:
@@ -200,7 +200,7 @@ def apply_script(protocol, connection, config):
 
     class VotemapProtocol(protocol):
         def on_map_change(self, M):
-            for player in self.players.values():
+            for player in self.connections.values():
                 # These votes were about the previous maps
                 if player.map_vote is vote_extend_candidate:
                     player.map_vote = None
