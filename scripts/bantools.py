@@ -5,9 +5,11 @@ from twisted.logger import Logger
 
 from piqueserver.commands import command, player_only, get_player
 from piqueserver.player import FeatureConnection
+from piqueserver.server import FeatureProtocol
 
 from pyspades.player import ServerConnection, parse_command
 from pyspades.packet import register_packet_handler
+from pyspades.common import escape_control_codes
 from pyspades import contained as loaders
 from pyspades.constants import *
 
@@ -67,6 +69,21 @@ def c_privmsg(connection, nickname, *w):
     player.send_chat(
         "{} -> YOU (PRIVATE): {}".format(connection.name, value)
     )
+
+@command('tli', 'togglelimbo')
+@player_only
+def c_togglelimbo(connection):
+    """
+    Toggle receiving messages from players in limbo
+    /togglelimbo
+    """
+
+    connection.ignore_limbo = not connection.ignore_limbo
+
+    if connection.ignore_limbo:
+        return "You are no longer receiving messages from limbo"
+    else:
+        return "You are receiving messages from limbo again"
 
 @command('ign', 'ignore')
 @player_only
@@ -137,7 +154,7 @@ def hardban(connection, nickname):
     protocol = connection.protocol
 
     player = get_player(protocol, nickname)
-    protocol.broadcast_chat(f'{connection.name} was hardbanned.')
+    protocol.broadcast_chat("{} was hardbanned".format(connection.name))
 
     protocol.hard_bans.add(player.address[0])
     player.disconnect(ERROR_BANNED)
@@ -227,6 +244,10 @@ def sanitize_message(text):
 def apply_script(protocol, connection, config):
     extensions = [(EXTENSION_KICKREASON, 1)]
 
+    assert protocol.broadcast_chat is FeatureProtocol.broadcast_chat, (
+        "“bantools” script is expected to be loaded before any other script that modifies `protocol.broadcast_chat`"
+    )
+
     class BantoolsProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
@@ -236,11 +257,26 @@ def apply_script(protocol, connection, config):
         def save_bans(self):
             protocol.save_bans(self)
 
-            for player in self.players.values():
+            for player in self.connections.values():
                 player.banned = player.address[0] in self.bans
 
+        def broadcast_chat(self, value, global_message = True, sender = None, team = None, irc = False):
+            if irc: self.irc_say("* {}".format(value))
+
+            for player in self.connections.values():
+                if player is sender:
+                    continue
+
+                if player.deaf:
+                    continue
+
+                if team is not None and player.team is not team:
+                    continue
+
+                player.send_chat(value, global_message)
+
     assert connection.on_connect is FeatureConnection.on_connect, (
-        "“jailban” script is expected to be loaded before any other script that modifies `connection.on_connect`"
+        "“bantools” script is expected to be loaded before any other script that modifies `connection.on_connect`"
     )
 
     class BantoolsConnection(connection):
@@ -252,7 +288,9 @@ def apply_script(protocol, connection, config):
 
         def __init__(self, *w, **kw):
             self.banned = False
-            self.ignore_list = set()
+
+            self.ignore_list  = set()
+            self.ignore_limbo = False
 
             connection.__init__(self, *w, **kw)
 
@@ -317,7 +355,7 @@ def apply_script(protocol, connection, config):
 
             ip, port = self.address
 
-            for player in self.protocol.players.values():
+            for player in self.protocol.connections.values():
                 if player.deaf:
                     continue
 
@@ -329,19 +367,35 @@ def apply_script(protocol, connection, config):
 
         @register_packet_handler(loaders.ChatMessage)
         def on_chat_message_recieved(self, contained):
-            if self.name is None:
-                return
+            value = sanitize_message(contained.value)
 
             if message_maximum_length < len(contained.value):
                 log.info(
                     "TOO LONG MESSAGE ({chars} chars) FROM {name} (#{id})",
-                    chars = len(contained.value), name = self.name, id = self.player_id
+                    chars = len(contained.value),
+                    name  = self.name or "Anonymous",
+                    id    = self.player_id
                 )
 
-            value = sanitize_message(contained.value)
+            if self.name is None:
+                contained           = loaders.ChatMessage()
+                contained.chat_type = CHAT_SYSTEM
+                contained.value     = "Anonymous: {}".format(value)
 
-            if value.startswith('/'):
+                for player in self.protocol.connections.values():
+                    if player.deaf:
+                        continue
+
+                    if player.ignore_limbo:
+                        continue
+
+                    player.send_contained(contained)
+
+                log.info("{{Anonymous}} {value}", value = escape_control_codes(value))
+
+            elif value.startswith('/'):
                 self.on_command(*parse_command(value[1:]))
+
             else:
                 is_global_message = contained.chat_type == CHAT_ALL
 
