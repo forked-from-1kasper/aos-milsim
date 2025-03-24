@@ -74,8 +74,9 @@ def c_lscon(connection):
 
     protocol = connection.protocol
     return ", ".join(
+        "#{}".format(player.player_id) if player.name is None else
         "{} (#{})".format(player.name, player.player_id)
-        for player in protocol.players.values()
+        for player in protocol.connections.values()
     )
 
 discord     = config.section("discord")
