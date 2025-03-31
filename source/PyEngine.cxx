@@ -330,13 +330,15 @@ static PyObject * PyEngineOnDespawn(PyEngine * self, PyObject * w) {
     if (!PyArg_ParseTuple(w, "i", &i))
         return nullptr;
 
-    auto & player = self->ref->players[i];
-    player.set_crouch(false);
-    player.set_position(nullptr);
-    player.set_orientation(nullptr);
+    if (i < self->ref->players.size()) { // `PyEngineOnSpawn` is not called for spectators
+        auto & player = self->ref->players[i];
+        player.set_crouch(false);
+        player.set_position(nullptr);
+        player.set_orientation(nullptr);
 
-    PyOwnedRef ds(self->ref->protocol, "players"); RETZIFZ(ds);
-    self->ref->players.resize(PyDictLargestKey<int>(ds) + 1);
+        PyOwnedRef ds(self->ref->protocol, "players"); RETZIFZ(ds);
+        self->ref->players.resize(PyDictLargestKey<int>(ds) + 1);
+    }
 
     Py_RETURN_NONE;
 }
