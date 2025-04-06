@@ -79,6 +79,26 @@ def c_lscon(connection):
         for player in protocol.connections.values()
     )
 
+@command('ping')
+def c_ping(connection, nickname = None):
+    """
+    Tell current ping of the given player (time for your actions to be received by the server)
+    /ping [nickname]
+    """
+
+    player = connection if nickname is None else get_player(connection.protocol, nickname)
+
+    if peer := getattr(player, 'peer', None):
+        ENET_PEER_PACKET_LOSS_SCALE = (1 << 16) # TODO: should be moved to `enet`
+
+        return "{nickname}: average = {average} ms, minimum = {minimum} ms, variance = {variance} ms, packet loss = {loss:.2f} %".format(
+            nickname = player.name,
+            average  = peer.roundTripTime,
+            minimum  = peer.lowestRoundTripTime,
+            variance = peer.roundTripTimeVariance,
+            loss     = peer.packetLoss * 100 / ENET_PEER_PACKET_LOSS_SCALE
+        )
+
 discord     = config.section("discord")
 invite      = discord.option("invite", "<no invite>").get()
 description = discord.option("description", "Discord").get()
