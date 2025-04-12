@@ -365,12 +365,6 @@ def apply_script(protocol, connection, config):
 
             connection.on_login(self, name)
 
-        # TODO: this *should* be fixed in the piqueserver itself
-        def on_reset(self):
-            self.kills = 0
-
-            connection.on_reset(self)
-
     from twisted.internet.defer import CancelledError
 
     class ToolboxProtocol(protocol):
