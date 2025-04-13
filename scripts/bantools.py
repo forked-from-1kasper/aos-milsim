@@ -299,6 +299,9 @@ def apply_script(protocol, connection, config):
             ip, port = self.address
 
             for player in self.protocol.connections.values():
+                if player.player_id is None:
+                    continue
+
                 if player.deaf:
                     continue
 
