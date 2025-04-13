@@ -135,63 +135,6 @@ def roles(connection, nickname):
     else:
         return "{} has no roles".format(player.name)
 
-@command(admin_only = True)
-def disconnect(connection, nickname):
-    """
-    Silently disconnect a given player
-    /disconnect <player>
-    """
-
-    get_player(connection.protocol, nickname).disconnect(ERROR_UNDEFINED)
-
-@command(admin_only = True)
-def hardban(connection, nickname):
-    """
-    Hardban a given player
-    /hardban <player>
-    """
-
-    protocol = connection.protocol
-
-    player = get_player(protocol, nickname)
-    protocol.broadcast_chat("{} was hardbanned".format(connection.name))
-
-    protocol.hard_bans.add(player.address[0])
-    player.disconnect(ERROR_BANNED)
-
-@command(admin_only = True)
-def unban(connection, nickname):
-    """
-    Unban a given player
-    /unban <player>
-    """
-
-    protocol = connection.protocol
-
-    player = get_player(protocol, nickname)
-    ip = player.address[0]
-
-    if ip in protocol.bans:
-        protocol.remove_ban(ip)
-        return "{} unbanned".format(player.name)
-    else:
-        return "{} is not banned".format(player.name)
-
-@command(admin_only = True)
-def unbanip(connection, ip):
-    """
-    Unban an ip
-    /unbanip <ip>
-    """
-
-    protocol = connection.protocol
-
-    if ip in protocol.bans:
-        protocol.remove_ban(ip)
-        return "{} unbanned".format(ip)
-    else:
-        return "{} is not banned".format(ip)
-
 @command()
 def status(connection, nickname = None):
     """
