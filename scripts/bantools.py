@@ -326,6 +326,9 @@ def apply_script(protocol, connection, config):
                 contained.value     = "Anonymous: {}".format(value)
 
                 for player in self.protocol.connections.values():
+                    if player.player_id is None:
+                        continue
+
                     if player.deaf:
                         continue
 
