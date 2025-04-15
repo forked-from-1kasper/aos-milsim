@@ -349,7 +349,10 @@ def cancel_votekick(connection, *w, **kw):
     /cancel
     """
 
-    return "Use /votepardon <player> instead"
+    if connection.admin:
+        return "Use /votepardon <player>, /voteveto <player>, or /revokevote <player> instead"
+    else:
+        return "Use /votepardon <player> instead"
 
 @command(admin_only = True)
 def kick(connection, nickname, *ws):
