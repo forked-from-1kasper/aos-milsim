@@ -4,6 +4,8 @@ from math import ceil
 
 from time import monotonic
 
+from twisted.logger import Logger
+
 from pyspades.constants import ERROR_BANNED, ERROR_UNDEFINED
 from pyspades.common import prettify_timespan
 
@@ -17,6 +19,8 @@ voteban_duration        = voteban_config.option('ban_duration', default = "30min
 voteban_revoke_timeout  = voteban_config.option('revoke_timeout', default = "2min", cast = cast_duration).get()
 voteban_percentage      = voteban_config.option('percentage', 51).get()
 voteban_percentage_team = voteban_config.option('percentage_team', 75).get()
+
+log = Logger()
 
 def format_reason(ws):
     if len(ws) > 0:
@@ -94,9 +98,6 @@ def scan_for_bans(protocol, total, team_1, team_2):
             reason = "voteban {:.0f} % ({})".format(team_2.percentage, protocol.team_2.name)
         else:
             continue
-
-        for player2 in protocol.connections.values():
-            player2.voteban.discard(addr)
 
         revoked += player.ban(reason, voteban_duration)
 
@@ -332,7 +333,7 @@ def c_votekick(connection, *w, **kw):
 
     return c_voteban(connection, *w, **kw)
 
-@command('y')
+@command('y', 'yes')
 def c_yes(connection, *w, **kw):
     """
     Placeholder for backward compatibility
@@ -582,6 +583,12 @@ def apply_script(protocol, connection, config):
         def broadcast_message(self, *ws, sep = ". "):
             self.broadcast_chat(sep.join(w for w in ws if w is not None))
 
+        def add_ban(self, addr, reason, duration, name = None):
+            protocol.add_ban(self, addr, reason, duration, name)
+
+            for player in self.connections.values():
+                player.voteban.discard(addr)
+
     class VotebanConnection(connection):
         voteban_last_revoke = 0
 
@@ -605,7 +612,15 @@ def apply_script(protocol, connection, config):
 
         def ban(self, reason = None, duration = None):
             connection.ban(self, reason, duration)
-            return voteban_revoke(self)
+
+            addr, port = self.address
+
+            if addr in self.protocol.bans:
+                log.info("{nickname} banned", nickname = self.name)
+
+                return voteban_revoke(self)
+            else:
+                return 0
 
         def suspected(self, investigator = None):
             addr, port = self.address
