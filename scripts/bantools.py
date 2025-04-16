@@ -70,7 +70,7 @@ def c_privmsg(connection, nickname, *w):
         "{} -> YOU (PRIVATE): {}".format(connection.name, value)
     )
 
-@command('tli', 'togglelimbo')
+@command('togglelimbo', 'tli')
 @player_only
 def c_togglelimbo(connection):
     """
@@ -85,7 +85,7 @@ def c_togglelimbo(connection):
     else:
         return "You are receiving messages from limbo again"
 
-@command('ign', 'ignore')
+@command('ignore', 'ign')
 @player_only
 def c_ignore(connection, nickname):
     """
@@ -102,7 +102,7 @@ def c_ignore(connection, nickname):
         connection.ignore_list.add(ip)
         return "You are now ignoring {}".format(player.name)
 
-@command('uni', 'unignore')
+@command('unignore', 'uni')
 @player_only
 def c_unignore(connection, nickname):
     """
