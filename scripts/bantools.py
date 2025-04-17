@@ -323,7 +323,10 @@ def apply_script(protocol, connection, config):
                     id    = self.player_id
                 )
 
-            if self.name is None:
+            if value.startswith('/'):
+                self.on_command(*parse_command(value[1:]))
+
+            elif self.name is None:
                 contained           = loaders.ChatMessage()
                 contained.chat_type = CHAT_SYSTEM
                 contained.value     = "Anonymous: {}".format(value)
@@ -341,9 +344,6 @@ def apply_script(protocol, connection, config):
                     player.send_contained(contained)
 
                 log.info("{{Anonymous}} {value}", value = escape_control_codes(value))
-
-            elif value.startswith('/'):
-                self.on_command(*parse_command(value[1:]))
 
             else:
                 is_global_message = contained.chat_type == CHAT_ALL
