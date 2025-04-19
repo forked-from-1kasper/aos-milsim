@@ -2,9 +2,11 @@
 
 #include "Python.h"
 
+#define RETIFZ(x)     { if ((x) == nullptr)   return;         }
 #define RETZIFZ(x)    { if ((x) == nullptr)   return nullptr; }
 #define RETERRIFZ(x)  { if ((x) == nullptr)   return -1;      }
 #define RETDEFIFZ(x)  { if ((x) == nullptr)   return {};      }
+#define RETIFERR()    { if (PyErr_Occurred()) return;         }
 #define RETZIFERR()   { if (PyErr_Occurred()) return nullptr; }
 #define RETERRIFERR() { if (PyErr_Occurred()) return -1;      }
 #define RETDEFIFERR() { if (PyErr_Occurred()) return {};      }
@@ -137,8 +139,22 @@ template<typename T> inline T PyGetAttr(PyObject * o, const char * attr) {
     return PyDecode<T>(attrval);
 }
 
+template<typename T> inline T PyGetAttr(PyObject * o, const char * attr, const T defval) {
+    PyOwnedRef attrval(o, attr);
+    if (attrval == nullptr) return defval;
+
+    return PyDecode<T>(attrval);
+}
+
 template<typename T> inline T PyGetItem(PyObject * o, const char * k) {
     auto val = PyDict_GetItemString(o, k); RETDEFIFZ(val);
+
+    return PyDecode<T>(val);
+}
+
+template<typename T> inline T PyGetItem(PyObject * o, const char * k, const T defval) {
+    auto val = PyDict_GetItemString(o, k);
+    if (val == nullptr) return defval;
 
     return PyDecode<T>(val);
 }
