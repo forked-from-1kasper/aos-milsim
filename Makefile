@@ -2,9 +2,10 @@ PYTHON       = python3
 PYTHONCONFIG = python3-config
 CXX          = c++
 CYTHON       = cython
-LIBPYSPADES  = $(shell $(PYTHON) -m site --user-site)/pyspades
-CXXFLAGS     = -pthread -std=c++23 -fPIC -Ibuild/ -Iinclude/ -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
+CXXFLAGS     = -pthread -fPIC -std=c++23 -Wno-mathematical-notation-identifier-extension -Ibuild/ -Iinclude/ -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
 LDFLAGS      = -pthread -shared
+PYMODCMD     = 'from importlib.util import find_spec; print(find_spec("pyspades").origin)'
+LIBPYSPADES  = $(shell dirname `$(PYTHON) -c $(PYMODCMD)`)
 
 all: build
 
