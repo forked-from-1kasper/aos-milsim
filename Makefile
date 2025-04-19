@@ -7,6 +7,12 @@ LDFLAGS      = -pthread -shared
 PYMODCMD     = 'from importlib.util import find_spec; print(find_spec("pyspades").origin)'
 LIBPYSPADES  = $(shell dirname `$(PYTHON) -c $(PYMODCMD)`)
 
+debug: CXXFLAGS += -g
+debug: all
+
+release: CXXFLAGS += -O3
+release: all
+
 all: build
 
 build:
@@ -14,9 +20,6 @@ build:
 
 clean:
 	rm -f build/*.o build/*.h build/*.cxx milsim/*.so
-
-release: CXXFLAGS += -O3
-release: all
 
 build/%.cxx: source/%.pyx
 	$(CYTHON) --cplus -3 $< -o $@
