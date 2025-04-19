@@ -40,8 +40,10 @@ template<> inline PyObject * PyEncode<unsigned long>(unsigned long d)
 template<> inline PyObject * PyEncode<unsigned long long>(unsigned long long d)
 { return PyLong_FromUnsignedLongLong(d); }
 
-template<> inline PyObject * PyEncode<bool>(bool b)
-{ return b ? Py_True : Py_False; }
+template<> inline PyObject * PyEncode<bool>(bool b) {
+    PyObject * o = b ? Py_True : Py_False;
+    Py_INCREF(o); return o;
+}
 
 template<typename T> T PyDecode(PyObject *) = delete;
 
