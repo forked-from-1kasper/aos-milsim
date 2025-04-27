@@ -394,6 +394,9 @@ def ban(connection, nickname, timestr, *ws):
     reason   = join_arguments(ws)
     player   = get_player(connection.protocol, nickname)
 
+    if duration is None:
+        return "Invalid duration: {}".format(timestr)
+
     if errmsg := have_privs(connection, player):
         return errmsg
 
@@ -483,6 +486,9 @@ def banip(connection, addr, timestr, *ws):
 
     duration = timeparse(timestr)
     reason   = join_arguments(ws)
+
+    if duration is None:
+        return "Invalid duration: {}".format(timestr)
 
     if errmsg := have_privs(connection):
         return errmsg
