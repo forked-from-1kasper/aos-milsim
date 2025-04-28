@@ -119,11 +119,11 @@ def c_unignore(connection, nickname):
     else:
         return "You are not ignoring {}".format(player.name)
 
-@command()
-def roles(connection, nickname):
+@command('listroles', 'roles', 'lsr')
+def c_roles(connection, nickname):
     """
     List roles of the given player
-    /roles <player>
+    /listroles <player>
     """
 
     player = get_player(connection.protocol, nickname)
