@@ -99,19 +99,6 @@ def c_ping(connection, nickname = None):
             loss     = peer.packetLoss * 100 / ENET_PEER_PACKET_LOSS_SCALE
         )
 
-discord     = config.section("discord")
-invite      = discord.option("invite", "<no invite>").get()
-description = discord.option("description", "Discord").get()
-
-@command()
-def discord(connection):
-    """
-    Information on where to find administrators in Discord
-    /discord
-    """
-
-    return "{}: {}".format(description, invite)
-
 mailbox   = config.section("mailbox")
 mailfile  = mailbox.option("file", "mailbox.txt").get()
 maildelay = mailbox.option("delay", 90).get()
