@@ -541,7 +541,19 @@ class TubularMagazine(Magazine):
         return sum(map(lambda o: o.totmass, self.container))
 
 class Tool:
+    def on_tool_used(self):
+        pass
+
+    def on_tool_equipped(self, o):
+        pass
+
+    def on_tool_unequipped(self, o):
+        pass
+
     def on_lmb_press(self):
+        pass
+
+    def on_lmb_hold(self, t, dt):
         pass
 
     def on_lmb_release(self):
@@ -550,22 +562,19 @@ class Tool:
     def on_sneak_press(self):
         pass
 
+    def on_sneak_hold(self, t, dt):
+        pass
+
     def on_sneak_release(self):
         pass
 
     def on_rmb_press(self):
         pass
 
-    def on_rmb_release(self):
-        pass
-
-    def on_lmb_hold(self, t, dt):
-        pass
-
     def on_rmb_hold(self, t, dt):
         pass
 
-    def on_sneak_hold(self, t, dt):
+    def on_rmb_release(self):
         pass
 
 def dig(player, mu, dt, x, y, z):

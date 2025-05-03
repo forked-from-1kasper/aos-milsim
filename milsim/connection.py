@@ -305,6 +305,7 @@ class MilsimConnection(FeatureConnection):
         self.previous_floor_position = self.floor()
 
         self.tool_object = self.weapon_object
+        self.tool_object.on_tool_equipped(None)
 
         self.last_sprint      = 0
         self.last_tool_update = 0
@@ -366,13 +367,18 @@ class MilsimConnection(FeatureConnection):
         self.last_tool_update = monotonic()
 
         if tool == SPADE_TOOL:
-            self.tool_object = self.spade_object
+            tool_object = self.spade_object
         if tool == BLOCK_TOOL:
-            self.tool_object = self.block_object
+            tool_object = self.block_object
         if tool == WEAPON_TOOL:
-            self.tool_object = self.weapon_object
+            tool_object = self.weapon_object
         if tool == GRENADE_TOOL:
-            self.tool_object = self.grenade_object
+            tool_object = self.grenade_object
+
+        self.tool_object.on_tool_unequipped(tool_object)
+        tool_object.on_tool_equipped(tool_object)
+
+        self.tool_object = tool_object
 
         self.world_object.set_weapon(tool == WEAPON_TOOL)
         self.on_tool_changed(tool)
@@ -751,6 +757,8 @@ class MilsimConnection(FeatureConnection):
             return
 
         if o := next(self.handgrenades(), None):
+            self.grenade_object.on_tool_used()
+
             self.inventory.remove(o)
 
             grenade = self.protocol.world.create_object(
