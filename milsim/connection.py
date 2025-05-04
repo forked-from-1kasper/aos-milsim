@@ -326,6 +326,13 @@ class MilsimConnection(FeatureConnection):
         if FeatureConnection.on_kill(self, killer, kill_type, grenade) is False:
             return False
 
+        if self.tool == GRENADE_TOOL and self.grenade_object.unpin_time > 0:
+            dt = max(0, monotonic() - self.grenade_object.unpin_time)
+            fuse = max(0, 3.0 - dt)
+
+            self.grenade_object.unpin_time = 0
+            self.create_grenade(self.world_object.position.copy(), Vertex3(), fuse)
+
         self.protocol.engine.on_despawn(self.player_id)
         self.drop_inventory()
 
@@ -756,9 +763,11 @@ class MilsimConnection(FeatureConnection):
         if check_nan(v.length()):
             return
 
-        if o := next(self.handgrenades(), None):
+        if self.create_grenade(r, v, fuse, sender = self) is not None:
             self.grenade_object.on_tool_used()
 
+    def create_grenade(self, r, v, fuse, sender = None):
+        if o := next(self.handgrenades(), None):
             self.inventory.remove(o)
 
             grenade = self.protocol.world.create_object(
@@ -775,7 +784,9 @@ class MilsimConnection(FeatureConnection):
                 contained.position  = r.get()
                 contained.velocity  = v.get()
 
-                self.protocol.broadcast_contained(contained, sender = self)
+                self.protocol.broadcast_contained(contained, sender = sender)
+
+            return grenade
 
     @register_packet_handler(loaders.GrenadePacket)
     def on_grenade_recieved(self, contained):

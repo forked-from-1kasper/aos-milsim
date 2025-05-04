@@ -2,6 +2,7 @@ from typing import Dict, List, Callable, Tuple
 from dataclasses import dataclass, field
 from collections.abc import Iterable
 from collections import deque
+from time import monotonic
 
 from math import pi, exp, log, inf, nan, floor, prod, sin, cos
 from random import random, gauss
@@ -625,7 +626,26 @@ class GrenadeTool(Tool):
     mass = 0
 
     def __init__(self, player):
+        self.unpin_time = 0
         self.player = player
+
+    def on_lmb_press(self):
+        self.unpin_time = monotonic()
+
+    def on_lmb_release(self):
+        self.unpin_time = 0
+
+    def on_tool_used(self):
+        self.unpin_time = 0
+
+    def on_tool_equipped(self, o):
+        if self.player.world_object.primary_fire:
+            self.unpin_time = monotonic()
+        else:
+            self.unpin_time = 0
+
+    def on_tool_unequipped(self, o):
+        self.unpin_time = 0
 
 class TileEntity:
     def __init__(self, protocol, position):
