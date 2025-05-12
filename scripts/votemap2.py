@@ -99,7 +99,7 @@ def c_vote(connection, *w):
 
     return "'{}' map not found".format(query)
 
-@command('voteskip')
+@command('voteskip', 'skip')
 @player_only
 def c_voteskip(connection, *w):
     """
@@ -119,7 +119,7 @@ def c_voteskip(connection, *w):
 
     check_map_vote_end(protocol)
 
-@command('voteextend')
+@command('voteextend', 'extend')
 @player_only
 def c_voteextend(connection, *w):
     """
