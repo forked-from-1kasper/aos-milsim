@@ -323,7 +323,7 @@ def mapname(connection):
     map_info = connection.protocol.map_info
     return "{} by {}".format(map_info.name, map_info.author)
 
-@command('whatsnext', 'wsn')
+@command('whatsnext', 'nextmap', 'wsn')
 def c_whatsnext(connection):
     """
     Print name of the next map
