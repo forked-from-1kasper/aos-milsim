@@ -64,10 +64,10 @@ class Engine:
 
         if value == 'on':
             o.on_trace = protocol.onTrace
-            return "Debug is turned on."
+            return "Debug is turned on"
         elif value == 'off':
             o.on_trace = None
-            return "Debug is turned off."
+            return "Debug is turned off"
         else:
             return "Usage: /engine debug (on|off)"
 
@@ -119,7 +119,7 @@ def lookat(connection):
         M, d = protocol.engine[loc]
         return f"Material: {M.name}, durability: {d:.2f}, crumbly: {yn(M.crumbly)}."
     else:
-        return "Block is too far."
+        return "Block is too far"
 
 @command()
 def weather(connection):
