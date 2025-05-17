@@ -117,7 +117,7 @@ def lookat(connection):
         protocol = connection.protocol
 
         M, d = protocol.engine[loc]
-        return f"Material: {M.name}, durability: {d:.2f}, crumbly: {yn(M.crumbly)}."
+        return f"Material: {M.name}, durability: {d:.2f}, crumbly: {yn(M.crumbly)}"
     else:
         return "Block is too far"
 
