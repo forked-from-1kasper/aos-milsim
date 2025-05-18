@@ -3,7 +3,7 @@ from time import strftime, gmtime, time, monotonic
 from twisted.internet import reactor
 from twisted.logger import Logger
 
-from piqueserver.commands import command, player_only, get_player
+from piqueserver.commands import _alias_map, command, player_only, get_player
 from piqueserver.player import FeatureConnection
 from piqueserver.server import FeatureProtocol
 
@@ -227,6 +227,7 @@ def apply_script(protocol, connection, config):
             "status",
             "admin",
             "ping",
+            "pm"
         }
 
         def __init__(self, *w, **kw):
@@ -243,7 +244,7 @@ def apply_script(protocol, connection, config):
             self.banned = self.address[0] in self.protocol.bans
 
         def on_command(self, command, parameters):
-            if self.banned and command not in self.command_whitelist:
+            if self.banned and _alias_map.get(command, command) not in self.command_whitelist:
                 if self.protocol.command_antispam:
                     self.command_limiter.record_event(monotonic())
 
