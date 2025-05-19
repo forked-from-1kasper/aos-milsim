@@ -292,9 +292,14 @@ def underbarrel(player):
 
     return "Underbarrel: {}".format(format_item(player.weapon_object.item_underbarrel))
 
-@command()
+@command('packload', 'gearmass', 'plo', 'gma')
 @alive_only
 def packload(player):
+    """
+    Print player's gear weight
+    /packload or /gearmass
+    """
+
     return "{:.3f} kg".format(player.gear_mass())
 
 items_per_page = 3
