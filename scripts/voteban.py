@@ -19,6 +19,8 @@ voteban_duration        = voteban_config.option('ban_duration', default = "30min
 voteban_revoke_timeout  = voteban_config.option('revoke_timeout', default = "2min", cast = cast_duration).get()
 voteban_percentage      = voteban_config.option('percentage', 51).get()
 voteban_percentage_team = voteban_config.option('percentage_team', 75).get()
+voteban_minvotes        = voteban_config.option('minvotes', 2).get()
+voteban_minvotes_team   = voteban_config.option('minvotes_team', 3).get()
 
 log = Logger()
 
@@ -29,7 +31,7 @@ def format_reason(ws):
         return None
 
 class VotebanResults(Counter):
-    def __init__(self, percentage, players):
+    def __init__(self, percentage, minvotes, players):
         votes = dict()
 
         for player in players:
@@ -45,7 +47,7 @@ class VotebanResults(Counter):
         ratio = percentage / 100.0
 
         self.percentage = percentage
-        self.threshold  = max(2, ceil(len(votes) * ratio))
+        self.threshold  = max(minvotes, ceil(len(votes) * ratio))
 
     def against(self, addr):
         return self.get(addr, 0)
@@ -61,9 +63,9 @@ def voteban_vetos(protocol):
     )
 
 def voteban_results(protocol):
-    total  = VotebanResults(voteban_percentage,      protocol.connections.values())
-    team_1 = VotebanResults(voteban_percentage_team, protocol.team_1.get_players())
-    team_2 = VotebanResults(voteban_percentage_team, protocol.team_2.get_players())
+    total  = VotebanResults(voteban_percentage,      voteban_minvotes,      protocol.connections.values())
+    team_1 = VotebanResults(voteban_percentage_team, voteban_minvotes_team, protocol.team_1.get_players())
+    team_2 = VotebanResults(voteban_percentage_team, voteban_minvotes_team, protocol.team_2.get_players())
 
     return total, team_1, team_2
 
