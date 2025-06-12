@@ -49,7 +49,7 @@ def on_environment_generation(dirname, seed):
         water    = Water,
         weather  = weather,
         palette  = {make_color(*concrete): Concrete},
-        size     = Box(xmin = 256 - 127, xmax = 256 + 128, ymin = 256 - 40, ymax = 256 + 40),
+        size     = Box(xmin = 256 - 127, xmax = 256 + 128, ymin = 256 - 32, ymax = 257 + 32),
     )
 
 get_entity_location = Entity(
