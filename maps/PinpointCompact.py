@@ -53,13 +53,13 @@ def on_environment_generation(dirname, seed):
     )
 
 get_entity_location = Entity(
-    blue_flag  = (256 - 64, 256, 60),
-    green_flag = (256 + 64, 256, 60),
+    blue_flag  = (256 - 48, 256, 60),
+    green_flag = (256 + 48, 256, 60),
     blue_base  = (256 - 96, 256, 60),
     green_base = (256 + 96, 256, 60),
 )
 
 get_spawn_location = Team(
-    blue  = Rectangle(x1 = 256 - 96 - 16, x2 = 256 - 96 + 16, y1 = 256 - 32, y2 = 256 + 32),
-    green = Rectangle(x1 = 256 + 96 - 16, x2 = 256 + 96 + 16, y1 = 256 - 32, y2 = 256 + 32)
+    blue  = Rectangle(x1 = 256 - 127, x2 = 256 - 127 + 16, y1 = 256 - 32, y2 = 256 + 32),
+    green = Rectangle(x1 = 256 + 128, x2 = 256 + 128 - 16, y1 = 256 - 32, y2 = 256 + 32)
 )
