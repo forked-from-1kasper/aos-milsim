@@ -24,6 +24,37 @@ prohibited = {
 log = Logger()
 
 @command()
+def kill(connection, value = None):
+    """
+    Kill yourself or a given player
+    /kill [target]
+    """
+
+    protocol = connection.protocol
+
+    player = connection if value is None else get_player(protocol, value)
+
+    if player.name is None or player.world_object is None or player.team is None:
+        return
+
+    if player.team.spectator:
+        return
+
+    P = connection.rights.kill or connection.admin
+    Q = player.banned
+    R = player is connection
+
+    if P or Q or R:
+        player.kill()
+
+        if player is connection:
+            protocol.broadcast_chat("{} suicied".format(connection.name))
+        else:
+            protocol.broadcast_chat("{} killed {}".format(connection.name or "Anonymous", player.name))
+    else:
+        return "You can't kill {}".format(player.name)
+
+@command()
 def say(connection, *w):
     """
     Say something in chat
