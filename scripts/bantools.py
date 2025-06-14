@@ -48,7 +48,7 @@ def kill(connection, value = None):
         player.kill()
 
         if player is connection:
-            protocol.broadcast_chat("{} suicied".format(connection.name))
+            protocol.broadcast_chat("{} suicided".format(connection.name))
         else:
             protocol.broadcast_chat("{} killed {}".format(connection.name or "Anonymous", player.name))
     else:
