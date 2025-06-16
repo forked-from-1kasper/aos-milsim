@@ -531,6 +531,51 @@ def hardban(connection, nickname, *ws):
     player.disconnect(ERROR_BANNED)
 
 @command(admin_only = True)
+def hardbanip(connection, addr):
+    """
+    Hardban an ip
+    /hardbanip <ip>
+    """
+
+    protocol = connection.protocol
+
+    if errmsg := have_privs(connection):
+        return errmsg
+
+    if addr in protocol.hard_bans:
+        return "{} is already hardbanned"
+    else:
+        protocol.hard_bans.add(addr)
+
+        hardbanned = [connection for connection
+                      in protocol.connections.values()
+                      if connection.address[0] == addr]
+
+        for connection in hardbanned:
+            connection.disconnect(ERROR_BANNED)
+
+        return "{} hardbanned".format(addr)
+
+@command(admin_only = True)
+def hardpardon(connection, addr):
+    """
+    Remove hardban
+    /hardpardon <ip>
+    """
+
+    protocol = connection.protocol
+
+    if errmsg := have_privs(connection):
+        return errmsg
+
+    if addr in protocol.hard_bans:
+        protocol.hard_bans.remove(addr)
+
+        return "{} unbanned".format(addr)
+    else:
+        return "{} is not hardbanned".format(addr)
+
+@command(admin_only = True)
 def undoban(connection):
     """
     Undo last ban
