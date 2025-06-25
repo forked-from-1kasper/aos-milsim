@@ -38,7 +38,7 @@ public:
     _object(o), _model(model), _thrower(i), _timestamp(t), _v0(v.abs()), position(r), velocity(v)
     { Py_INCREF(o); _index = gidx++; }
 
-    inline ~Object() { Py_DECREF(_object); }
+    inline ~Object() { Py_XDECREF(_object); }
 
     inline double energy() const { return 0.5 * mass * velocity.norm(); }
 
@@ -48,6 +48,9 @@ public:
     inline int        thrower()   const { return _thrower;   }
     inline double     timestamp() const { return _timestamp; }
     inline double     v0()        const { return _v0;        }
+
+    inline bool valid() const { return _object != nullptr; }
+    inline void invalidate() { Py_DECREF(_object); _object = nullptr; }
 };
 
 struct Player {
@@ -119,8 +122,14 @@ public:
     Voxel & set(int i, PyObject * o);
     Voxel & get(int x, int y, int z);
 
+    inline Voxel & get(const Vector3i & R)
+    { return get(R.x, R.y, R.z); }
+
     inline Voxel & set(int x, int y, int z, PyObject * o)
     { return set(get_pos(x, y, z), o); }
+
+    inline Voxel & set(const Vector3i & R, PyObject * o)
+    { return set(get_pos(R.x, R.y, R.z), o); }
 
     inline void erase(int x, int y, int z) { data.erase(get_pos(x, y, z)); }
 
@@ -158,8 +167,14 @@ private:
 
     double _lag, _peak;
 
-    void next(double t1, const double t2, ObjectIterator &);
+    inline int intersectPlayer(const Ray<double> &, Arc<double> &);
 
+    inline bool terminal(Object &, const Vector3i &, const Vector3d &);
+    inline void external(Object &, const double, const Vector3d &);
+    inline bool impactPlayer(Object &, const int, const Vector3i &, const Ray<double> &, const Arc<double> &);
+    inline bool impactSurface(Object &, const Vector3i &, const Vector3d & n, const Vector3d & r);
+
+    void next(double t1, const double t2, ObjectIterator &);
 public:
     inline Engine(PyObject * o) : protocol(o), _lag(0.0), _peak(0.0)
     { srand(time(NULL)); players.reserve(32); }
@@ -177,6 +192,11 @@ public:
         }
 
         return false;
+    }
+
+    inline bool solid(const Vector3i & R) {
+        return is_valid_position(R.x, R.y, R.z)
+            && get_solid(R.x, R.y, R.z, map);
     }
 
     inline double density() const { return _density; }

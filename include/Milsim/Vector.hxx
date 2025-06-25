@@ -92,6 +92,8 @@ template<typename T> struct Vector3 {
         auto k3 = k1.cross(k2); auto k = k3.normal(); auto cosθ = (k1, k2);
         return scale(cosθ) - cross(k3) + k * (dot(k) * (1 - cosθ));
     }
+
+    constexpr inline bool isZero() const { return x == T(0) && y == T(0) && z == T(0); }
 };
 
 using Vector3i = Vector3<int>;
