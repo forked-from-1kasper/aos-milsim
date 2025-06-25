@@ -63,6 +63,8 @@ Go to a shooting range, airsoft club or army.
 
 # Protocol extensions
 
+For the reference implementations of these extensions see [TigerSpades](https://github.com/rzrn/tigerspades).
+
 ## Bullet traces
 
 Extension ID: 0x10.
