@@ -264,9 +264,9 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
         auto [dt, n] = traverse(r, v, t2 - t1);
         auto dr = v * (m2b<double> * dt);
 
-        /* Midpoint of [r; dr] (= (r + r + dr) / 2 = r + dr / 2)
+        /* Midpoint of [r; r + dr] (= (r + r + dr) / 2 = r + dr / 2)
            is in the interior of the cube in which the projectile is,
-           except for the rare case when A and B are on the same face. */
+           except for the rare case when r and (r + dr) are on the same face. */
         auto R = voxelOf(r + dr * 0.5);
 
         Ray<double> ray(r, dr); Arc<double> arc{};
