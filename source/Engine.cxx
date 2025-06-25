@@ -132,9 +132,9 @@ template<typename T> inline auto traverseReciprocal(const Vector3<T> & r, const 
 
     return max(
         [](auto & w1, auto & w2){ return w1.first < w2.first; },
-        std::pair(m2b<T> * v.x / dx, Vector3<T>(-sign<T>(v.x), 0, 0)),
-        std::pair(m2b<T> * v.y / dy, Vector3<T>(0, -sign<T>(v.y), 0)),
-        std::pair(m2b<T> * v.z / dz, Vector3<T>(0, 0, -sign<T>(v.z)))
+        std::pair(ofMeters<T>(v.x) / dx, Vector3<T>(-sign<T>(v.x), 0, 0)),
+        std::pair(ofMeters<T>(v.y) / dy, Vector3<T>(0, -sign<T>(v.y), 0)),
+        std::pair(ofMeters<T>(v.z) / dz, Vector3<T>(0, 0, -sign<T>(v.z)))
     );
 }
 
@@ -178,24 +178,35 @@ inline bool Engine::impactPlayer(Object & o, const int target, const Vector3i & 
     return false;
 }
 
+// http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php
+inline double maximumImpactDepth(Material * M, double m, double A, double E₀) {
+    constexpr double drag = 1;
+
+    auto xc = m / (drag * M->density * A);
+    return xc * log(1 + (E₀ * drag * M->density) / (M->strength * m));
+}
+
+inline double impactRemainingEnergy(Material * M, double m, double A, double E₀, double x) {
+    constexpr double drag = 1;
+
+    auto ε = exp(-drag * A * M->density * x / m);
+    return E₀ * ε - M->strength * m * (1 - ε) / (drag * M->density);
+}
+
 inline bool Engine::terminal(Object & o, const Vector3i & R, const Vector3d & dr) {
     using namespace Fundamentals;
 
     Voxel & voxel = vxlData.get(R);
     Material * M = voxel.material();
 
-    // http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php
-    auto depth = dr.abs() * b2m<double>;
-    auto E₀    = 0.5 * o.mass * o.velocity.norm();
-    auto drag  = 1;
-    auto xc    = o.mass / (drag * M->density * o.area);
-    auto xmax  = xc * log(1 + (E₀ * drag * M->density) / (M->strength * o.mass));
+    auto E₀ = o.energy();
+    auto xmax = maximumImpactDepth(M, o.mass, o.area, E₀);
+    auto depth = toMeters<double>(dr.abs());
 
     double ΔE;
 
     if (depth < xmax) {
-        auto ε = exp(-drag * o.area * M->density * depth / o.mass);
-        auto E = E₀ * ε - M->strength * o.mass * (1 - ε) / (drag * M->density);
+        auto E = impactRemainingEnergy(M, o.mass, o.area, E₀, depth);
         ΔE = E₀ - E;
 
         o.position += dr;
@@ -209,7 +220,7 @@ inline bool Engine::terminal(Object & o, const Vector3i & R, const Vector3d & dr
     if (voxel.isub(ΔE * (M->durability / M->absorption)))
         onDestroy(o.thrower(), R.x, R.y, R.z);
 
-    return depth <= xmax;
+    return xmax <= depth;
 }
 
 inline void Engine::external(Object & o, const double dt, const Vector3d & dr) {
