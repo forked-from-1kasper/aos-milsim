@@ -37,6 +37,9 @@ def kill(connection, value = None):
     if player.name is None or player.world_object is None or player.team is None:
         return
 
+    if player.hp is None or player.world_object.dead:
+        return
+
     if player.team.spectator:
         return
 
