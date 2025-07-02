@@ -6,6 +6,8 @@ from time import monotonic
 from twisted.internet import reactor
 from twisted.logger import Logger
 
+from piqueserver.commands import get_player
+
 from pyspades.collision import collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
 from pyspades.world import cube_line, Grenade
@@ -221,6 +223,12 @@ class MilsimConnection(FeatureConnection):
         R = 0.5 <= t - self.last_tool_update
 
         return P and Q and R
+
+    def get_player(self, nickname):
+        if nickname is None:
+            return self
+        else:
+            return get_player(self.protocol, nickname)
 
     def on_position_update(self):
         if self.previous_floor_position is not None:

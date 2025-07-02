@@ -70,11 +70,11 @@ def icons(x, xs):
 ilen   = lambda it: sum(1 for o in it)
 iempty = lambda it: next(it, None) is None
 
-def apply_item(klass, player, errmsg = None):
+def apply_item(klass, player, *w, errmsg = None):
     it = filter(lambda o: isinstance(o, klass), player.inventory)
 
     if o := next(it, None):
-        return o.apply(player)
+        return o.apply(player, *w)
     else:
         return errmsg
 

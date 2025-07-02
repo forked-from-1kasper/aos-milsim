@@ -192,30 +192,30 @@ def artery(player, target = None):
 
 @command('bandage', 'b')
 @alive_only
-def bandage(player):
+def bandage(player, nickname = None):
     """
     Put the bandage (used to stop venous bleeding)
-    /b or /bandage
+    /b or /bandage [player]
     """
-    return apply_item(BandageItem, player, errmsg = "You do not have a bandage")
+    return apply_item(BandageItem, player, nickname, errmsg = "You do not have a bandage")
 
 @command('tourniquet', 't')
 @alive_only
-def tourniquet(player):
+def tourniquet(player, nickname = None):
     """
     Put the tourniquet (used to stop arterial bleeding)
-    /t or /tourniquet
+    /t or /tourniquet [player]
     """
-    return apply_item(TourniquetItem, player, errmsg = "You do not have a tourniquet")
+    return apply_item(TourniquetItem, player, nickname, errmsg = "You do not have a tourniquet")
 
 @command('splint', 's')
 @alive_only
-def splint(player):
+def splint(player, nickname = None):
     """
     Splint a broken limb
-    /s or /splint
+    /s or /splint [player]
     """
-    return apply_item(SplintItem, player, errmsg = "You do not have a splint")
+    return apply_item(SplintItem, player, nickname, errmsg = "You do not have a splint")
 
 @command('rangefinder', 'rf')
 @alive_only
