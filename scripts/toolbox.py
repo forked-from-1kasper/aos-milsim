@@ -249,7 +249,7 @@ def c_help(connection, argval = None):
     else:
         return "Unknown command: {}".format(argval)
 
-@command('showrotation', 'shr')
+@command('showrotation', 'shr', 'rot')
 def show_rotation(connection, argval = None):
     """
     Scroll through the current map rotation
