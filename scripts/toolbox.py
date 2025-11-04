@@ -249,6 +249,26 @@ def c_help(connection, argval = None):
     else:
         return "Unknown command: {}".format(argval)
 
+@command('listrules', 'lsrul', 'rules', 'rule', 'rul')
+def list_rules(connection, argval = None):
+    """
+    Scroll through the server rules
+    /rule [page number] or /rule
+    """
+
+    rules = connection.protocol.rules
+    total = len(rules)
+
+    if argval is None:
+        no = getattr(connection, 'list_rules_page', 0)
+    elif argval.isdigit():
+        no = max(1, min(total, int(argval))) - 1
+    else:
+        return "'{}' expected to be a positive integer".format(argval)
+
+    connection.list_rules_page = (no + 1) % total
+    return "[{}/{}] {}".format(no + 1, total, rules[no])
+
 @command('showrotation', 'shr', 'rot')
 def show_rotation(connection, argval = None):
     """
