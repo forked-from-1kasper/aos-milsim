@@ -334,6 +334,18 @@ def advancecancel(connection):
 
             protocol.broadcast_chat('Map advance cancelled.')
 
+@command('reloadmap', 'rlma', admin_only = True)
+def c_reloadmap(connection):
+    """
+    Instantly reload the current map
+    /reloadmap or /rlma
+    """
+
+    protocol = connection.protocol
+
+    protocol.planned_map = protocol.map_info.rot_info
+    protocol.advance_rotation()
+
 @command()
 def mapname(connection):
     """
