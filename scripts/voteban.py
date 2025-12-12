@@ -15,12 +15,14 @@ from piqueserver.utils import timeparse
 
 voteban_config = config.section('voteban')
 
-voteban_duration        = voteban_config.option('ban_duration', default = "30min", cast = cast_duration).get()
-voteban_revoke_timeout  = voteban_config.option('revoke_timeout', default = "2min", cast = cast_duration).get()
-voteban_percentage      = voteban_config.option('percentage', 51).get()
-voteban_percentage_team = voteban_config.option('percentage_team', 75).get()
-voteban_minvotes        = voteban_config.option('minvotes', 2).get()
-voteban_minvotes_team   = voteban_config.option('minvotes_team', 3).get()
+voteban_duration        = voteban_config.option('voteban_duration', default = "30min", cast = cast_duration).get()
+voteban_revoke_timeout  = voteban_config.option('voteban_revoke_timeout', default = "2min", cast = cast_duration).get()
+voteban_percentage      = voteban_config.option('voteban_percentage', 51).get()
+voteban_percentage_team = voteban_config.option('voteban_percentage_team', 75).get()
+voteban_minvotes        = voteban_config.option('voteban_minvotes', 2).get()
+voteban_minvotes_team   = voteban_config.option('voteban_minvotes_team', 3).get()
+voteunban_percentage    = voteban_config.option('voteunban_percentage', 51).get()
+voteunban_minvotes      = voteban_config.option('voteunban_minvotes', 3).get()
 
 log = Logger()
 
@@ -30,16 +32,14 @@ def format_reason(ws):
     else:
         return None
 
-class VotebanResults(Counter):
-    def __init__(self, percentage, minvotes, players):
+class VoteResults(Counter):
+    def __init__(self, *, percentage, minvotes, ballots):
         votes = dict()
 
-        for player in players:
-            addr, port = player.address
-
+        for addr, ballot in ballots:
             # this way votes from the same address are not counted twice
             vs = votes[addr] = votes.get(addr) or set()
-            vs.update(player.voteban)
+            vs.update(ballot)
 
         for vs in votes.values():
             self.update(vs)
@@ -62,16 +62,46 @@ def voteban_vetos(protocol):
         )
     )
 
-def voteban_results(protocol):
-    total  = VotebanResults(voteban_percentage,      voteban_minvotes,      protocol.connections.values())
-    team_1 = VotebanResults(voteban_percentage_team, voteban_minvotes_team, protocol.team_1.get_players())
-    team_2 = VotebanResults(voteban_percentage_team, voteban_minvotes_team, protocol.team_2.get_players())
+def voteban_ballot(players):
+    for player in players:
+        addr, port = player.address
+        yield addr, player.voteban
 
-    return total, team_1, team_2
+def voteunban_ballot(players):
+    for player in players:
+        addr, port = player.address
+        yield addr, player.voteunban
+
+def voteban_results(protocol):
+    return (
+        VoteResults(
+            percentage = voteban_percentage,
+            minvotes   = voteban_minvotes,
+            ballots    = voteban_ballot(protocol.connections.values())
+        ),
+        VoteResults(
+            percentage = voteban_percentage_team,
+            minvotes   = voteban_minvotes_team,
+            ballots    = voteban_ballot(protocol.team_1.get_players())
+        ),
+        VoteResults(
+            percentage = voteban_percentage_team,
+            minvotes   = voteban_minvotes_team,
+            ballots    = voteban_ballot(protocol.team_2.get_players())
+        )
+    )
+
+def voteunban_results(protocol):
+    return VoteResults(
+        percentage = voteunban_percentage,
+        minvotes   = voteunban_minvotes,
+        ballots    = voteunban_ballot(protocol.connections.values())
+    )
 
 def voteban_revoke(player):
     retval = len(player.vetos)
 
+    player.voteunban.clear()
     player.voteban.clear()
     player.vetos.clear()
 
@@ -90,7 +120,7 @@ def scan_for_bans(protocol, total, team_1, team_2):
 
         if addr in protocol.bans:
             revoked += voteban_revoke(player)
-            continue
+            continue # player is already banned, nothing to do
 
         if total.successful(addr):
             reason = "voteban {:.0f} %".format(total.percentage)
@@ -110,6 +140,28 @@ def check_voteban_end(protocol):
 
     while scan_for_bans(protocol, total, team_1, team_2) > 0:
         pass
+
+def check_voteunban_end(protocol):
+    vetos = voteban_vetos(protocol)
+    total = voteunban_results(protocol)
+
+    for player in protocol.connections.values():
+        addr, port = player.address
+
+        if addr in vetos:
+            continue
+
+        if addr not in protocol.bans:
+            continue # player is already unbanned, nothing to do
+
+        if total.successful(addr):
+            protocol.remove_ban(addr)
+
+            protocol.broadcast_chat(
+                "{} was unbanned by {:.0f} % of votes".format(
+                    player.name, total.percentage
+                )
+            )
 
 def have_privs(connection, target = None):
     protocol = connection.protocol
@@ -139,20 +191,21 @@ def c_votestatus(connection, nickname):
     addr, port = player.address
 
     if addr in protocol.bans:
-        return "{} is banned".format(player.name)
+        total = voteunban_results(protocol)
 
-    total, team_1, team_2 = voteban_results(protocol)
+        return "{}: {}/{} BAN {}".format(
+            player.name, total.against(addr), total.threshold,
+            "VETO" if player.vetoed() else ""
+        )
+    else:
+        total, team_1, team_2 = voteban_results(protocol)
 
-    votes_total  = total.against(addr)
-    votes_team_1 = team_1.against(addr)
-    votes_team_2 = team_2.against(addr)
-
-    return "{}: {}/{}, {}/{} ({}), {}/{} ({}) {}".format(
-        player.name,  votes_total,      total.threshold,
-        votes_team_1, team_1.threshold, protocol.team_1.name,
-        votes_team_2, team_2.threshold, protocol.team_2.name,
-        "VETO" if player.vetoed() else ""
-    )
+        return "{}: {}/{}, {}/{} ({}), {}/{} ({}) {}".format(
+            player.name, total.against(addr), total.threshold,
+            team_1.against(addr), team_1.threshold, protocol.team_1.name,
+            team_2.against(addr), team_2.threshold, protocol.team_2.name,
+            "VETO" if player.vetoed() else ""
+        )
 
 @command('revokevote', 'rvo', admin_only = True)
 def c_revokevote(connection, nickname, *ws):
@@ -216,8 +269,6 @@ def c_veto(connection, *w):
 
     if addr is connection.address[0]:
         return "You can't veto yourself"
-    elif addr in protocol.bans:
-        return "{} is banned".format(player.name)
     elif addr in connection.vetos:
         return "You already vetoed {}'s ban".format(player.name)
     else:
@@ -248,9 +299,7 @@ def c_unveto(connection, *w):
 
     addr, port = player.address
 
-    if addr in protocol.bans:
-        return "{} is banned".format(player.name)
-    elif addr in connection.vetos:
+    if addr in connection.vetos:
         connection.vetos.remove(addr)
 
         protocol.broadcast_message(
@@ -261,6 +310,7 @@ def c_unveto(connection, *w):
         )
 
         check_voteban_end(protocol)
+        check_voteunban_end(protocol)
     else:
         return "You didn't veto {}'s ban".format(player.name)
 
@@ -325,6 +375,68 @@ def c_votepardon(connection, *w):
         )
     else:
         return "You didn't vote against {}".format(player.name)
+
+@command('voteunban', 'vub')
+@player_only
+def c_voteunban(connection, *w):
+    """
+    Vote to unban a given player
+    /votteunban <player> [reason]
+    """
+
+    if len(w) <= 0: return "Target player is required"
+
+    nickname, *ws = w
+
+    protocol = connection.protocol
+    player = get_player(protocol, nickname)
+
+    addr, port = player.address
+
+    if addr not in protocol.bans:
+        return "{} is not banned".format(player.name)
+    elif addr in connection.voteunban:
+        return "You already voted to unban {}".format(player.name)
+    else:
+        connection.voteunban.add(addr)
+
+        protocol.broadcast_message(
+            "{} voted TO UNBAN {}".format(
+                connection.name, player.name
+            ),
+            format_reason(ws)
+        )
+
+        check_voteunban_end(protocol)
+
+@command('votepunish', 'vpu')
+@player_only
+def c_votepunish(connection, *w):
+    """
+    Revoke your vote to unban a given player
+    /votepunish <player> [reason]
+    """
+
+    if len(w) <= 0: return "Target player is required"
+
+    nickname, *ws = w
+
+    protocol = connection.protocol
+    player = get_player(protocol, nickname)
+
+    addr, port = player.address
+
+    if addr in connection.voteunban:
+        connection.voteunban.remove(addr)
+
+        protocol.broadcast_message(
+            "{} took back his vote to unban {}".format(
+                connection.name, player.name
+            ),
+            format_reason(ws)
+        )
+    else:
+        return "You didn't vote to unban {}".format(player.name)
 
 @command('votekick', 'vk')
 def c_votekick(connection, *w, **kw):
@@ -645,22 +757,31 @@ def apply_script(protocol, connection, config):
             for player in self.connections.values():
                 player.voteban.discard(addr)
 
+        def remove_ban(self, addr):
+            protocol.remove_ban(self, addr)
+
+            for player in self.connections.values():
+                player.voteunban.discard(addr)
+
     class VotebanConnection(connection):
         voteban_last_revoke = 0
 
         def __init__(self, *w, **kw):
             connection.__init__(self, *w, **kw)
 
-            self.voteban = set()
-            self.vetos = set()
+            self.voteunban = set()
+            self.voteban   = set()
+            self.vetos     = set()
 
         def on_connect(self):
             connection.on_connect(self)
             check_voteban_end(self.protocol)
+            check_voteunban_end(self.protocol)
 
         def on_disconnect(self):
             connection.on_disconnect(self)
             check_voteban_end(self.protocol)
+            check_voteunban_end(self.protocol)
 
         def on_team_changed(self, old_team):
             connection.on_team_changed(self, old_team)
