@@ -224,7 +224,7 @@ class Rifle(DetachableMagazineItem):
     reload_time            = 2.5
     magazine_class         = RifleMagazine
     default_magazine       = R762Magazine
-    default_magazine_count = 5
+    default_magazine_count = 3
 
 class SMGMagazine(BoxMagazine):
     pass
@@ -242,7 +242,7 @@ class SMG(DetachableMagazineItem):
     reload_time            = 2.5
     magazine_class         = SMGMagazine
     default_magazine       = ParabellumMagazine
-    default_magazine_count = 4
+    default_magazine_count = 2
 
 class ShotgunMagazine(TubularMagazine):
     capacity = 6
@@ -255,4 +255,4 @@ class Shotgun(IntegralMagazineItem):
     cartridge_class   = Shotshell
     default_magazine  = ShotgunMagazine
     default_cartridge = Buckshot0000
-    default_reserve   = 70
+    default_reserve   = 35
