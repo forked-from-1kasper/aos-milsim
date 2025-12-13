@@ -65,6 +65,12 @@ def runas(connection, nickname, cmdname, *params):
     player = get_player(connection.protocol, nickname)
     return handle_command(player, cmdname, params)
 
+def format_connection(player):
+    if player.name is None:
+        return "#{}".format(player.player_id)
+    else:
+        return "{} (#{})".format(player.name, player.player_id)
+
 @command('listconnections', 'lscon')
 def c_lscon(connection):
     """
@@ -73,11 +79,22 @@ def c_lscon(connection):
     """
 
     protocol = connection.protocol
-    return ", ".join(
-        "#{}".format(player.player_id) if player.name is None else
-        "{} (#{})".format(player.name, player.player_id)
-        for player in protocol.connections.values()
-    )
+
+    return ", ".join(format_connection(player) for player in protocol.connections.values())
+
+@command('whoami')
+def c_whoami(connection):
+    """
+    Print your nickname and/or #id
+    /whoami
+    """
+
+    protocol = connection.protocol
+
+    if isinstance(connection, protocol.connection_class):
+        return format_connection(connection)
+    else:
+        return str(connection.name)
 
 @command('ping')
 def c_ping(connection, nickname = None):
