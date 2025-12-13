@@ -3,7 +3,7 @@ from time import strftime, gmtime, time, monotonic
 from twisted.internet import reactor
 from twisted.logger import Logger
 
-from piqueserver.commands import _alias_map, command, player_only, get_player
+from piqueserver.commands import CommandError, _alias_map, command, player_only, get_player
 from piqueserver.player import FeatureConnection
 from piqueserver.server import FeatureProtocol
 
@@ -77,8 +77,23 @@ def say(connection, *w):
 
         protocol.broadcast_contained(contained)
 
+def get_connection(protocol, argval):
+    if argval.startswith('#'):
+        player_id = int(argval[1:])
+
+        for connection in protocol.connections.values():
+            if connection.player_id == player_id:
+                return connection
+
+        raise CommandError("Invalid Player")
+    else:
+        return get_player(protocol, argval)
+
+def format_nickname(connection):
+    return connection.name or "#{}".format(connection.player_id)
+
 @command('pm', 'priv', 'privmsg')
-def c_privmsg(connection, nickname, *w):
+def c_privmsg(connection, argval, *w):
     """
     Send a private message to a given player
     /pm <player> <message>
@@ -86,7 +101,7 @@ def c_privmsg(connection, nickname, *w):
 
     protocol = connection.protocol
 
-    player = get_player(connection.protocol, nickname)
+    player = get_connection(protocol, argval)
 
     value = ' '.join(w)
 
@@ -94,14 +109,14 @@ def c_privmsg(connection, nickname, *w):
 
     if isinstance(connection, protocol.connection_class):
         connection.send_chat(
-            "YOU -> {} (PRIVATE): {}".format(player.name, value)
+            "YOU -> {} (PRIVATE): {}".format(format_nickname(player), value)
         )
 
         if connection.address[0] in player.ignore_list:
             return
 
     player.send_chat(
-        "{} -> YOU (PRIVATE): {}".format(connection.name, value)
+        "{} -> YOU (PRIVATE): {}".format(format_nickname(connection), value)
     )
 
 @command('togglelimbo', 'tli')
@@ -121,37 +136,37 @@ def c_togglelimbo(connection):
 
 @command('ignore', 'ign')
 @player_only
-def c_ignore(connection, nickname):
+def c_ignore(connection, argval):
     """
     Ignore player
     /ignore <player>
     """
 
-    player = get_player(connection.protocol, nickname)
-    ip, port = player.address
+    player = get_connection(connection.protocol, argval)
+    addr, port = player.address
 
-    if ip in connection.ignore_list:
-        return "You are already ignoring {}".format(player.name)
+    if addr in connection.ignore_list:
+        return "You are already ignoring {}".format(format_nickname(player))
     else:
-        connection.ignore_list.add(ip)
-        return "You are now ignoring {}".format(player.name)
+        connection.ignore_list.add(addr)
+        return "You are now ignoring {}".format(format_nickname(player))
 
 @command('unignore', 'uni')
 @player_only
-def c_unignore(connection, nickname):
+def c_unignore(connection, argval):
     """
     Stop ignoring the given player
     /unignore <player>
     """
 
-    player = get_player(connection.protocol, nickname)
-    ip, port = player.address
+    player = get_connection(connection.protocol, argval)
+    addr, port = player.address
 
-    if ip in connection.ignore_list:
-        connection.ignore_list.remove(ip)
-        return "You are no longer ignoring {}".format(player.name)
+    if addr in connection.ignore_list:
+        connection.ignore_list.remove(addr)
+        return "You are no longer ignoring {}".format(format_nickname(player))
     else:
-        return "You are not ignoring {}".format(player.name)
+        return "You are not ignoring {}".format(format_nickname(player))
 
 @command('listroles', 'roles', 'lsr')
 def c_roles(connection, nickname):
@@ -179,19 +194,19 @@ def status(connection, nickname = None):
     protocol = connection.protocol
 
     if nickname is not None:
-        player = get_player(protocol, nickname)
+        player = get_connection(protocol, nickname)
     elif isinstance(connection, protocol.connection_class):
         player = connection
     else:
         return "Usage: /status [player]"
 
-    ip = player.address[0]
-    if ip in protocol.bans:
-        name, reason, timestamp = protocol.bans[ip]
+    addr = player.address[0]
+    if addr in protocol.bans:
+        name, reason, timestamp = protocol.bans[addr]
         reason = reason or ""
 
         if timestamp < time():
-            protocol.remove_ban(ip)
+            protocol.remove_ban(addr)
             return "Ban expired{}".format(reason)
         elif timestamp is not None:
             expires = strftime("%b %d, %Y %H:%M:%S", gmtime(timestamp))
@@ -199,7 +214,7 @@ def status(connection, nickname = None):
         else:
             return "Permabanned{}".format(reason)
     else:
-        return "{} is not banned".format(player.name)
+        return "{} is not banned".format(format_nickname(player))
 
 message_maximum_length = 108
 
@@ -331,7 +346,7 @@ def apply_script(protocol, connection, config):
             contained.chat_type = CHAT_ALL if team is None else CHAT_TEAM
             contained.value     = value
 
-            ip, port = self.address
+            addr, port = self.address
 
             for player in self.protocol.connections.values():
                 if player.player_id is None:
@@ -340,7 +355,7 @@ def apply_script(protocol, connection, config):
                 if player.deaf:
                     continue
 
-                if ip in player.ignore_list:
+                if addr in player.ignore_list:
                     continue
 
                 if team is None or team is player.team:
@@ -366,6 +381,8 @@ def apply_script(protocol, connection, config):
                 contained.chat_type = CHAT_SYSTEM
                 contained.value     = "Anonymous: {}".format(value)
 
+                addr, port = self.address
+
                 for player in self.protocol.connections.values():
                     if player.player_id is None:
                         continue
@@ -374,6 +391,9 @@ def apply_script(protocol, connection, config):
                         continue
 
                     if player.ignore_limbo:
+                        continue
+
+                    if addr in player.ignore_list:
                         continue
 
                     player.send_contained(contained)
