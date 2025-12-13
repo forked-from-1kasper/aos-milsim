@@ -381,7 +381,7 @@ def c_votepardon(connection, *w):
 def c_voteunban(connection, *w):
     """
     Vote to unban a given player
-    /votteunban <player> [reason]
+    /voteunban <player> [reason]
     """
 
     if len(w) <= 0: return "Target player is required"
