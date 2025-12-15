@@ -77,6 +77,20 @@ def say(connection, *w):
 
         protocol.broadcast_contained(contained)
 
+@command('teamdup')
+@player_only
+def c_teamdup(connection):
+    """
+    Duplicate the last message sent in team chat to global chat
+    /teamdup
+    """
+
+    if mesg := connection.last_teamchat_message:
+        connection.broadcast_chat(mesg, team = None)
+        connection.last_teamchat_message = None
+    else:
+        return "There's nothing to duplicate"
+
 def get_connection(protocol, argval):
     if argval.startswith('#'):
         player_id = int(argval[1:])
@@ -285,6 +299,8 @@ def apply_script(protocol, connection, config):
             self.ignore_list  = set()
             self.ignore_limbo = False
 
+            self.last_teamchat_message = None
+
             connection.__init__(self, *w, **kw)
 
         def on_connect(self):
@@ -411,5 +427,7 @@ def apply_script(protocol, connection, config):
 
                 self.broadcast_chat(value, team = None if is_global_message else self.team)
                 self.on_chat_sent(value, is_global_message)
+
+                self.last_teamchat_message = None if is_global_message else value
 
     return BantoolsProtocol, BantoolsConnection
