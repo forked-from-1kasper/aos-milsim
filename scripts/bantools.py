@@ -106,7 +106,7 @@ def get_connection(protocol, argval):
 def format_nickname(connection):
     return connection.name or "#{}".format(connection.player_id)
 
-@command('pm', 'priv', 'privmsg')
+@command('pm', 'priv', 'privmsg', 'msg', 'w')
 def c_privmsg(connection, argval, *w):
     """
     Send a private message to a given player
