@@ -351,6 +351,22 @@ def advancecancel(connection):
 
             protocol.broadcast_chat('Map advance cancelled.')
 
+@command('listroles', 'roles', 'lsr')
+def c_roles(connection, nickname):
+    """
+    List roles of the given player
+    /listroles <player>
+    """
+
+    player = get_player(connection.protocol, nickname)
+
+    if bool(player.user_types):
+        return "{}: {}".format(
+            player.name, ", ".join(player.user_types)
+        )
+    else:
+        return "{} has no roles".format(player.name)
+
 @command('listrights', 'rights', 'lsrights')
 def c_listrights(connection, nickname = None):
     """
@@ -360,7 +376,7 @@ def c_listrights(connection, nickname = None):
 
     player = connection if nickname is None else get_player(connection.protocol, nickname)
 
-    if player.rights:
+    if bool(player.rights):
         return "{}: {}".format(
             player.name, ", ".join(player.rights)
         )

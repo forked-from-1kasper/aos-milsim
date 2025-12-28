@@ -182,22 +182,6 @@ def c_unignore(connection, argval):
     else:
         return "You are not ignoring {}".format(format_nickname(player))
 
-@command('listroles', 'roles', 'lsr')
-def c_roles(connection, nickname):
-    """
-    List roles of the given player
-    /listroles <player>
-    """
-
-    player = get_player(connection.protocol, nickname)
-
-    if bool(player.user_types):
-        return "{}: {}".format(
-            player.name, ", ".join(player.user_types)
-        )
-    else:
-        return "{} has no roles".format(player.name)
-
 @command()
 def status(connection, nickname = None):
     """
