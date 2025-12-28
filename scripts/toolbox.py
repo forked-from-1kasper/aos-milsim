@@ -351,6 +351,70 @@ def advancecancel(connection):
 
             protocol.broadcast_chat('Map advance cancelled.')
 
+@command('listrights', 'rights', 'lsrights')
+def c_listrights(connection, nickname = None):
+    """
+    List additional rights of the specified player
+    /listrights [nickname]
+    """
+
+    player = connection if nickname is None else get_player(connection.protocol, nickname)
+
+    if player.rights:
+        return "{}: {}".format(
+            player.name, ", ".join(player.rights)
+        )
+    else:
+        return "{} has no additional rights".format(player.name)
+
+@command('grant', admin_only = True)
+def c_grant(connection, nickname, argval):
+    """
+    Grant a given right to the player
+    /grant <nickname> <right>
+    """
+
+    protocol = connection.protocol
+
+    player = get_player(protocol, nickname)
+
+    right = _alias_map.get(argval, argval)
+
+    if right in player.rights:
+        return "{} already has '{}' right".format(player.name, right)
+    else:
+        player.rights.add(right)
+
+        protocol.broadcast_chat(
+            "{} granted '{}' right to {}".format(
+                connection.name, right, player.name
+            )
+        )
+
+@command('revoke', admin_only = True)
+def c_revoke(connection, nickname, argval):
+    """
+    Revoke a given right from the player
+    /revoke <nickname> <right>
+    """
+
+    protocol = connection.protocol
+
+    player = get_player(protocol, nickname)
+
+    right = _alias_map.get(argval, argval)
+
+    if right in player.rights:
+        player.rights.remove(right)
+
+        protocol.broadcast_chat(
+            "{} revoked '{}' right from {}".format(
+                connection.name, right, player.name
+            )
+        )
+    else:
+        return "{} doesn't have '{}' right".format(player.name, right)
+
 @command('reloadmap', 'rlma', admin_only = True)
 def c_reloadmap(connection):
     """
