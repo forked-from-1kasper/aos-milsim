@@ -149,12 +149,16 @@ def c_togglelimbo(connection):
         return "You are receiving messages from limbo again"
 
 @command('ignore', 'ign')
-@player_only
 def c_ignore(connection, argval):
     """
     Ignore player
     /ignore <player>
     """
+
+    protocol = connection.protocol
+
+    if isinstance(connection, protocol.connection_class) is False:
+        return "Only players can use this command"
 
     player = get_connection(connection.protocol, argval)
     addr, port = player.address
@@ -166,14 +170,18 @@ def c_ignore(connection, argval):
         return "You are now ignoring {}".format(format_nickname(player))
 
 @command('unignore', 'uni')
-@player_only
 def c_unignore(connection, argval):
     """
     Stop ignoring the given player
     /unignore <player>
     """
 
-    player = get_connection(connection.protocol, argval)
+    protocol = connection.protocol
+
+    if isinstance(connection, protocol.connection_class) is False:
+        return "Only players can use this command"
+
+    player = get_connection(protocol, argval)
     addr, port = player.address
 
     if addr in connection.ignore_list:
