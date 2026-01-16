@@ -1,13 +1,14 @@
-from random import randint, random
+from random import randint, choice
 from itertools import product
 from math import radians
+
+from pyspades.common import make_color
 
 from milsim.vxl import VxlData
 from milsim.maptools import *
 
 name    = 'Tower'
-version = '1.0'
-author  = 'Siegmentation Fault'
+version = '1.1'
 
 StrongConcrete = Material(name = "strong concrete", ricochet = 1.0,  deflecting = radians(5),  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
 StrongSteel    = Material(name = "strong steel",    ricochet = 1.0,  deflecting = radians(5),  durability = 600.0, strength = 500e+6, density = 7850, absorption = 1e+15, crumbly = False)
@@ -22,16 +23,16 @@ randfloor   = lambda: randint(0, 6)
 blue_floor  = randfloor()
 green_floor = randfloor()
 
-# be sure that player cannot spawn inside the column
-pushout = lambda z: z if z % 4 != 0 else z + 1 if random() < 0.5 else z - 1
+blue_team_spawn  = [(256 - Δx, 256 - Δy) for Δx, Δy in product(range(33, 61), repeat = 2) if Δx % 4 != 0 or Δy % 4 != 0]
+green_team_spawn = [(256 + Δx, 256 + Δy) for Δx, Δy in product(range(33, 61), repeat = 2) if Δx % 4 != 0 or Δy % 4 != 0]
 
 def get_spawn_location(connection):
-    Δ1, Δ2 = randint(33, 61), randint(33, 61)
-
     if connection.team is connection.protocol.blue_team:
-        return pushout(256 - Δ1), pushout(256 - Δ2), 59 - 8 * blue_floor
+        x, y = choice(blue_team_spawn)
+        return x, y, 59 - 8 * blue_floor
     elif connection.team is connection.protocol.green_team:
-        return pushout(256 + Δ1), pushout(256 + Δ2), 59 - 8 * green_floor
+        x, y = choice(green_team_spawn)
+        return x, y, 59 - 8 * green_floor
     else:
         return ServerConnection.get_spawn_location(connection)
 
@@ -68,60 +69,56 @@ WATER    = (0, 170, 240)
 CONCRETE = (0xCC, 0xCC, 0xCC)
 STEEL    = (0xAA, 0xAA, 0xAA)
 
-def square(vxl, X, Y, Z, size, color):
-    for i in range(-size, size + 1):
-        vxl.set_point(X + i, Y - size, Z, color)
-        vxl.set_point(X + i, Y + size, Z, color)
-        vxl.set_point(X - size, Y + i, Z, color)
-        vxl.set_point(X + size, Y + i, Z, color)
+def rect(xsize, ysize):
+    yield from product(range(-xsize, xsize + 1), range(-ysize, ysize + 1))
 
-def dotted_square(vxl, X, Y, Z, size, color):
-    for i in range(-size, size + 1):
-        if i % 2 == 0:
-            vxl.set_point(X + i, Y - size, Z, color)
-            vxl.set_point(X + i, Y + size, Z, color)
-            vxl.set_point(X - size, Y + i, Z, color)
-            vxl.set_point(X + size, Y + i, Z, color)
+def inner(vxl, z1, z2, size):
+    assert z1 % (2 * size + 1) == 0
+    assert z2 % (2 * size + 1) == 0
 
-def stairs(vxl, X, Y, offset, size, color):
-    height = 2 * size + 1
+    concrete = make_color(*CONCRETE)
 
-    for i in range(-size, size + 1):
-        # stairs
-        for j in range(-size + 1, size):
-            vxl.set_point(X + i, Y + j, offset - (i + size), color)
+    for Δx, Δy in rect(2 * size, 2 * size):
+        x, y = 256 + Δx, 256 + Δy
 
-        # wall
-        for k in range(0, height + 1):
-            vxl.set_point(X + i, Y - size, offset - k, color)
-            vxl.set_point(X + i, Y + size, offset - k, color)
+        # columns around the tower
+        if max(abs(Δx), abs(Δy)) == 2 * size:
+            if (Δx + Δy) % 2 == 0:
+                vxl.set_column_fast(x, y, z1, z2, z2, concrete)
 
-    # platform
-    square(vxl, X, Y, offset - height, size + 1, color)
-    square(vxl, X, Y, offset - height, size + 2, color)
-    square(vxl, X, Y, offset - height, size + 3, color)
+        # walls covering the stairs
+        if abs(Δx) <= size and abs(Δy) == size:
+            vxl.set_column_fast(x, y, z1, z2, z2, concrete)
 
-    # columns around the stairs
-    for k in range(0, height): dotted_square(vxl, X, Y, offset - k, size + 3, color)
+        if abs(Δx) <= size and abs(Δy) < size:
+            # the stairs
+            for z in range(z1 + 1, z2):
+                if (z - 1) % (2 * size + 1) == size - Δx:
+                    vxl.set_point(x, y, z, CONCRETE)
+        else:
+            # floors
+            for z in range(z1, z2):
+                if z % (2 * size + 1) == 0:
+                    vxl.set_point(x, y, z, CONCRETE)
 
-# first floor & columns under the building
-def basement(vxl, offset):
-    for x, y in product(range(-64, 65), range(-64, 65)):
-        if max(abs(x), abs(y)) >= 32:
-            vxl.set_point(256 + x, 256 + y, offset, CONCRETE)
+def annulus():
+    for Δx, Δy in rect(64, 64):
+        if 32 <= max(abs(Δx), abs(Δy)):
+            yield Δx, Δy
 
-            if x % 4 == 0 and y % 4 == 0:
-                for z in range(offset + 1, 63):
-                    vxl.set_point(256 + x, 256 + y, z, STEEL)
+def outer(vxl, z1, z2):
+    steel = make_color(*STEEL)
 
-def floor(vxl, offset, k):
-    for x, y in product(range(-64, 65), range(-64, 65)):
-        if max(abs(x), abs(y)) >= 32:
-            vxl.set_point(256 + x, 256 + y, offset - 8 * k, CONCRETE)
+    for Δx, Δy in annulus():
+        x, y = 256 + Δx, 256 + Δy
 
-            if x % 4 == 0 and y % 4 == 0:
-                for z in range(offset - 8 * k + 1, offset - 8 * (k - 1)):
-                    vxl.set_point(256 + x, 256 + y, z, STEEL)
+        if Δx % 4 == 0 and Δy % 4 == 0:
+            vxl.set_column_fast(x, y, z1, z2, z2, steel)
+
+        # floors
+        for z in range(z1, z2 + 1):
+            if z % 8 == z1 % 8:
+                vxl.set_point(x, y, z, CONCRETE)
 
 def on_map_generation(dirname, seed):
     vxl = VxlData()
@@ -129,18 +126,16 @@ def on_map_generation(dirname, seed):
     for x, y in product(range(512), range(512)):
         vxl.set_point(x, y, 63, WATER)
 
-    offset = 60
-    basement(vxl, offset)
-    for k in range(1, 8): floor(vxl, offset, k)
-    for k in range(0, 8): stairs(vxl, 255, 255, 62 - 7 * k, 3, CONCRETE)
+    inner(vxl, z1 = 0, z2 = 63, size = 3)
+    outer(vxl, z1 = 4, z2 = 63)
 
     return vxl
 
 def on_environment_generation(dirname, seed):
     return Environment(
-        default  = Dirt,
-        build    = Sand2,
-        water    = Water,
-        palette  = palette,
-        size     = Box(xmin = 256 - 64, xmax = 256 + 64, ymin = 256 - 64, ymax = 256 + 64)
+        default = StrongConcrete,
+        build   = Sand2,
+        water   = Water,
+        palette = palette,
+        size    = Box(xmin = 256 - 65, xmax = 256 + 65, ymin = 256 - 65, ymax = 256 + 65)
     )

@@ -29,7 +29,7 @@ Try not to run around in front of everyone. After all, use *your shovel:* dig tu
 
 1. Be careful.
 2. Don’t go straight into areas where there are likely to be a lot of mines (e.g. intel, narrow tunnels, doors, back entrances, places convenient for sniper fire etc).
-3. Deactivate mines with a greande explosion.
+3. Deactivate mines with a grenade explosion.
 4. Cooperate in your team and report the location of placed mines in the team chat.
 
 ### I don’t see/hear drones
@@ -106,7 +106,7 @@ The [OktoberDistrict](maps/OktoberDistrict.vxl) map by Bubochka.
 
 # License
 
-Copyright © 2021–2025 rzrn
+Copyright © 2021–2026 rzrn
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
