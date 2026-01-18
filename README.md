@@ -102,7 +102,10 @@ The [OktoberDistrict](maps/OktoberDistrict.vxl) map by Bubochka.
 
 * [Under the hood: the physics of projectile ballistics](http://panoptesv.com/RPGs/Equipment/Weapons/Projectile_physics.php).
 * [Towards a better, science-based, evaluation of kinetic non-lethal weapons](https://www.researchgate.net/publication/254911398_Towards_a_better_science-based_evaluation_of_kinetic_non-lethal_weapons), L. Koene, A. Papy.
-* [Terminal Ballistics](https://link.springer.com/book/10.1007/978-3-030-46612-1), 3rd edition, Z. Rosenberg, E. Dekel.
+* [Terminal Ballistics](https://link.springer.com/book/10.1007/978-3-030-46612-1), 3rd edition, Z. Rosenberg, E. Dekel.
+* [Grammatical Framework’s Resource Grammar Library (RGL)](https://github.com/GrammaticalFramework/gf-rgl).
+* [Basic English Grammar and Sentence Structures](https://www.scientificpsychic.com/grammar/enggram1.html).
+* [Speech and Language Processing: An Introduction to Speech Recognition, Computational Linguistics and Natural Language Processing](https://web.stanford.edu/~jurafsky/slp3/), 2nd edition, D. Jurafsky, J. H. Martin.
 
 # License
 
