@@ -6,6 +6,9 @@ from milsim.grammar import (
     PRES, PAST, SG, INF, PTCP2
 )
 
+# Some useful examples & tests of this formal grammar.
+# To run these use `python -m milsim.grammar`.
+
 ################################
 player_n = RegularNoun("player")
 
