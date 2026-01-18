@@ -1,6 +1,7 @@
-from typing import Dict, List, Callable, Tuple
-from dataclasses import dataclass, field
 from collections.abc import Iterable
+from typing import Dict, List, Tuple
+
+from dataclasses import dataclass, field
 from collections import deque
 from time import monotonic
 
@@ -13,6 +14,8 @@ from pyspades.common import Vertex3
 
 from milsim.constants import Pound, Inch, Limb
 from milsim.engine import Material
+
+from milsim.grammar import Adjective, RegularNoun, zero_sg, linearize, NOM
 
 randbool = lambda prob: random() <= prob
 
@@ -202,20 +205,17 @@ class Linear(ABCMap):
         t = (v - self.v1) / (self.v2 - self.v1)
         return self.w1 + t * (self.w2 - self.w1)
 
-@dataclass
 class ABCLimb:
-    abbrev    : str
-    label     : str
-
-    hp        : int  = 100
-    venous    : bool = False
-    arterial  : bool = False
-    fractured : bool = False
-    splint    : bool = False
-
     bleeding = ABCMap()
     fracture = ABCMap()
     damage   = ABCMap()
+
+    def __init__(self, abbrev, np):
+        self.abbrev = abbrev
+        self.np     = np
+        self.label  = " ".join(np(zero_sg).linearize(NOM))
+
+        self.reset()
 
     def ofEnergyAndArea(self, E, A):
         damage, venous, arterial, fractured = 0, False, False, False
@@ -289,14 +289,21 @@ class Leg(ABCLimb):
     walk_damage_rate   = 3.5
     jump_damage        = 9.0
 
+left_adj, right_adj = Adjective("left"), Adjective("right")
+
+torso_n = RegularNoun("torso")
+head_n  = RegularNoun("head")
+arm_n   = RegularNoun("arm")
+leg_n   = RegularNoun("leg")
+
 class Body:
     def __init__(self):
-        self.torso = Torso("torso", "torso")
-        self.head  = Head("head", "head")
-        self.arml  = Arm("arml", "left arm")
-        self.armr  = Arm("armr", "right arm")
-        self.legl  = Leg("legl", "left leg")
-        self.legr  = Leg("legr", "right leg")
+        self.torso = Torso("torso", lambda det: det(torso_n))
+        self.head  = Head("head", lambda det: det(head_n))
+        self.arml  = Arm("arml", lambda det: left_adj(det(arm_n)))
+        self.armr  = Arm("armr", lambda det: right_adj(det(arm_n)))
+        self.legl  = Leg("legl", lambda det: left_adj(det(leg_n)))
+        self.legr  = Leg("legr", lambda det: right_adj(det(leg_n)))
 
     def __getitem__(self, k):
         if k == Limb.torso: return self.torso

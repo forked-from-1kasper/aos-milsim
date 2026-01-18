@@ -3,8 +3,14 @@ from math import degrees, fmod, acos
 from pyspades.collision import distance_3d_vector
 from pyspades.common import Vertex3
 
-from milsim.common import toMeters, dot, xOy, azimuth, needle
+from milsim.common import Success, Failure, toMeters, dot, xOy, azimuth, needle
 from milsim.types import Item
+
+from milsim.grammar import (
+    VerbNTR, VerbNP, VerbNPPP, ProgressiveAspect, Possessive,
+    ProperNoun, RegularNoun, SemiregularVerb, RegularVerb,
+    a_sg, no_pl, you_pr, have_v, not_adv, np_vp_pres, np_vp_past, SG
+)
 
 class Kettlebell(Item):
     def __init__(self, mass):
@@ -13,100 +19,99 @@ class Kettlebell(Item):
 
     @property
     def name(self):
-        return f"Kettlebell ({self.mass:.0f} kg)"
+        return "Kettlebell ({:.0f} kg)".format(self.mass)
 
 def is_reachable(player, target):
-    wo1 = player.world_object
-    wo2 = target.world_object
-
+    wo1, wo2 = player.world_object, target.world_object
     if 1.5 < distance_3d_vector(wo1.position, wo2.position):
         return "{} is too far".format(target.name)
 
-class BandageItem(Item):
+class MedicalItem(Item):
+    def apply(self, player, nickname):
+        target = player.get_player(nickname)
+        if not target.alive(): return
+
+        if errmsg := is_reachable(player, target):
+            return errmsg
+
+        target_np = you_pr if target is player else ProperNoun(target.name)
+
+        match self.treat(target):
+            case Success(vp):
+                player.inventory.remove(self)
+
+                if target is not player:
+                    target.send_chat(
+                        np_vp_past(ProperNoun(player.name), vp(you_pr))
+                    )
+
+                return np_vp_past(you_pr, vp(target_np))
+
+            case Failure(vp):
+                return np_vp_pres(target_np, vp)
+
+bleed_v   = SemiregularVerb(bare = "bleed", ving = "bleeding", ved = "bled", v3sg = "bleeds", vpast = "bled")
+bandage_v = RegularVerb("bandage")
+
+not_bleeding_vp = ProgressiveAspect(not_adv(VerbNTR(bleed_v)))
+bandage_vp      = VerbNP(bandage_v)
+
+class BandageItem(MedicalItem):
     name = "Bandage"
     mass = 0.250
 
-    def apply(self, player, nickname):
-        target = player.get_player(nickname)
-        if not target.alive(): return
-
-        if errmsg := is_reachable(player, target):
-            return errmsg
-
+    def treat(self, target):
         for bodypart in target.body.values():
             if bodypart.arterial or bodypart.venous:
-                player.inventory.remove(self)
-
                 bodypart.venous = False
+                return Success(
+                    lambda np: bandage_vp(bodypart.np(Possessive(np, SG)))
+                )
 
-                if target is player:
-                    return "You bandaged your {}".format(bodypart.label)
-                else:
-                    target.send_chat("{} bandaged your {}".format(player.name, bodypart.label))
-                    return "You bandaged {}'s {}".format(target.name, bodypart.label)
+        return Failure(not_bleeding_vp)
 
-        if target is player:
-            return "You are not bleeding"
-        else:
-            return "{} is not bleeding".format(target.name)
+apply_v      = RegularVerb("apply")
+tourniquet_n = RegularNoun("tourniquet")
 
-class TourniquetItem(Item):
+a_tourniquet_np = a_sg(tourniquet_n)
+apply_on_vp     = VerbNPPP(apply_v, "on")
+
+class TourniquetItem(MedicalItem):
     name = "Tourniquet"
     mass = 0.050
 
-    def apply(self, player, nickname):
-        target = player.get_player(nickname)
-        if not target.alive(): return
-
-        if errmsg := is_reachable(player, target):
-            return errmsg
-
+    def treat(self, target):
         for bodypart in target.body.values():
-            if bodypart.arterial:
-                player.inventory.remove(self)
-
+            if bodypart.arterial or bodypart.venous:
                 bodypart.arterial = False
+                return Success(
+                    lambda np: apply_on_vp(
+                        a_tourniquet_np, bodypart.np(Possessive(np, SG))
+                    )
+                )
 
-                if target is player:
-                    return "You put a tourniquet on your {}".format(bodypart.label)
-                else:
-                    target.send_chat("{} put a tourniquet on your {}".format(player.name, bodypart.label))
-                    return "You put a tourniquet on {}'s {}".format(target.name, bodypart.label)
+        return Failure(not_bleeding_vp)
 
-        if target.body.bleeding():
-            return "To stop venous bleeding use /bandage /b"
-        elif target is player:
-            return "You are not bleeding"
-        else:
-            return "{} is not bleeding".format(target.name)
+fracture_n = RegularNoun("fracture")
+splint_v   = RegularVerb("splint")
 
-class SplintItem(Item):
+splint_vp            = VerbNP(splint_v)
+have_vp              = VerbNP(have_v)
+have_no_fractures_vp = have_vp(no_pl(fracture_n))
+
+class SplintItem(MedicalItem):
     name = "Splint"
     mass = 0.160
 
-    def apply(self, player, nickname):
-        target = player.get_player(nickname)
-        if not target.alive(): return
-
-        if errmsg := is_reachable(player, target):
-            return errmsg
-
+    def treat(self, target):
         for bodypart in target.body.values():
             if bodypart.fractured and not bodypart.splint:
-                player.inventory.remove(self)
-
                 bodypart.splint = True
+                return Success(
+                    lambda np: splint_vp(bodypart.np(Possessive(np, SG)))
+                )
 
-                if target is player:
-                    return "You put a splint on your {}".format(bodypart.label)
-                else:
-                    target.send_chat("{} put a split on your {}".format(player.name, bodypart.label))
-                    return "You put a splint on {}'s {}".format(target.name, bodypart.label)
-
-        if target is player:
-            return "You have no fractures"
-        else:
-            return "{} has no fractures".format(target.name)
+        return Failure(have_no_fractures_vp)
 
 class CompassItem(Item):
     name = "Compass"

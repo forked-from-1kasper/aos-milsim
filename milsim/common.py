@@ -11,6 +11,18 @@ from milsim.constants import Pound, Yard, Inch
 from milsim.engine import toMeters
 from milsim.types import *
 
+class Result:
+    __match_args__ = ("value",)
+
+    def __init__(self, value):
+        self.value = value
+
+class Success(Result):
+    pass
+
+class Failure(Result):
+    pass
+
 def alive_only(func):
     @functools.wraps(func)
     def _decorated(connection, *w, **kw):
