@@ -24,6 +24,12 @@ from milsim.types import Inventory, Body, randbool, logistic
 from milsim.items import HandgrenadeItem
 from milsim.constants import Limb
 
+from milsim.grammar import RegularNoun, SemiregularVerb, Cardinal, VerbNTR, PassiveVoice, np_vp_pres
+
+leave_v    = SemiregularVerb(bare = "leave", ving = "leaving", ved = "left", v3sg = "leaves", vpast = "left")
+be_left_vp = PassiveVoice(VerbNTR(leave_v))
+grenade_n  = RegularNoun("grenade")
+
 GRENADE_LETHAL_RADIUS = 4
 GRENADE_SAFETY_RADIUS = 30
 
@@ -808,7 +814,7 @@ class MilsimConnection(FeatureConnection):
         self.handle_grenade_packet(x, y, z, vx, vy, vz, contained.value)
 
         rem = ilen(self.handgrenades())
-        self.send_chat("{} grenade(s) left".format(rem))
+        self.send_chat(np_vp_pres(Cardinal(rem, grenade_n), be_left_vp))
 
         if self.grenades <= 0 or rem <= 0:
             self.sync()
