@@ -9,7 +9,7 @@ from milsim.types import Item
 from milsim.grammar import (
     VerbNTR, VerbNP, VerbNPPP, ProgressiveAspect, Possessive,
     ProperNoun, RegularNoun, SemiregularVerb, RegularVerb,
-    a_sg, no_pl, you_pr, have_v, not_adv, np_vp_pres, np_vp_past, SG
+    an_sg, no_pl, you_pr, have_v, not_adv, np_vp_pres, np_vp_past, SG
 )
 
 class Kettlebell(Item):
@@ -73,7 +73,7 @@ class BandageItem(MedicalItem):
 apply_v      = RegularVerb("apply")
 tourniquet_n = RegularNoun("tourniquet")
 
-a_tourniquet_np = a_sg(tourniquet_n)
+a_tourniquet_np = an_sg(tourniquet_n)
 apply_on_vp     = VerbNPPP(apply_v, "on")
 
 class TourniquetItem(MedicalItem):

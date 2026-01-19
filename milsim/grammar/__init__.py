@@ -1,3 +1,5 @@
+from collections.abc import Iterator
+
 from milsim.grammar.category import (
     GrammarError,
     Number, SG, PL,
@@ -10,7 +12,7 @@ from milsim.grammar.category import (
 from milsim.grammar.verb import Verb, ModalVerb, SemiregularVerb, RegularVerb
 from milsim.grammar.noun import Noun, SemiregularNoun, RegularNoun
 
-from milsim.grammar.syntax import NP, VP, Sentence
+from milsim.grammar.syntax import HasEmit, Token, Phrase, NP, VP, Sentence
 
 from milsim.grammar.np import (
     ProperNoun, ZeroArticle, Determiner, Possessive, Cardinal, Ordinal,
@@ -23,7 +25,67 @@ from milsim.grammar.sentence import (
     Declarative, YesNoInterrogative, Imperative, Compound
 )
 
-DET = NP[Noun]
+startswith = lambda val, *sfxs: any(val.startswith(sfx) for sfx in sfxs)
+
+# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ResEng.gf
+class AnToken(HasEmit):
+    @staticmethod
+    def emit(rem):
+        word = next(rem)
+
+        if startswith(word, "eu", "Eu", "uni", "up"):
+            yield "a"
+        elif word.startswith("un"):
+            yield "an"
+        elif startswith(word, "a", "e", "i", "o", "A", "E", "I", "O"):
+            yield "an"
+        elif startswith(word, "SMS", "sms"):
+            yield "an"
+        else:
+            yield "a"
+
+        yield word
+
+class CompoundToken(HasEmit):
+    def __init__(self, *words):
+        self.words = words
+
+    def emit(self, rem):
+        yield from self.words
+
+def flatten(tokens : Iterator[Token]) -> Iterator[str]:
+    for token in tokens:
+        if isinstance(token, str):
+            yield token
+        else:
+            rem = flatten(tokens)
+            yield from token.emit(rem)
+            yield from rem
+
+def canonicalize(phrase : Phrase) -> str:
+    if isinstance(phrase, NP):
+        tokens = phrase.linearize(NOM)
+    elif isinstance(phrase, VP):
+        tokens = phrase.linearize(INF)
+    else:
+        raise GrammarError
+
+    return " ".join(flatten(tokens))
+
+def wordspacing(words : Iterator[str]) -> Iterator[str]:
+    if head := next(words, None):
+        yield head.capitalize()
+    else:
+        return
+
+    for word in words:
+        if word not in {".", ",", ";", ":", "?", "!"}:
+            yield " "
+
+        yield word
+
+def linearize(s : Sentence) -> str:
+    return "".join(wordspacing(flatten(s.linearize())))
 
 def np_vp_pres(np : NP, vp : VP):
     s = Declarative(np = np, vp = vp, tense = PRES)
@@ -33,21 +95,6 @@ def np_vp_past(np : NP, vp : VP):
     s = Declarative(np = np, vp = vp, tense = PAST)
     return linearize(s)
 
-def wordspacing(tokens):
-    if head := next(tokens, None):
-        yield head.capitalize()
-    else:
-        return
-
-    for token in tokens:
-        if token not in {".", ",", ";", ":", "?", "!"}:
-            yield " "
-
-        yield token
-
-def linearize(s : Sentence) -> str:
-    return "".join(wordspacing(s.linearize()))
-
 I_pr    = Pronoun(person = P1ST, number = SG, nom = "I",    obl = "me",   pos = "my")
 mine_pr = Pronoun(person = P1ST, number = SG, nom = "mine", obl = "mine", pos = "mine's")
 you_pr  = Pronoun(person = P2ND, number = SG, nom = "you",  obl = "you",  pos = "your")
@@ -56,6 +103,8 @@ she_pr  = Pronoun(person = P3RD, number = SG, nom = "she",  obl = "her",  pos = 
 it_pr   = Pronoun(person = P3RD, number = SG, nom = "it",   obl = "it",   pos = "its")
 we_pr   = Pronoun(person = P1ST, number = PL, nom = "we",   obl = "us",   pos = "our")
 they_pr = Pronoun(person = P3RD, number = PL, nom = "they", obl = "them", pos = "their")
+this_pr = Pronoun(person = P3RD, number = SG, nom = "this", obl = "this")
+that_pr = Pronoun(person = P3RD, number = SG, nom = "that", obl = "that")
 
 song_n  = RegularNoun("song")
 light_n = RegularNoun("light")
@@ -82,8 +131,7 @@ zero_sg   = ZeroArticle(SG)
 zero_pl   = ZeroArticle(PL)
 the_sg    = Determiner("the", SG)
 the_pl    = Determiner("the", PL)
-a_sg      = Determiner("a", SG)
-an_sg     = Determiner("an", SG)
+an_sg     = Determiner(AnToken(), SG)
 no_sg     = Determiner("no", SG)
 no_pl     = Determiner("no", PL)
 this_det  = Determiner("this", SG)

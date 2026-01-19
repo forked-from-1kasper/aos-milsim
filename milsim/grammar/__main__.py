@@ -1,7 +1,7 @@
 from milsim.grammar import (
     Declarative, YesNoInterrogative, Imperative, Compound, VerbNTR, InfinitivePhrase, Possessive,
     Cardinal, Ordinal, PassiveVoice, PerfectAspect, ProgressiveAspect, RegularNoun, SemiregularVerb, RegularVerb,
-    linearize, VerbVP, VerbNP, VerbNPPP, zero_pl, a_sg, the_sg, the_pl, not_adv, good_adj,
+    linearize, VerbVP, VerbNP, VerbNPPP, this_pr, that_pr, zero_pl, an_sg, the_sg, the_pl, not_adv, good_adj,
     I_pr, you_pr, he_pr, she_pr, it_pr, light_n, song_n, be_v, do_v, can_v, turn_v, give_v, sing_v,
     PRES, PAST, SG, INF, PTCP2
 )
@@ -15,7 +15,7 @@ player_n = RegularNoun("player")
 be_vp = VerbNP(be_v)
 
 np1 = I_pr
-vp1 = be_vp(good_adj(a_sg(player_n)))
+vp1 = be_vp(good_adj(an_sg(player_n)))
 
 s1 = Declarative(np = np1, vp = vp1, tense = PRES)
 print("1)", linearize(s1))
@@ -98,7 +98,7 @@ sing_vp = VerbNTR(sing_v)
 
 vp11 = ProgressiveAspect(PassiveVoice(sing_vp, agent = she_pr))
 
-s11 = Declarative(np = a_sg(song_n), vp = vp11, tense = PRES)
+s11 = Declarative(np = an_sg(song_n), vp = vp11, tense = PRES)
 print("11)", linearize(s11))
 
 ###########################
@@ -137,3 +137,13 @@ from itertools import product
 for k, (tense, vp) in enumerate(product([PRES, PAST], vps15), start = 1):
     s = Declarative(np = I_pr, vp = vp, tense = tense)
     print("15.{}) {}".format(k, linearize(s)))
+
+##############################
+apple_n = RegularNoun("apple")
+banana_n = RegularNoun("banana")
+
+s16_1 = Declarative(np = this_pr, vp = be_vp(an_sg(apple_n)), tense = PRES)
+s16_2 = Declarative(np = that_pr, vp = be_vp(an_sg(banana_n)), tense = PRES)
+
+s16 = Compound(s16_1, s16_2, "and")
+print("16)", linearize(s16))

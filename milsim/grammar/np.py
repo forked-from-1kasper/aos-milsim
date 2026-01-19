@@ -102,16 +102,16 @@ def Ordinal(k : int, np : NP):
 
     return NP(left, right, number = np.number, person = np.person)
 
-def Pronoun(number : Number, person : Person, nom, obl, pos):
+def Pronoun(number : Number, person : Person, *, nom = None, obl = None, pos = None):
     def left(c : Case):
         yield from ()
 
     def right(c : Case):
-        if c is NOM:
+        if nom is not None and c is NOM:
             yield nom
-        elif c is OBL:
+        elif obl is not None and c is OBL:
             yield obl
-        elif c is POS:
+        elif pos is not None and c is POS:
             yield pos
         else:
             raise GrammarError

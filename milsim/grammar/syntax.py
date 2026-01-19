@@ -1,8 +1,14 @@
 from collections.abc import Callable, Iterator
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Protocol
 
 from milsim.grammar.category import Number, Person, Case, VerbForm
+
+class HasEmit(Protocol):
+    def emit(rem : Iterator[str]) -> Iterator[str]:
+        ...
+
+Token = str | HasEmit
 
 class Phrase(ABC):
     def __class_getitem__(klass, typeval):
@@ -14,7 +20,7 @@ class Phrase(ABC):
             return Callable[[typeval], klass]
 
     @abstractmethod
-    def linearize(self, *w : Any, **kw : Any) -> Iterator[str]:
+    def linearize(self, *w : Any, **kw : Any) -> Iterator[Token]:
         ...
 
 class NP(Phrase):
@@ -23,7 +29,7 @@ class NP(Phrase):
 
         self.number, self.person = number, person
 
-    def linearize(self, c : Case) -> Iterator[str]:
+    def linearize(self, c : Case) -> Iterator[Token]:
         yield from self.left(c)
         yield from self.right(c)
 
@@ -31,11 +37,11 @@ class VP(Phrase):
     def __init__(self, l, r, /):
         self.left, self.right = l, r
 
-    def linearize(self, vf : VerbForm) -> Iterator[str]:
+    def linearize(self, vf : VerbForm) -> Iterator[Token]:
         yield from self.left(vf)
         yield from self.right(vf)
 
 class Sentence(ABC):
     @abstractmethod
-    def linearize(self) -> Iterator[str]:
+    def linearize(self) -> Iterator[Token]:
         ...
