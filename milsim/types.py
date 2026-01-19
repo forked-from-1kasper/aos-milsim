@@ -15,7 +15,7 @@ from pyspades.common import Vertex3
 from milsim.constants import Pound, Inch, Limb
 from milsim.engine import Material
 
-from milsim.grammar import Adjective, RegularNoun, zero_sg, canonicalize
+from milsim.grammar import Adjective, RegularNoun
 
 randbool = lambda prob: random() <= prob
 
@@ -211,9 +211,7 @@ class ABCLimb:
     damage   = ABCMap()
 
     def __init__(self, abbrev, np):
-        self.abbrev = abbrev
-        self.np     = np
-        self.label  = canonicalize(np(zero_sg))
+        self.abbrev, self.np = abbrev, np
 
         self.reset()
 
