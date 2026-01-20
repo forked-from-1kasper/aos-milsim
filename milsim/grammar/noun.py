@@ -41,17 +41,15 @@ class SemiregularNoun(Noun):
             nom_pl = pl, pos_pl = possessify(pl)
         )
 
-endswith = lambda val, *sfxs: any(val.endswith(sfx) for sfx in sfxs)
-
 # https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ParadigmsEng.gf
 def pluralize(w):
-    if endswith(w, "io", "oo"):
+    if w.endswith(("io", "oo")):
         return w + "s"
-    elif endswith(w, "s", "z", "x", "sh", "ch", "o"):
+    elif w.endswith(("s", "z", "x", "sh", "ch", "o")):
         return w + "es"
-    elif endswith(w, "ay", "oy", "uy", "ey"):
+    elif w.endswith(("ay", "oy", "uy", "ey")):
         return w + "s"
-    elif endswith(w, "y"):
+    elif w.endswith("y"):
         return w.removesuffix("y") + "ies"
     else:
         return w + "s"

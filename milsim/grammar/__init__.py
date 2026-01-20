@@ -25,21 +25,19 @@ from milsim.grammar.sentence import (
     Declarative, YesNoInterrogative, Imperative, Compound
 )
 
-startswith = lambda val, *sfxs: any(val.startswith(sfx) for sfx in sfxs)
-
 # https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ResEng.gf
 class AnToken(HasEmit):
     @staticmethod
     def emit(rem):
         word = next(rem)
 
-        if startswith(word, "eu", "Eu", "uni", "up"):
+        if word.startswith(("eu", "Eu", "uni", "up")):
             yield "a"
         elif word.startswith("un"):
             yield "an"
-        elif startswith(word, "a", "e", "i", "o", "A", "E", "I", "O"):
+        elif word.startswith(("a", "e", "i", "o", "A", "E", "I", "O")):
             yield "an"
-        elif startswith(word, "SMS", "sms"):
+        elif word.startswith(("SMS", "sms")):
             yield "an"
         else:
             yield "a"
