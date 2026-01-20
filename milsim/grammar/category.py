@@ -7,37 +7,45 @@ class Category:
 class Number(Category):
     pass
 
-SG = Number()
-PL = Number()
+SG = Number() # Singular
+PL = Number() # Plural
 
 class Person(Category):
     pass
 
-P1ST = Person()
-P2ND = Person()
-P3RD = Person()
+P1ST = Person() # First person
+P2ND = Person() # Second person
+P3RD = Person() # Third person
 
 class Case(Category):
     pass
 
-NOM = Case()
-OBL = Case()
-POS = Case()
+# Nominative and oblique cases differ only for personal pronouns,
+# but for simplicity we consider all three even for nouns.
+NOM = Case() # Nominative
+OBL = Case() # Oblique (objective)
+POS = Case() # Possessive
 
 class Tense(Category):
     pass
 
-PRES = Tense()
-PAST = Tense()
+# Here we consider inflected tenses only, not compound ones like “Present Perfect”.
+# Like Russian (я пишу / я писал) or German (ich schreibe / ich schrieb) and unlike Ukrainian (я пишу / я писав / я писатиму)
+# or French (j’écris / j’écrivis / j’écrirai), English has only two such tenses (I write / I wrote).
+PRES = Tense() # Present
+PAST = Tense() # Past
 
 class VerbForm(Category):
     pass
 
-INF     = VerbForm()
-PTCP1   = VerbForm()
-PTCP2   = VerbForm()
-PRES1SG = VerbForm()
-PRES2SG = VerbForm()
+# In principle we can use something like `... | type[Number, Person, Tense]`,
+# but since we’ll have to write these abbreviations for convenience anyway,
+# it seems that it would be easier to define it like this.
+INF     = VerbForm() # Bare infinitive
+PTCP1   = VerbForm() # Participle I (present participle)
+PTCP2   = VerbForm() # Participle II (past participle)
+PRES1SG = VerbForm() # First-person singular, present
+PRES2SG = VerbForm() # And so on…
 PRES3SG = VerbForm()
 PRES1PL = VerbForm()
 PRES2PL = VerbForm()
