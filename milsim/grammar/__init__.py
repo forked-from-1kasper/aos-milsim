@@ -76,7 +76,7 @@ def canonicalize(phrase : Phrase) -> str:
 
 def wordspacing(words : Iterator[str]) -> Iterator[str]:
     if head := next(words, None):
-        yield head.capitalize()
+        yield head[:1].upper() + head[1:]
     else:
         return
 
