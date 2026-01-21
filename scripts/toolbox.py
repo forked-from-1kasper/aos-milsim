@@ -431,6 +431,23 @@ def c_revoke(connection, nickname, argval):
     else:
         return "{} doesn't have '{}' right".format(player.name, right)
 
+# https://github.com/bjdhwz/piqueserver-scripts/blob/main/scripts/auth.py
+@command('logout')
+def c_logout(connection):
+    """
+    Revoke all rights granted by all previous /login commands
+    /logout
+    """
+
+    if bool(connection.user_types):
+        connection.user_types.clear()
+        connection.rights.clear()
+        connection.admin = False
+
+        return "You've logged out"
+    else:
+        return "You're not logged in"
+
 @command('reloadmap', 'rlma', admin_only = True)
 def c_reloadmap(connection):
     """
