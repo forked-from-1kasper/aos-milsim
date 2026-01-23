@@ -358,16 +358,19 @@ class MilsimConnection(FeatureConnection):
         if self.respawn_time is None:
             return 0
 
+        if self.team.spectator:
+            return 0
+
         if self.protocol.respawn_waves:
             offset = self.last_death_time % self.respawn_time
             return self.respawn_time - offset
+
+        if self.last_killer is self:
+            return self.respawn_time
+        elif self.last_death_type == TEAM_CHANGE_KILL or self.last_death_type == CLASS_CHANGE_KILL:
+            return self.respawn_time
         else:
-            if self.last_killer is self:
-                return self.respawn_time
-            elif self.last_death_type == TEAM_CHANGE_KILL or self.last_death_type == CLASS_CHANGE_KILL:
-                return self.respawn_time
-            else:
-                return clamp(0, self.respawn_time, self.last_death_time - self.last_spawn_time)
+            return clamp(0, self.respawn_time, self.last_death_time - self.last_spawn_time)
 
     def on_disconnect(self):
         if o := self.weapon_object:
