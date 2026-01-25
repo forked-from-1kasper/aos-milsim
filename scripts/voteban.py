@@ -158,7 +158,7 @@ def check_voteunban_end(protocol):
             protocol.remove_ban(addr)
 
             protocol.broadcast_chat(
-                "{} was unbanned by {:.0f} % of votes".format(
+                "{} unbanned by {:.0f} % of votes".format(
                     player.name, total.percentage
                 )
             )
@@ -722,7 +722,7 @@ def unban(connection, nickname, *ws):
         protocol.remove_ban(addr)
 
         protocol.broadcast_message(
-            "{} was unbanned by {}".format(player.name, connection.name),
+            "{} unbanned by {}".format(player.name, connection.name),
             format_reason(ws)
         )
     else:
@@ -762,6 +762,15 @@ def apply_script(protocol, connection, config):
 
             for player in self.connections.values():
                 player.voteunban.discard(addr)
+
+        # TODO: there should be one endpoint for this
+        def undo_last_ban(self):
+            addr, value = protocol.undo_last_ban(self)
+
+            for player in self.connections.values():
+                player.voteunban.discard(addr)
+
+            return addr, value
 
     class VotebanConnection(connection):
         voteban_last_revoke = 0

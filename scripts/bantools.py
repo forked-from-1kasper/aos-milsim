@@ -256,7 +256,12 @@ def apply_script(protocol, connection, config):
             protocol.save_bans(self)
 
             for player in self.connections.values():
-                player.banned = player.address[0] in self.bans
+                past, pres = player.banned, player.address[0] in self.bans
+
+                if past is True and pres is False: player.send_chat_error("You've been unbanned")
+                if past is False and pres is True: player.send_chat_error("You've been banned")
+
+                player.banned = pres
 
         def broadcast_chat(self, value, global_message = True, sender = None, team = None, irc = False):
             if irc: self.irc_say("* {}".format(value))
