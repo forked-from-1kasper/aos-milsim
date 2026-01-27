@@ -353,6 +353,16 @@ def apply_script(protocol, connection, config):
 
             return connection.loader_received(self, loader)
 
+        def on_chat_delivered(self, player, value, team):
+            addr, port = player.address
+            if addr in self.ignore_list:
+                return False
+
+            if player.name is None and self.ignore_limbo:
+                return False
+
+            return connection.on_chat_delivered(self, player, value, team)
+
         def broadcast_chat(self, value, team = None):
             contained           = loaders.ChatMessage()
             contained.player_id = self.player_id
@@ -365,18 +375,17 @@ def apply_script(protocol, connection, config):
                 if player.player_id is None:
                     continue
 
-                if player.deaf:
+                if player.on_chat_delivered(self, value, team) is False:
                     continue
 
-                if addr in player.ignore_list:
-                    continue
-
-                if team is None or team is player.team:
-                    player.send_contained(contained)
+                player.send_contained(contained)
 
         @register_packet_handler(loaders.ChatMessage)
         def on_chat_message_recieved(self, contained):
             value = sanitize_message(contained.value)
+
+            is_global_message = contained.chat_type == CHAT_ALL
+            team = None if is_global_message else self.team
 
             if message_maximum_length < len(contained.value):
                 log.info(
@@ -400,13 +409,7 @@ def apply_script(protocol, connection, config):
                     if player.player_id is None:
                         continue
 
-                    if player.deaf:
-                        continue
-
-                    if player.ignore_limbo:
-                        continue
-
-                    if addr in player.ignore_list:
+                    if player.on_chat_delivered(self, value, team) is False:
                         continue
 
                     player.send_contained(contained)
@@ -414,15 +417,14 @@ def apply_script(protocol, connection, config):
                 log.info("{{Anonymous}} {value}", value = escape_control_codes(value))
 
             else:
-                is_global_message = contained.chat_type == CHAT_ALL
-
                 retval = self.on_chat(value, is_global_message)
-                if retval == False:
+
+                if retval is False:
                     return
                 elif retval is not None:
                     value = retval
 
-                self.broadcast_chat(value, team = None if is_global_message else self.team)
+                self.broadcast_chat(value, team)
                 self.on_chat_sent(value, is_global_message)
 
                 self.last_teamchat_message = None if is_global_message else value
