@@ -238,6 +238,10 @@ class MilsimProtocol(FeatureProtocol):
         for player in self.living():
             dt = t - player.last_hp_update
 
+            if self.environment.size.inside(player.world_object.position) is False:
+                player.kill()
+                continue
+
             player.body.update(dt)
 
             for leg in player.body.legs():
@@ -264,11 +268,7 @@ class MilsimProtocol(FeatureProtocol):
                     player.tool_object.on_sneak_hold(t, dt)
 
             hp = player.body.average()
-            if player.hp != hp:
-                player.set_hp(hp, kill_type = MELEE_KILL)
-
-            if not self.environment.size.inside(player.world_object.position):
-                player.kill()
+            if player.hp != hp: player.set_hp(hp, kill_type = MELEE_KILL)
 
             player.last_hp_update = t
 
