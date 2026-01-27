@@ -303,6 +303,8 @@ class Body:
         self.legl  = Leg("legl", lambda det: left_adj(det(leg_n)))
         self.legr  = Leg("legr", lambda det: right_adj(det(leg_n)))
 
+        self.reset()
+
     def __getitem__(self, k):
         if k == Limb.torso: return self.torso
         if k == Limb.head:  return self.head
@@ -343,6 +345,8 @@ class Body:
     def reset(self):
         for P in self.values():
             P.reset()
+
+        self.deaf = False
 
     def update(self, dt):
         for P in self.values():

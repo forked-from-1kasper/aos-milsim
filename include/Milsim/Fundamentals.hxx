@@ -102,6 +102,8 @@ namespace Fundamentals {
     template<typename T> constexpr T molarMassWaterVapor = 0.018016;  // kg/mol
     template<typename T> constexpr T gasConstant         = 8.31446;   // J / (K · mol)
     template<typename T> constexpr T absoluteZero        = -273.15;   // Celsius
+    template<typename T> constexpr T millisecond         = 0.001;     // s
+    template<typename T> constexpr T bar                 = 100'000;   // Pa
 }
 
 template<typename Real> constexpr inline Real vaporPressureOfWater(const Real T) {
@@ -110,8 +112,73 @@ template<typename Real> constexpr inline Real vaporPressureOfWater(const Real T)
     return 610.78 * exp(k); // Pa
 }
 
+template<typename Real> inline Real overpressurePeakToAmbientRatio(const Real Z /* m / ∛kg */) {
+    // Explosive Shocks in Air, G. F. Kinney, K. J. Graham, 2nd edition,
+    // Ch. 6 “Blast Waves”, Tables and Equations for Blast Waves, p. 94
+
+    constexpr Real α₁ = 4.5, α₂ = 0.048, α₃ = 0.32, α₄ = 1.35, β = 808;
+
+    const Real Z² = Z * Z;
+
+    const Real A₁ = 1 + Z² / α₁ / α₁;
+    const Real A₂ = 1 + Z² / α₂ / α₂;
+    const Real A₃ = 1 + Z² / α₃ / α₃;
+    const Real A₄ = 1 + Z² / α₄ / α₄;
+
+    return β * A₁ / std::sqrt(A₂ * A₃ * A₄);
+}
+
+template<typename Real> inline Real /* s */ overpressureDuration(const Real Z) {
+    // Explosive Shocks in Air, G. F. Kinney, K. J. Graham, 2nd edition,
+    // Ch. 6 “Blast Waves”, Duration, p. 97
+
+    constexpr Real α₁ = 0.54, α₂ = 0.02, α₃ = 0.74, α₄ = 6.9, β = 980;
+
+    constexpr Real α₁² = α₁ * α₁, α₁⁴ = α₁² * α₁², α₁⁸ = α₁⁴ * α₁⁴, α₁¹⁰ = α₁⁸ * α₁²;
+    constexpr Real α₂² = α₂ * α₂, α₂³ = α₂² * α₂;
+    constexpr Real α₃² = α₃ * α₃, α₃³ = α₃² * α₃, α₃⁶ = α₃³ * α₃³;
+    constexpr Real α₄² = α₄ * α₄;
+
+    const Real Z² = Z * Z, Z³ = Z² * Z, Z⁴ = Z² * Z², Z⁶ = Z³ * Z³, Z¹⁰ = Z⁶ * Z⁴;
+
+    const Real A₁ = 1 + Z¹⁰ / α₁¹⁰;
+    const Real A₂ = 1 + Z³ / α₂³;
+    const Real A₃ = 1 + Z⁶ / α₃⁶;
+    const Real A₄ = std::sqrt(1 + Z² / α₄²);
+
+    using namespace Fundamentals;
+
+    return millisecond<Real> * β * A₁ / (A₂ * A₃ * A₄);
+}
+
+template<typename Real> inline Real /* Pa · s */ overpressureImpulse(const Real Z) {
+    // Explosive Shocks in Air, G. F. Kinney, K. J. Graham, 2nd edition,
+    // Ch. 6 “Blast Waves”, Blast Wave Impulse per Unit Area, p. 98
+
+    constexpr Real β = 0.067, α₁ = 0.23, α₂ = 1.55;
+
+    constexpr Real α₁² = α₁ * α₁, α₁⁴ = α₁² * α₁²;
+    constexpr Real α₂² = α₂ * α₂, α₂³ = α₂² * α₂;
+
+    const Real Z² = Z * Z, Z³ = Z² * Z, Z⁴ = Z² * Z²;
+
+    const Real A₁ = std::sqrt(1 + Z⁴ / α₁⁴);
+    const Real A₂ = std::cbrt(1 + Z³ / α₂³);
+    const Real A₃ = β / Z²;
+
+    using namespace Fundamentals;
+
+    return (bar<Real> * millisecond<Real>) * A₁ * A₃ / A₂;
+}
+
 template<typename T> constexpr inline T ofMeters(const T v) { return Fundamentals::m2b<T> * v; }
 template<typename T> constexpr inline T toMeters(const T v) { return Fundamentals::b2m<T> * v; }
+
+template<typename T> constexpr inline auto ofMeters3(const Vector3<T> & v)
+{ return Vector3<T>(ofMeters<T>(v.x), ofMeters<T>(v.y), ofMeters<T>(v.z)); }
+
+template<typename T> constexpr inline auto toMeters3(const Vector3<T> & v)
+{ return Vector3<T>(toMeters<T>(v.x), toMeters<T>(v.y), toMeters<T>(v.z)); }
 
 template<typename T> Vector3<T> cone(const Vector3<T> & v, const T σ);
 
@@ -158,5 +225,15 @@ namespace Box {
 
     template<typename T> constexpr auto legc_right = Hitbox<T>(
         LIMB_LEGR, Vector3<T>(-3.5, -6.75, 6.0), Vector3<T>(3, 7, 8), 0.1
+    );
+
+    template<typename T> constexpr auto player = AABB<T>(
+        Vector3<T>(arm_right<T>.aabb.min.x, torso<T>.aabb.min.y, leg_left<T>.aabb.min.z),
+        Vector3<T>(arm_left<T>.aabb.max.x, torso<T>.aabb.max.y, head<T>.aabb.max.z)
+    );
+
+    template<typename T> constexpr auto playerc = AABB<T>(
+        Vector3<T>(armc_right<T>.aabb.min.x, torsoc<T>.aabb.min.y, legc_left<T>.aabb.min.z),
+        Vector3<T>(armc_left<T>.aabb.max.x, torsoc<T>.aabb.max.y, head<T>.aabb.max.z)
     );
 }

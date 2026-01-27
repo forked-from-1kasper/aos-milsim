@@ -44,6 +44,44 @@ template<typename Real> struct AABB {
     min(std::min(A.x, B.x), std::min(A.y, B.y), std::min(A.z, B.z)),
     max(std::max(A.x, B.x), std::max(A.y, B.y), std::max(A.z, B.z)) {}
 
+    constexpr inline Real l() const { return max.x; } // left
+    constexpr inline Real r() const { return min.x; } // right
+    constexpr inline Real f() const { return max.y; } // forward
+    constexpr inline Real b() const { return min.y; } // backward
+    constexpr inline Real u() const { return min.z; } // up
+    constexpr inline Real d() const { return max.z; } // down
+
+    constexpr inline Vector3<Real> rfu() const { return {r(), f(), u()}; }
+    constexpr inline Vector3<Real> lfu() const { return {l(), f(), u()}; }
+    constexpr inline Vector3<Real> rbu() const { return {r(), b(), u()}; }
+    constexpr inline Vector3<Real> lbu() const { return {l(), b(), u()}; }
+    constexpr inline Vector3<Real> rfd() const { return {r(), f(), d()}; }
+    constexpr inline Vector3<Real> lfd() const { return {l(), f(), d()}; }
+    constexpr inline Vector3<Real> rbd() const { return {r(), b(), d()}; }
+    constexpr inline Vector3<Real> lbd() const { return {l(), b(), d()}; }
+
+    constexpr inline Quadrilateral<Real> front()  const { return {rfd(), rfu(), lfu(), lfd()}; }
+    constexpr inline Quadrilateral<Real> back()   const { return {lbd(), lbu(), rbu(), rbd()}; }
+    constexpr inline Quadrilateral<Real> top()    const { return {rfu(), rbu(), lbu(), lfu()}; }
+    constexpr inline Quadrilateral<Real> bottom() const { return {rbd(), rfd(), lfd(), lbd()}; }
+    constexpr inline Quadrilateral<Real> left()   const { return {lfd(), lfu(), lbu(), lbd()}; }
+    constexpr inline Quadrilateral<Real> right()  const { return {rbd(), rbu(), rfu(), rfd()}; }
+
+    constexpr inline bool inside(const Vector3<Real> & v) const
+    { return min.x <= v.x && v.x <= max.y
+          && min.y <= v.y && v.y <= max.y
+          && min.z <= v.z && v.z <= max.z; }
+
+    inline Real exposed(const Vector3<Real> & r0) const
+    { return inside(r0)
+           ? 4 * std::numbers::pi_v<Real>
+           : front().exposed(r0)
+           + back().exposed(r0)
+           + top().exposed(r0)
+           + bottom().exposed(r0)
+           + left().exposed(r0)
+           + right().exposed(r0);}
+
     constexpr inline Arc<Real> intersect(const int index, const Ray<Real> & r) const {
         using namespace std;
 

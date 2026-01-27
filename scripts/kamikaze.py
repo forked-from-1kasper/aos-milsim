@@ -13,10 +13,7 @@ from pyspades.common import Vertex3
 from piqueserver.commands import command, player_only
 from piqueserver.config import config
 
-from milsim.blast import sendGrenadePacket, explode
-
-BELT_GUARANTEED_KILL_RADIUS = 17
-BELT_KILL_RADIUS = 40
+from milsim.blast import HighExplosive, sendGrenadePacket
 
 section = config.section("kamikaze")
 
@@ -25,13 +22,15 @@ kamikaze_max_fuse = section.option("max_fuse", 60).get()
 kamikaze_delay    = section.option("delay", 15).get()
 
 class ExplosiveBelt:
-    def __init__(self, conn):
-        self.defer = None
-        self.conn  = conn
-        self.last  = -inf
+    high_explosive = HighExplosive(4.5, 1500, 1700, 1 / 1000, 1.5e-4, 0.70)
+
+    def __init__(self, connection):
+        self.connection = connection
+        self.defer      = None
+        self.last       = -inf
 
     def alive(self):
-        return self.conn and self.conn.alive()
+        return self.connection and self.connection.alive()
 
     def start(self, fuse):
         if self.defer is not None:
@@ -64,22 +63,24 @@ class ExplosiveBelt:
         self.last  = monotonic()
         self.defer = None
 
+        protocol = self.connection.protocol
+
         if self.alive() and kamikaze_message:
             contained           = loaders.ChatMessage()
-            contained.player_id = self.conn.player_id
+            contained.player_id = self.connection.player_id
             contained.chat_type = CHAT_ALL
             contained.value     = kamikaze_message
 
-            self.conn.protocol.broadcast_contained(contained)
+            protocol.broadcast_contained(contained)
 
-        r = self.conn.world_object.position
+        r = self.connection.world_object.position
         sendGrenadePacket(
-            self.conn.protocol, self.conn.player_id,
+            protocol, self.connection.player_id,
             r - Vertex3(0, 0, 1.5), Vertex3(0, 0, 0), 0
         )
 
-        self.conn.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3))
-        explode(BELT_GUARANTEED_KILL_RADIUS, BELT_KILL_RADIUS, self.conn, r)
+        self.connection.grenade_destroy(floor(r.x), floor(r.y), floor(r.z + 3))
+        self.high_explosive.explode(protocol, r, hit_by = self.connection)
 
 @command('boom', 'a', 'aa')
 @player_only

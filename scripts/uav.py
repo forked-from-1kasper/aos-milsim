@@ -12,7 +12,7 @@ from pyspades.team import Team
 from piqueserver.commands import command, get_player, CommandError
 from piqueserver.config import config
 
-from milsim.blast import sendGrenadePacket
+from milsim.blast import HighExplosive, HEGrenadeObject, sendGrenadePacket
 from milsim.common import alive_only
 
 section = config.section("drone")
@@ -23,6 +23,9 @@ drone_rate     = section.option("rate", 1).get()
 drone_timeout  = section.option("timeout", 60).get()
 drone_teamkill = section.option("teamkill", False).get()
 drone_grenades = section.option("grenades", 5).get()
+
+class M26GrenadeObject(HEGrenadeObject):
+    high_explosive = HighExplosive(0.200, 1150, 1600, 0.2 / 1000, 2.0e-5, 0.46)
 
 class Status(Enum):
     inflight = auto()
@@ -112,29 +115,28 @@ class Drone:
             position = Vertex3(x, y, 0)
             velocity = Vertex3(0, 0, 0)
 
-            player = self.protocol.take_player(self.player_id)
+            if player := self.protocol.take_player(self.player_id):
+                grenade = self.protocol.world.create_object(
+                    M26GrenadeObject, self.protocol, player.player_id, fuse, position, velocity
+                )
+                grenade.name = 'grenade'
 
-            grenade = self.protocol.world.create_object(
-                Grenade, fuse, position, None, velocity, player.grenade_exploded
-            )
-            grenade.name = 'grenade'
+                sendGrenadePacket(self.protocol, player.player_id, position, velocity, fuse)
 
-            sendGrenadePacket(self.protocol, player.player_id, position, velocity, fuse)
+                self.grenades -= 1
 
-            self.grenades -= 1
+                self.passed    = 0
+                self.target_id = None
+                self.player_id = None
 
-            self.passed    = 0
-            self.target_id = None
-            self.player_id = None
-
-            if self.grenades > 0:
-                self.status   = Status.awaiting
-                self.callback = None
-                self.report("Bombed out. Awaiting for further instructions")
-            else:
-                self.status   = Status.inflight
-                self.callback = reactor.callLater(drone_delay, self.arrive)
-                self.report("Bombed out. Will be ready in {} seconds".format(drone_delay))
+                if self.grenades > 0:
+                    self.status   = Status.awaiting
+                    self.callback = None
+                    self.report("Bombed out. Awaiting for further instructions")
+                else:
+                    self.status   = Status.inflight
+                    self.callback = reactor.callLater(drone_delay, self.arrive)
+                    self.report("Bombed out. Will be ready in {} seconds".format(drone_delay))
         else:
             self.callback = reactor.callLater(drone_rate, self.ping)
 

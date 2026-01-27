@@ -10,16 +10,16 @@ from piqueserver.commands import get_player
 
 from pyspades.collision import collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
-from pyspades.world import cube_line, Grenade
 from pyspades import contained as loaders
 from pyspades.player import check_nan
+from pyspades.world import cube_line
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 
 from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
-from milsim.blast import sendGrenadePacket, explode, flashbang_effect
+from milsim.blast import sendGrenadePacket, flashbang_effect
 from milsim.types import Inventory, Body, randbool, logistic
 from milsim.items import HandgrenadeItem
 from milsim.constants import Limb
@@ -29,9 +29,6 @@ from milsim.grammar import RegularNoun, SemiregularVerb, Cardinal, VerbNTR, Pass
 leave_v    = SemiregularVerb(bare = "leave", ving = "leaving", ved = "left", v3sg = "leaves", vpast = "left")
 be_left_vp = PassiveVoice(VerbNTR(leave_v))
 grenade_n  = RegularNoun("grenade")
-
-GRENADE_LETHAL_RADIUS = 4
-GRENADE_SAFETY_RADIUS = 30
 
 SHOVEL_GUARANTEED_DAMAGE = 50
 
@@ -235,6 +232,12 @@ class MilsimConnection(FeatureConnection):
             return self
         else:
             return get_player(self.protocol, nickname)
+
+    def on_chat_delivered(self, player, value, team):
+        if self.alive() and self.body.deaf:
+            return False
+
+        return FeatureConnection.on_chat_delivered(self, player, value, team)
 
     def on_position_update(self):
         if self.previous_floor_position is not None:
@@ -469,15 +472,8 @@ class MilsimConnection(FeatureConnection):
 
         return True
 
-    def grenade_explode(self, r):
-        self.grenade_destroy(floor(r.x), floor(r.y), floor(r.z))
-        explode(GRENADE_LETHAL_RADIUS, GRENADE_SAFETY_RADIUS, self, r)
-
     def grenade_exploded(self, grenade):
-        if self.name is None:
-            return
-
-        self.grenade_explode(grenade.position)
+        raise NotImplementedError
 
     def flashbang_exploded(self, grenade):
         if self.name is None:
@@ -788,7 +784,7 @@ class MilsimConnection(FeatureConnection):
             self.inventory.remove(o)
 
             grenade = self.protocol.world.create_object(
-                Grenade, fuse, r, None, v, o.on_explosion(self)
+                o.grenade_class, self.protocol, self.player_id, fuse, r, v
             )
             grenade.team = self.team
 

@@ -157,6 +157,64 @@ static PyObject * PyEngineUpdate(PyEngine * self, PyObject * E) {
     Py_RETURN_NONE;
 }
 
+static PyObject * PyEngineDragRaycast(PyEngine * self, PyObject * w) {
+    double CD, m, A, v₀; PyObject * ro1, * ro2;
+
+    if (!PyArg_ParseTuple(w, "ddddOO", &CD, &m, &A, &v₀, &ro1, &ro2))
+        return nullptr;
+
+    auto r1 = PyDecode<Vector3d>(ro1); RETZIFERR();
+    auto r2 = PyDecode<Vector3d>(ro2); RETZIFERR();
+
+    auto v = self->ref->dragRaycast(CD, m, A, v₀, r1, r2);
+    return PyEncode<double>(v);
+}
+
+static PyObject * PyEngineHCCofficient(PyEngine * self, PyObject * Wo) {
+    auto W = PyDecode<double>(Wo); RETZIFERR();
+
+    auto HCC = self->ref->HopkinsonCranzCoefficient(W);
+    return PyEncode<double>(HCC);
+}
+
+static PyObject * PyEngineOverpressureValue(PyEngine * self, PyObject * Zo) {
+    auto p = self->ref->pressure;
+
+    auto Z = PyDecode<double>(Zo); RETZIFERR();
+    return PyEncode<double>(p * overpressurePeakToAmbientRatio<double>(Z));
+}
+
+static PyObject * PyEngineOverpressureDuration(PyObject *, PyObject * Zo) {
+    auto Z = PyDecode<double>(Zo); RETZIFERR();
+    return PyEncode<double>(overpressureDuration<double>(Z));
+}
+
+static PyObject * PyEngineOverpressureImpulse(PyObject *, PyObject * Zo) {
+    auto Z = PyDecode<double>(Zo); RETZIFERR();
+    return PyEncode<double>(overpressureImpulse<double>(Z));
+}
+
+static PyObject * PyEngineExposed(PyEngine * self, PyObject * w) {
+    int i; PyObject * co;
+
+    if (!PyArg_ParseTuple(w, "iO", &i, &co))
+        return nullptr;
+
+    auto c = PyDecode<Vector3d>(co); RETZIFERR();
+    auto [hd, to, ll, lr, ar, al] = self->ref->players[i].exposed(c);
+
+    auto retval = PyTuple_New(6);
+
+    PyTuple_SET_ITEM(retval, 0, PyEncode<double>(hd));
+    PyTuple_SET_ITEM(retval, 1, PyEncode<double>(to));
+    PyTuple_SET_ITEM(retval, 2, PyEncode<double>(ll));
+    PyTuple_SET_ITEM(retval, 3, PyEncode<double>(lr));
+    PyTuple_SET_ITEM(retval, 4, PyEncode<double>(ar));
+    PyTuple_SET_ITEM(retval, 5, PyEncode<double>(al));
+
+    return retval;
+}
+
 static PyObject * PyEngineAdd(PyEngine * self, PyObject * w) {
     int player_id; PyObject * ro, * vo; double timestamp; PyObject * po;
 
@@ -400,18 +458,24 @@ static PyMappingMethods PyEngineMapping = {
 };
 
 static PyMethodDef PyEngineMethods[] = {
-    {"step",          PyCFunction(PyEngineStep),         METH_VARARGS, NULL},
-    {"add",           PyCFunction(PyEngineAdd),          METH_VARARGS, NULL},
-    {"update",        PyCFunction(PyEngineUpdate),       METH_O,       NULL},
-    {"dig",           PyCFunction(PyEngineDig),          METH_VARARGS, NULL},
-    {"smash",         PyCFunction(PyEngineSmash),        METH_VARARGS, NULL},
-    {"apply",         PyCFunction(PyEngineApply),        METH_O,       NULL},
-    {"clear",         PyCFunction(PyEngineClearMeth),    METH_NOARGS,  NULL},
-    {"flush",         PyCFunction(PyEngineFlush),        METH_NOARGS,  NULL},
-    {"on_spawn",      PyCFunction(PyEngineOnSpawn),      METH_VARARGS, NULL},
-    {"on_despawn",    PyCFunction(PyEngineOnDespawn),    METH_VARARGS, NULL},
-    {"set_animation", PyCFunction(PyEngineSetAnimation), METH_VARARGS, NULL},
-    {NULL                                                                  }
+    {"cast",          PyCFunction(PyEngineDragRaycast),          METH_VARARGS,         NULL},
+    {"hccoeff",       PyCFunction(PyEngineHCCofficient),         METH_O,               NULL},
+    {"opvalue",       PyCFunction(PyEngineOverpressureValue),    METH_O,               NULL},
+    {"opduration",    PyCFunction(PyEngineOverpressureDuration), METH_O | METH_STATIC, NULL},
+    {"opimpulse",     PyCFunction(PyEngineOverpressureImpulse),  METH_O | METH_STATIC, NULL},
+    {"exposed",       PyCFunction(PyEngineExposed),              METH_VARARGS,         NULL},
+    {"step",          PyCFunction(PyEngineStep),                 METH_VARARGS,         NULL},
+    {"add",           PyCFunction(PyEngineAdd),                  METH_VARARGS,         NULL},
+    {"update",        PyCFunction(PyEngineUpdate),               METH_O,               NULL},
+    {"dig",           PyCFunction(PyEngineDig),                  METH_VARARGS,         NULL},
+    {"smash",         PyCFunction(PyEngineSmash),                METH_VARARGS,         NULL},
+    {"apply",         PyCFunction(PyEngineApply),                METH_O,               NULL},
+    {"clear",         PyCFunction(PyEngineClearMeth),            METH_NOARGS,          NULL},
+    {"flush",         PyCFunction(PyEngineFlush),                METH_NOARGS,          NULL},
+    {"on_spawn",      PyCFunction(PyEngineOnSpawn),              METH_VARARGS,         NULL},
+    {"on_despawn",    PyCFunction(PyEngineOnDespawn),            METH_VARARGS,         NULL},
+    {"set_animation", PyCFunction(PyEngineSetAnimation),         METH_VARARGS,         NULL},
+    {NULL                                                                                  }
 };
 
 static PyGetSetDef PyEngineGetset[] = {

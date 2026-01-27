@@ -117,7 +117,7 @@ void Engine::step(const double t1, const double t2) {
     _peak = std::max(_peak, double(diff));
 }
 
-template<typename T> inline auto traverseReciprocal(const Vector3<T> & r, const Vector3<T> & v /* m/s */) {
+template<typename T> inline auto traverseReciprocal(const Vector3<T> & r, const Vector3<T> & v) {
     using namespace Fundamentals;
 
     T x = v.x > T(0) ? std::floor(r.x) + 1 : std::ceil(r.x) - 1;
@@ -132,14 +132,14 @@ template<typename T> inline auto traverseReciprocal(const Vector3<T> & r, const 
 
     return max(
         [](auto & w1, auto & w2){ return w1.first < w2.first; },
-        std::pair(ofMeters<T>(v.x) / dx, Vector3<T>(-sign<T>(v.x), 0, 0)),
-        std::pair(ofMeters<T>(v.y) / dy, Vector3<T>(0, -sign<T>(v.y), 0)),
-        std::pair(ofMeters<T>(v.z) / dz, Vector3<T>(0, 0, -sign<T>(v.z)))
+        std::pair(v.x / dx, Vector3<T>(-sign<T>(v.x), 0, 0)),
+        std::pair(v.y / dy, Vector3<T>(0, -sign<T>(v.y), 0)),
+        std::pair(v.z / dz, Vector3<T>(0, 0, -sign<T>(v.z)))
     );
 }
 
-static inline auto traverse(const Vector3d & r, const Vector3d & v, const double rem) {
-    auto [idt, n] = traverseReciprocal<double>(r, v);
+static inline auto traverse(const Vector3d & r, const Vector3d & v /* m/s */, const double rem /* s */) {
+    auto [idt, n] = traverseReciprocal<double>(r, ofMeters3<double>(v));
     double dt = idt < 1e-9 ? INFINITY : 1 / idt;
 
     return rem < dt ? std::pair(rem, Vector3d())
@@ -200,27 +200,22 @@ inline bool Engine::terminal(Object & o, const Vector3i & R, const Vector3d & dr
     Material * M = voxel.material();
 
     auto E₀ = o.energy();
-    auto xmax = maximumImpactDepth(M, o.mass, o.area, E₀);
+
     auto depth = toMeters<double>(dr.abs());
+    auto E = impactRemainingEnergy(M, o.mass, o.area, E₀, depth);
 
-    double ΔE;
+    auto ΔE = E > 0 ? E₀ - E : E₀;
 
-    if (depth < xmax) {
-        auto E = impactRemainingEnergy(M, o.mass, o.area, E₀, depth);
-        ΔE = E₀ - E;
-
+    if (0 < E) {
         o.position += dr;
         o.velocity *= std::sqrt(E / E₀);
-    } else {
-        ΔE = E₀;
-
+    } else
         o.velocity = {};
-    }
 
     if (voxel.isub(ΔE * (M->durability / M->absorption)))
         onDestroy(o.thrower(), R.x, R.y, R.z);
 
-    return xmax <= depth;
+    return E <= 0;
 }
 
 inline void Engine::external(Object & o, const double dt, const Vector3d & dr) {
@@ -315,4 +310,55 @@ void Engine::next(double t1, const double t2, ObjectIterator & it) {
     //if (!S) printf("%ld: invalidated\n", o.index);
 
     if (P && Q && R && S) ++it; else it = objects.erase(it);
+}
+
+double Engine::dragRaycast(double CD, double m, double A, double v₀, Vector3d r, const Vector3d & s) {
+    double E = 0.5 * m * v₀ * v₀;
+    auto [d, n] = (s - r).polar();
+
+    while (d > 0) {
+        auto [idR, _] = traverseReciprocal<double>(r, n);
+
+        double dR = std::min(1 / idR, d);
+        auto depth = toMeters<double>(dR);
+
+        auto dr = n * dR;
+
+        auto R = voxelOf(r + dr * 0.5);
+        if (solid(R)) {
+            Material * M = vxlData.get(R).material();
+            E = impactRemainingEnergy(M, m, A, E, depth);
+
+            if (E <= 0) return 0;
+        } else {
+            /* For a quadratic drag force F = −cv² (neglecting gravity) we have that:
+                 (1) F = m dv/dt,
+                 (2) dv/dt = dv/dr dr/dt = vdv/dr,
+                 (3) m vdv/dr = F = −cv²,
+               so dv/v = −(c/m)dr.
+
+               Evaluating integral we get that ln(v) = −(c/m)r + C(r₀), v = v₀exp(−cr/m),
+               thus E/E₀ = (mv²/2)/(mv₀²/2) = (v/v₀)² = exp(−2cr/m).
+
+               For c = 1/2 · CD · A · ρ we finally obtain that E/E₀ = exp(−CD · A · ρ · r / m). */
+            E *= exp(-CD * A * _density * depth / m);
+        }
+
+        d -= dR;
+        r += dr;
+    }
+
+    return std::sqrt(2 * E / m);
+}
+
+double Engine::HopkinsonCranzCoefficient(double W /* TNT equivalent, kg */) {
+    // Explosive Shocks in Air, G. F. Kinney, K. J. Graham, 2nd edition,
+    // Ch. 7 “The Scaling Law”, Scaled Distance, p. 109
+
+    using namespace Fundamentals;
+
+    constexpr double p₀ = 101'325, /* Pa */ T₀ = 288.15 /* K */;
+    const double p = pressure, T = temperature - absoluteZero<double>;
+
+    return std::cbrt(1 / W * p / p₀ * T₀ / T);
 }

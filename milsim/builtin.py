@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from math import radians
 
 from pyspades.common import Vertex3
@@ -5,14 +6,17 @@ from pyspades.common import Vertex3
 from milsim.engine import Material
 
 from milsim.common import grain, gram, isosceles, yard, inch, mm, MOA
-from milsim.blast import sendGrenadePacket, explode
+from milsim.blast import HighExplosive, sendGrenadePacket
 from milsim.types import G1, G7, Shotshell
 
+@dataclass
 class G7HEI(G7):
+    high_explosive : HighExplosive
+
     def explode(self, protocol, player_id, r):
         if player := protocol.players.get(player_id):
             sendGrenadePacket(protocol, player_id, r, Vertex3(1, 0, 0), -1)
-            explode(4, 20, player, r)
+            self.high_explosive.explode(protocol, r, hit_by = player)
 
             return True
 
@@ -44,4 +48,14 @@ R127x108mm = G1(name = "R127x108mm", muzzle = 900,  effmass = gram(50.00), totma
 R762x54mm  = G7(name = "R762x54mm",  muzzle = 850,  effmass = gram(10.00), totmass = gram(22.00),  grouping = MOA(0.7), deviation = 0.03, BC = 0.187, caliber = mm(07.62))
 Parabellum = G1(name = "Parabellum", muzzle = 600,  effmass = gram(8.03),  totmass = gram(12.00),  grouping = MOA(2.5), deviation = 0.05, BC = 0.212, caliber = mm(09.00))
 
-HEI762x54mm = G7HEI(name = "HEI762x54mm", muzzle = 820, effmass = gram(160.00), totmass = gram(250.00), grouping = MOA(2.0), deviation = 0.07, BC = 0.190, caliber = mm(07.62))
+HEI762x54mm = G7HEI(
+    name           = "HEI762x54mm",
+    muzzle         = 820,
+    effmass        = gram(160.00),
+    totmass        = gram(250.00),
+    grouping       = MOA(2.0),
+    deviation      = 0.07,
+    BC             = 0.190,
+    caliber        = mm(07.62),
+    high_explosive = HighExplosive(1.8 / 1000, 30, 1000, 10.0 / 1000, 5.0e-5, 0.80)
+)

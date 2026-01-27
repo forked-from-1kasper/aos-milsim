@@ -4,7 +4,7 @@ from pyspades.constants import UPDATE_FREQUENCY
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
 
-from milsim.blast import sendGrenadePacket
+from milsim.blast import HighExplosive, HEGrenadeObject, FlashbangObject, sendGrenadePacket
 from milsim.weapon import UnderbarrelItem
 from milsim.common import format_item
 from milsim.types import Item
@@ -26,7 +26,7 @@ class GrenadeLauncher(UnderbarrelItem):
             v = wo.orientation.normal().copy() * (o.muzzle / 32)
 
             go = player.protocol.world.create_object(
-                Grenade, inf, r, None, v, o.on_explosion(player)
+                o.grenade_class, player.protocol, player.player_id, inf, r, v
             )
 
             go.fuse, _, _, _ = go.get_next_collision(UPDATE_FREQUENCY)
@@ -59,18 +59,17 @@ class GrenadeCartridge(Item):
         else:
             return "No grenade launcher to load"
 
-class GrenadeItem(GrenadeCartridge):
-    name   = "M433 Grenade"
-    mass   = 0.230
-    muzzle = 120
+class M433GrenadeObject(HEGrenadeObject):
+    high_explosive = HighExplosive(0.040, 1000, 1700, 0.2 / 1000, 7.0e-5, 0.46)
 
-    def on_explosion(self, player):
-        return player.grenade_exploded
+class GrenadeItem(GrenadeCartridge):
+    name          = "M433 Grenade"
+    mass          = 0.230
+    muzzle        = 120
+    grenade_class = M433GrenadeObject
 
 class FlashbangItem(GrenadeCartridge):
-    name   = "Flashbang"
-    mass   = 0.200
-    muzzle = 120
-
-    def on_explosion(self, player):
-        return player.flashbang_exploded
+    name          = "Flashbang"
+    mass          = 0.200
+    muzzle        = 120
+    grenade_class = FlashbangObject

@@ -68,12 +68,13 @@ struct Player {
     inline Vector3d position()    const { return Vector3d(p); }
     inline Vector3d orientation() const { return Vector3d(f); }
 
+    inline Vector3d origin() const
+    { return position().translate(0, 0, crouch() ? -1.05 : -1.1); }
+
     inline auto intersect(const Ray<double> & r) const {
         using namespace std;
 
-        auto origin = position().translate(0, 0, crouch() ? -1.05 : -1.1);
-
-        auto ray = r.translate(-origin).pointAt(
+        auto ray = r.translate(-origin()).pointAt(
             orientation().xOy().normal(), Vector3d(0, 1, 0)
         );
 
@@ -86,11 +87,37 @@ struct Player {
 
         return min(
             [](auto & w1, auto & w2) { return w1 < w2; },
-            head.intersect(ray), torso.intersect(ray),
-            legl.intersect(ray), legr.intersect(ray),
-            armr.intersect(ray), arml.intersect(ray.rot(Vector3<double>(0, 0, 1), -std::numbers::pi_v<double> / 4))
+            head.intersect(ray),
+            torso.intersect(ray),
+            legl.intersect(ray),
+            legr.intersect(ray),
+            armr.intersect(ray),
+            arml.intersect(ray.rot(Vector3d(0, 0, 1), -std::numbers::pi_v<double> / 4))
         );
     }
+
+    inline auto exposed(const Vector3d & center) const {
+        auto r0 = (center - origin()).pointAt(
+            orientation().xOy().normal(), Vector3d(0, 1, 0)
+        );
+
+        auto & head  = Box::head<double>;
+        auto & torso = crouch() ? Box::torsoc<double>     : Box::torso<double>;
+        auto & legl  = crouch() ? Box::legc_left<double>  : Box::leg_left<double>;
+        auto & legr  = crouch() ? Box::legc_right<double> : Box::leg_right<double>;
+        auto & armr  = crouch() ? Box::armc_right<double> : Box::arm_right<double>;
+        auto & arml  = crouch() ? Box::armc_left<double>  : Box::arm_left<double>;
+
+        return std::tuple(
+            head.aabb.exposed(r0),
+            torso.aabb.exposed(r0),
+            legl.aabb.exposed(r0),
+            legr.aabb.exposed(r0),
+            armr.aabb.exposed(r0.rot(Vector3d(0, 0, 1), -std::numbers::pi_v<double> / 4)),
+            arml.aabb.exposed(r0)
+        );
+    }
+
 };
 
 enum class Terminal { flying, ricochet, penetration };
@@ -218,4 +245,7 @@ public:
     { onTrace(index, r.x, r.y, r.z, value, origin); }
 
     void step(const double t1, const double t2);
+
+    double dragRaycast(double CD, double m, double A, double v₀, Vector3d, const Vector3d &);
+    double HopkinsonCranzCoefficient(double);
 };

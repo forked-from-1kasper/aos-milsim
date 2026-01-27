@@ -4,6 +4,7 @@ from pyspades.collision import distance_3d_vector
 from pyspades.common import Vertex3
 
 from milsim.common import Success, Failure, toMeters, dot, xOy, azimuth, needle
+from milsim.blast import HighExplosive, HEGrenadeObject, FlashbangObject
 from milsim.types import Item
 
 from milsim.grammar import (
@@ -172,16 +173,15 @@ class RangefinderItem(Item):
 class HandgrenadeItem(Item):
     pass
 
-class F1GrenadeItem(HandgrenadeItem):
-    name = "F-1 Grenade"
-    mass = 0.600
+class F1GrenadeObject(HEGrenadeObject):
+    high_explosive = HighExplosive(0.184, 1000, 1500, 0.5 / 1000, 5.5e-5, 0.46)
 
-    def on_explosion(self, player):
-        return player.grenade_exploded
+class F1GrenadeItem(HandgrenadeItem):
+    name          = "F-1 Grenade"
+    mass          = 0.600
+    grenade_class = F1GrenadeObject
 
 class StunHandgrenadeItem(HandgrenadeItem):
-    name = "M84 Stun Grenade"
-    mass = 0.370
-
-    def on_explosion(self, player):
-        return player.flashbang_exploded
+    name          = "M84 Stun Grenade"
+    mass          = 0.370
+    grenade_class = FlashbangObject

@@ -8,18 +8,20 @@ from milsim.common import (
     alive_only, apply_item, has_item,
     take_item, take_items, format_taken_items
 )
-from milsim.blast import sendGrenadePacket, explode
+from milsim.blast import HighExplosive, sendGrenadePacket
 from milsim.types import TileEntity, Item
 
-class Explosive(TileEntity):
-    r1, r2 = 7.0, 30.0
-
+class ExplosiveEntity(TileEntity):
     Δx, Δy, Δz = 0, 0, 0
     x0, y0, z0 = 0.5, 0.5, 0.5
 
     def __init__(self, protocol, position, player_id):
         TileEntity.__init__(self, protocol, position)
         self.player_id = player_id
+
+    @property
+    def high_explosive(self):
+        raise NotImplementedError
 
     def explode(self):
         self.protocol.remove_tile_entity(*self.position)
@@ -30,23 +32,23 @@ class Explosive(TileEntity):
             player.grenade_destroy(x + self.Δx, y + self.Δy, z + self.Δz)
 
             loc = Vertex3(x + self.x0, y + self.y0, z + self.z0)
-            explode(self.r1, self.r2, player, loc)
+            self.high_explosive.explode(self.protocol, loc, hit_by = player)
 
             sendGrenadePacket(self.protocol, player.player_id, loc, Vertex3(0, 0, 0), 0)
 
-class Landmine(Explosive):
+class Landmine(ExplosiveEntity):
     Δz = -1
     z0 = -0.5
 
-    on_pressure  = Explosive.explode
-    on_explosion = Explosive.explode
-    on_destroy   = Explosive.explode
+    high_explosive = HighExplosive(0.250, 2000, 1600, 3.0 / 1000, 6.0e-5, 0.46)
+    on_pressure    = ExplosiveEntity.explode
+    on_explosion   = ExplosiveEntity.explode
+    on_destroy     = ExplosiveEntity.explode
 
-class Charge(Explosive):
-    r1, r2 = 20.0, 60.0
-
-    on_explosion = Explosive.explode
-    on_destroy   = Explosive.explode
+class Charge(ExplosiveEntity):
+    high_explosive = HighExplosive(10.000, 750, 2000, 1.5 / 1000, 5.0e-5, 0.50)
+    on_explosion   = ExplosiveEntity.explode
+    on_destroy     = ExplosiveEntity.explode
 
 class ExplosiveItem(Item):
     tile_entity_class = NotImplemented

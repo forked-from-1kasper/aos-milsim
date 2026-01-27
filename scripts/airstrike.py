@@ -11,7 +11,7 @@ from piqueserver.config import config
 from pyspades.common import Vertex3
 from pyspades.team import Team
 
-from milsim.blast import sendGrenadePacket, explode
+from milsim.blast import HighExplosive, sendGrenadePacket
 from milsim.weapon import UnderbarrelItem
 from piqueserver.commands import command
 from milsim.common import alive_only
@@ -26,17 +26,17 @@ BOMBS_COUNT   = 7
 BOMBER_SPEED  = 10
 BOMBING_DELAY = 2
 
-AIRBOMB_DELAY                  = 3
-AIRBOMB_RADIUS                 = 10
-AIRBOMB_SAFE_DISTANCE          = 150
-AIRBOMB_GUARANTEED_KILL_RADIUS = 40
+AIRBOMB_DELAY  = 3
+AIRBOMB_RADIUS = 10
 
 AIRSTRIKE_PASSES        = 50
 AIRSTRIKE_CAST_DISTANCE = 300
 
+airbomb_high_explosive = HighExplosive(350.0, 10_000, 3000, 1 / 1000, 0.017, 0.50)
+
 def airbomb_explode(protocol, player_id, x, y, z):
     if player := protocol.take_player(player_id):
-        explode(AIRBOMB_GUARANTEED_KILL_RADIUS, AIRBOMB_SAFE_DISTANCE, player, Vertex3(x, y, z))
+        airbomb_high_explosive.explode(protocol, Vertex3(x, y, z), hit_by = player)
 
         for i in range(AIRSTRIKE_PASSES):
             X = x + randint(-AIRBOMB_RADIUS, AIRBOMB_RADIUS)
