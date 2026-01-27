@@ -120,7 +120,7 @@ template<typename T> inline T solidAngle(const Vector3<T> & r1, const Vector3<T>
     auto n = (r1, r2.cross(r3));
     auto d = R1 * R2 * R3 + R12 * R3 + R13 * R2 + R23 * R1;
 
-    return 2 * atan2<T>(n, d);
+    return 2 * atan2(n, d);
 }
 
 template<typename T> struct Quadrilateral {
