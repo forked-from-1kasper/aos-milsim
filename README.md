@@ -106,6 +106,11 @@ The [OktoberDistrict](maps/OktoberDistrict.vxl) map by Bubochka.
 * [Grammatical Framework’s Resource Grammar Library (RGL)](https://github.com/GrammaticalFramework/gf-rgl).
 * [Basic English Grammar and Sentence Structures](https://www.scientificpsychic.com/grammar/enggram1.html).
 * [Speech and Language Processing: An Introduction to Speech Recognition, Computational Linguistics and Natural Language Processing](https://web.stanford.edu/~jurafsky/slp3/), 2nd edition, D. Jurafsky, J. H. Martin.
+* [The Solid Angle of a Plane Triangle](https://ieeexplore.ieee.org/document/4121581), A. van Oosterom, J. Strackee.
+* [Estimate of Man’s Tolerance to the Direct Effects of Air Blast](https://apps.dtic.mil/sti/tr/pdf/AD0693105.pdf), I. G. Bowen, E. R. Fletcher, D. R. Richmond.
+* [A survey of computational models for blast induced human injuries for security and defence applications](https://publications.jrc.ec.europa.eu/repository/bitstream/JRC119310/00surveyprobits_final-1.pdf), G. Solomos, M. Larcher, G. Valsamos, V. Karlos, F. Casadei.
+* [Explosive Shocks in Air](https://link.springer.com/book/10.1007/978-3-642-86682-1), G. F. Kinney, K. J. Graham.
+* [Dynamic Behavior of Materials](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470172278), M. A. Meyers.
 
 # License
 
