@@ -111,7 +111,7 @@ using Vector3i = Vector3<int>;
 using Vector3f = Vector3<float>;
 using Vector3d = Vector3<double>;
 
-template<typename T> inline T solid(const Vector3<T> & r1, const Vector3<T> & r2, const Vector3<T> & r3) {
+template<typename T> inline T solidAngle(const Vector3<T> & r1, const Vector3<T> & r2, const Vector3<T> & r3) {
     // The Solid Angle of a Plane Triangle, A. van Oosterom & J. Strackee, 1983
 
     auto R1 = r1.abs(), R2 = r2.abs(), R3 = r3.abs();
@@ -128,7 +128,7 @@ template<typename T> struct Quadrilateral {
 
     inline T solid(const Vector3<T> & r0) const {
         auto R1 = r1 - r0, R2 = r2 - r0, R3 = r3 - r0, R4 = r4 - r0;
-        return solid<T>(R1, R2, R3) + solid<T>(R1, R3, R4);
+        return solidAngle<T>(R1, R2, R3) + solidAngle<T>(R1, R3, R4);
     }
 
     inline T exposed(const Vector3<T> & r0) const
