@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from milsim.grammar.category import GrammarError, Number, SG, PL, Case, NOM, OBL, POS
+from milsim.grammar.paradigms import possessify, pluralize
 
 @dataclass
 class Noun:
@@ -25,34 +26,12 @@ class Noun:
 
         raise GrammarError
 
-def possessify(w):
-    if w is None:
-        return
-
-    if w[-1] == 's':
-        return w + "'"
-    else:
-        return w + "'s"
-
 class SemiregularNoun(Noun):
     def __init__(self, *, sg = None, pl = None):
         super().__init__(
             nom_sg = sg, pos_sg = possessify(sg),
             nom_pl = pl, pos_pl = possessify(pl)
         )
-
-# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ParadigmsEng.gf
-def pluralize(w):
-    if w.endswith(("io", "oo")):
-        return w + "s"
-    elif w.endswith(("s", "z", "x", "sh", "ch", "o")):
-        return w + "es"
-    elif w.endswith(("ay", "oy", "uy", "ey")):
-        return w + "s"
-    elif w.endswith("y"):
-        return w.removesuffix("y") + "ies"
-    else:
-        return w + "s"
 
 class RegularNoun(SemiregularNoun):
     def __init__(self, sg):

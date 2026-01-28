@@ -10,6 +10,8 @@ from milsim.grammar.category import (
     PAST1PL, PAST2PL, PAST3PL
 )
 
+from milsim.grammar.paradigms import regularize
+
 @dataclass
 class Verb:
     inf   : Optional[str] = None
@@ -74,42 +76,7 @@ class SemiregularVerb(Verb):
             vp1pl = vpast, vp2pl = vpast, vp3pl = vpast
         )
 
-ascii_vowels = {'a', 'e', 'i', 'o', 'u'}
-
-# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ParadigmsEng.gf
-def dupfin(w):
-    if w[-3] in {'a', 'e', 'o'} and w[-2] in ascii_vowels:
-        return w
-    elif w[-2] in ascii_vowels and w[-1] in {'b', 'd', 'g', 'm', 'n', 'p', 'r', 't'}:
-        return w + w[-1]
-    else:
-        return w
-
-def ingize(w):
-    if w.endswith("ee"):
-        return w + "ing"
-    elif w.endswith("ie"):
-        return w.removesuffix("ie") + "ying"
-    elif w.endswith("e"):
-        return w.removesuffix("e") + "ing"
-    elif w.endswith("er"):
-        return w + "ing"
-    else:
-        return dupfin(w) + "ing"
-
-from milsim.grammar.noun import pluralize
-
 class RegularVerb(SemiregularVerb):
     def __init__(self, cry):
-        cries = pluralize(cry) # ???
-
-        if cries.endswith("es"):
-            cried = cries.removesuffix("s") + "d"
-        elif cries.endswith("ers"):
-            cried = cries.removesuffix("s") + "ed"
-        else:
-            cried = dupfin(cry) + "ed"
-
-        crying = ingize(cry)
-
+        cries, crying, cried = regularize(cry)
         super().__init__(bare = cry, ving = crying, ved = cried, v3sg = cries, vpast = cried)

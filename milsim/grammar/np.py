@@ -4,6 +4,7 @@ from milsim.grammar.category import (
     GrammarError, Number, Person, Case,
     SG, PL, NOM, OBL, POS, INF, P3RD, PTCP1
 )
+from milsim.grammar.paradigms import cardinal, ordinal
 from milsim.grammar.syntax import NP, VP
 from milsim.grammar.noun import Noun
 
@@ -61,25 +62,6 @@ class Possessive:
             yield noun.inflect(self.number, c)
 
         return NP(left, right, number = self.number, person = P3RD)
-
-def cardinal(k : int) -> str:
-    return str(k)
-
-def indicator(k : int) -> str:
-    if k < 0: raise GrammarError
-
-    if 11 <= k % 100 <= 13:
-        return "th"
-
-    match k % 10:
-        case 1: return "st"
-        case 2: return "nd"
-        case 3: return "rd"
-
-    return "th"
-
-def ordinal(k : int) -> str:
-    return str(k) + indicator(k)
 
 def Cardinal(k : int, noun : Noun):
     number = SG if k == 1 else PL

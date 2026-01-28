@@ -25,28 +25,11 @@ from milsim.grammar.sentence import (
     Declarative, YesNoInterrogative, Imperative, Compound
 )
 
+from milsim.grammar.paradigms import AnToken
+
 # This module is intented to provide a convient AST for natural language generation,
 # but not for the accurate representation of how the language actually works,
 # so we take some liberties compared to the serious software like Grammatical Framework.
-
-# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ResEng.gf
-class AnToken(HasEmit):
-    @staticmethod
-    def emit(rem):
-        word = next(rem)
-
-        if word.startswith(("eu", "Eu", "uni", "up")):
-            yield "a"
-        elif word.startswith("un"):
-            yield "an"
-        elif word.startswith(("a", "e", "i", "o", "A", "E", "I", "O")):
-            yield "an"
-        elif word.startswith(("SMS", "sms")):
-            yield "an"
-        else:
-            yield "a"
-
-        yield word
 
 class CompoundToken(HasEmit):
     def __init__(self, *words):
