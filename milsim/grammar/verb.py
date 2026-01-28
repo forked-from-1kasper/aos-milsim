@@ -10,7 +10,7 @@ from milsim.grammar.category import (
     PAST1PL, PAST2PL, PAST3PL
 )
 
-from milsim.grammar.paradigms import regularize
+from milsim.grammar.paradigms import esize, ingize, edize
 
 @dataclass
 class Verb:
@@ -78,5 +78,6 @@ class SemiregularVerb(Verb):
 
 class RegularVerb(SemiregularVerb):
     def __init__(self, cry):
-        cries, crying, cried = regularize(cry)
+        cries, crying, cried = esize(cry), ingize(cry), edize(cry)
+
         super().__init__(bare = cry, ving = crying, ved = cried, v3sg = cries, vpast = cried)

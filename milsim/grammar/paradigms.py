@@ -1,82 +1,94 @@
 from milsim.grammar.syntax import HasEmit
 
-# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ResEng.gf
+ascii_vowels = {'a', 'e', 'i', 'o', 'u'}
+
+# https://en.wikipedia.org/wiki/Template:A_or_an
 class AnToken(HasEmit):
     @staticmethod
     def emit(rem):
-        word = next(rem)
+        w = next(rem)
 
-        if word.startswith(("eu", "Eu", "uni", "up")):
+        if w.startswith(("eu", "ew", "uni", "one", "once", "U")):
             yield "a"
-        elif word.startswith("un"):
+        elif w[0] in ascii_vowels:
             yield "an"
-        elif word.startswith(("a", "e", "i", "o", "A", "E", "I", "O")):
+        elif w in {"heir", "hour", "honor"}:
             yield "an"
-        elif word.startswith(("SMS", "sms")):
-            yield "an"
+        elif w.isupper():
+            if w.startswith(("F", "H", "L", "M", "N", "R", "S", "X")):
+                yield "an"
+            else:
+                yield "a"
+        elif w.isdigit():
+            if w.startswith(("8", "11", "18")):
+                yield "an"
+            else:
+                yield "a"
         else:
             yield "a"
 
-        yield word
+        yield w
 
 def possessify(w):
     if w is None:
         return
 
-    if w[-1] == 's':
+    if w.endswith("s"):
         return w + "'"
     else:
         return w + "'s"
 
-# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ParadigmsEng.gf
+# https://en.wikipedia.org/wiki/English_plurals
 def pluralize(w):
-    if w.endswith(("io", "oo")):
-        return w + "s"
-    elif w.endswith(("s", "z", "x", "sh", "ch", "o")):
+    if w.endswith(("s", "z", "sh", "ch")): # /s/, /z/, /ʃ/, /tʃ/
         return w + "es"
-    elif w.endswith(("ay", "oy", "uy", "ey")):
+    elif w[-2] not in ascii_vowels and w.endswith("o"):
+        return w + "es"
+    elif w[-2] not in ascii_vowels and w.endswith("y"):
+        return w.removesuffix("y") + "ies"
+    elif w.endswith("quy"):
+        return w.removesuffix("quy") + "quies"
+    else:
         return w + "s"
-    elif w.endswith("y"):
+
+# https://en.wikipedia.org/wiki/English_verbs
+def esize(w):
+    if w.endswith(("s", "z", "sh", "ch")): # /s/, /z/, /ʃ/, /tʃ/
+        return w + "es"
+    elif w[-2] not in ascii_vowels and w.endswith("o"):
+        return w + "es"
+    elif w[-2] not in ascii_vowels and w.endswith("y"):
         return w.removesuffix("y") + "ies"
     else:
         return w + "s"
 
-ascii_vowels = {'a', 'e', 'i', 'o', 'u'}
+ascii_doubling_consonants = {'b', 'd', 'f', 'g', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 's', 'v', 'z'}
 
-# https://github.com/GrammaticalFramework/gf-rgl/blob/master/src/english/ParadigmsEng.gf
-def dupfin(w):
-    if w[-3] in {'a', 'e', 'o'} and w[-2] in ascii_vowels:
-        return w
-    elif w[-2] in ascii_vowels and w[-1] in {'b', 'd', 'g', 'm', 'n', 'p', 'r', 't'}:
+def ckize(w):
+    if w.endswith("t"):
+        raise GrammarError("Cannot decide whether the final syllable is stressed in ‘{}’".format(w))
+    elif w.endswith("c"):
+        return w.removesuffix("c") + "ck"
+    elif w[-1] in ascii_doubling_consonants:
         return w + w[-1]
     else:
         return w
 
+def edize(w):
+    if w.endswith("e"):
+        return w + "d"
+    elif w[-2] not in ascii_vowels and w.endswith("y"):
+        return w.removesuffix("y") + "ied"
+    else:
+        return ckize(w) + "ed"
+
 def ingize(w):
-    if w.endswith("ee"):
-        return w + "ing"
+    if w.endswith("e"):
+        return w.removesuffix("e") + "ing"
     elif w.endswith("ie"):
         return w.removesuffix("ie") + "ying"
-    elif w.endswith("e"):
-        return w.removesuffix("e") + "ing"
-    elif w.endswith("er"):
-        return w + "ing"
     else:
-        return dupfin(w) + "ing"
-
-def regularize(cry):
-    cries = pluralize(cry) # ???
-
-    if cries.endswith("es"):
-        cried = cries.removesuffix("s") + "d"
-    elif cries.endswith("ers"):
-        cried = cries.removesuffix("s") + "ed"
-    else:
-        cried = dupfin(cry) + "ed"
-
-    crying = ingize(cry)
-
-    return cries, crying, cried
+        return ckize(w) + "ing"
 
 def cardinal(k : int) -> str:
     return str(k)
