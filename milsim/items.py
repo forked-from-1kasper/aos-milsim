@@ -94,7 +94,7 @@ class TourniquetItem(MedicalItem):
         return Failure(not_bleeding_vp)
 
 fracture_n = RegularNoun("fracture")
-splint_v   = RegularVerb("splint")
+splint_v   = SemiregularVerb(bare = "splint", ving = "splinting", ved = "splinted", v3sg = "splints", vpast = "splinted")
 
 splint_vp            = VerbNP(splint_v)
 have_vp              = VerbNP(have_v)
