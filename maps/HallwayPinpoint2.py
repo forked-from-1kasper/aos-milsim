@@ -1,3 +1,18 @@
+# Copyright © 2024 rzrn
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from itertools import product
 from random import randint
 from math import radians
@@ -8,7 +23,7 @@ from milsim.maptools import *
 
 name    = 'HallwayPinpoint2'
 version = '1.0'
-author  = 'Siegmentation Fault'
+author  = 'izzy (orig.)'
 
 StrongBricks = Material(name = "strong bricks", ricochet = 1.0,  deflecting = radians(5),  durability = 120.0, strength = 5e+6,   density = 2400, absorption = 1e+15, crumbly = False)
 Sand2        = Material(name = "sand",          ricochet = 0.4,  deflecting = radians(83), durability = 1.0,   strength = 1500,   density = 1600, absorption = 50e+3, crumbly = True)

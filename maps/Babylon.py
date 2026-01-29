@@ -1,3 +1,18 @@
+# Copyright © 2025 rzrn
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 from itertools import product
 from math import radians
 
@@ -11,7 +26,6 @@ from milsim.maptools import *
 
 name    = 'Babylon'
 version = '1.1'
-author  = 'Siegmentation Fault'
 
 WetSand = Material(name = "wet sand", ricochet = 0.35, deflecting = radians(89), durability = 5.0, strength = 1500, density = 2000, absorption = 1e+15, crumbly = True)
 StrongConcrete = Material(name = "strong concrete", ricochet = 1.0, deflecting = radians(5), durability = 120.0, strength = 5e+6, density = 2400, absorption = 1e+15, crumbly = False)
