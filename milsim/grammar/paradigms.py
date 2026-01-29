@@ -1,3 +1,4 @@
+from milsim.grammar.category import GrammarError
 from milsim.grammar.syntax import HasEmit
 
 ascii_vowels = {'a', 'e', 'i', 'o', 'u'}
