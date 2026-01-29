@@ -4,7 +4,7 @@ TSV = lambda it: map(lambda x: tuple(x.rstrip("\n").split('\t')), it)
 ordinal = lambda k, v: (ord(k), v)
 
 # https://github.com/anyascii/anyascii
-with open("extra/anyascii.tsv", "r") as fin:
+with open("extra/anyascii/anyascii.tsv", "r") as fin:
     anyascii = dict(map(lambda w: ordinal(*w), TSV(fin)))
 
 deuce = lambda x: "Deuce" if len(x) <= 0 else x
