@@ -110,7 +110,7 @@ def air(player, loc = None):
     if loc is not None:
         return "To initiate an airstrike scope and then hold V. Use /air to check the readiness"
 
-    if o := player.get_bomber():
+    if o := player.team.bomber:
         remaining = o.remaining()
 
         if remaining is not None:
@@ -136,7 +136,7 @@ class Laser(UnderbarrelItem):
         if self.timer > airstrike_zoomv_time:
             self.timer = 0
 
-            if o := player.get_bomber():
+            if o := player.team.bomber:
                 o.point(player)
 
 @dataclass
@@ -157,21 +157,22 @@ class Bomber:
         if by_server:
             self.preparation = reactor.callLater(aitstrike_phase, self.start)
 
-    def point(self, conn):
+    def point(self, connection):
         if not self.active() and self.ready:
-            self.player_id = conn.player_id
-            do_airstrike(self.name, conn)
+            self.player_id = connection.player_id
+            do_airstrike(self.name, connection)
             self.restart()
 
     def active(self):
         return self.call and self.call.active()
 
     def stop(self, player_id = None):
-        if (player_id and player_id != self.player_id) or not player_id:
+        if player_id is not None and player_id != self.player_id:
             return
 
         if self.call and self.call.active():
             self.call.cancel()
+
         self.call = None
 
     def start(self):
@@ -203,24 +204,24 @@ def apply_script(protocol, connection, config):
     class AirstrikeProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
-            self.bombers = {
-                self.team_1.id : Bomber("B-52",   self.team_1, self),
-                self.team_2.id : Bomber("Tu-22M", self.team_2, self)
-            }
+
+            self.team_1.bomber         = Bomber("B-52",   self.team_1, self)
+            self.team_2.bomber         = Bomber("Tu-22M", self.team_2, self)
+            self.team_spectator.bomber = None
 
         def on_map_change(self, M):
-            for bomber in self.bombers.values():
+            for team in self.team_1, self.team_2:
+                bomber = team.bomber
+
                 if bomber.preparation and bomber.preparation.active():
                     bomber.preparation.cancel()
+
                 bomber.stop()
                 bomber.init(by_server = True)
 
             protocol.on_map_change(self, M)
 
     class AirstrikeConnection(connection):
-        def get_bomber(self):
-            return self.protocol.bombers.get(self.team.id)
-
         def on_spawn(self, pos):
             connection.on_spawn(self, pos)
 
