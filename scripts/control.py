@@ -1,4 +1,4 @@
-# Copyright © 2024–2025 rzrn
+# Copyright © 2024–2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -381,7 +381,7 @@ def c_backpack(player, argval = None):
 def take(player, ID):
     """
     Take an item with the given ID to the inventory
-    /take (ID)
+    /take <ID>
     """
     for i in player.get_available_inventory():
         if o := i[ID]:
@@ -398,7 +398,7 @@ def take(player, ID):
 def drop(player, ID):
     """
     Drop an item with the given ID from the inventory
-    /drop (ID)
+    /drop <ID>
     """
 
     if o := player.drop(ID):
@@ -411,7 +411,7 @@ def drop(player, ID):
 def use(player, ID, *w, **kw):
     """
     Use an item from the inventory with the given ID
-    /u (ID) or /use
+    /u <ID> or /use
     """
 
     if o := player.inventory[ID]:
@@ -431,7 +431,7 @@ def use(player, ID, *w, **kw):
 def prioritize(player, ID):
     """
     Give the highest priority to an item with the given ID
-    /pr (ID) or /priority
+    /pr <ID> or /priority
     """
     i = player.inventory
 
