@@ -117,14 +117,25 @@ The [OktoberDistrict](maps/OktoberDistrict.vxl) map by Bubochka.
 Copyright © 2021–2026 rzrn
 
 This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
+it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+Additionally, parts of this program are licensed under the GNU General Public License
+as published by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version. The terms of both licenses apply to the respective parts,
+and the combination as a whole is subject to the conditions of both licenses.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
+along with these parts. If not, see <https://www.gnu.org/licenses/>.
+
+The file `extra/anyascii/anyascii.tsv` is taken from [AnyAscii](https://github.com/anyascii/anyascii)
+project under the ISC License.
