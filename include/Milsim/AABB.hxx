@@ -1,5 +1,23 @@
 #pragma once
 
+/*
+    Copyright © 2012–2014 Tavian Barnes <tavianator@tavianator.com>
+    Copyright © 2024–2026 rzrn
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <Milsim/Vector.hxx>
 
 #include <algorithm>
@@ -85,7 +103,9 @@ template<typename Real> struct AABB {
     constexpr inline Arc<Real> intersect(const int index, const Ray<Real> & r) const {
         using namespace std;
 
-        // https://tavianator.com/2011/ray_box.html
+        /* [1] https://tavianator.com/2011/ray_box.html
+           [2] https://tavianator.com/2015/03/fast-branchless-raybounding-box-intersections-part-2-nans/
+           [3] https://tavianator.com/cgit/dimension.git/tree/libdimension/bvh/bvh.c */
 
         Real irx = 1 / r.direction.x, iry = 1 / r.direction.y, irz = 1 / r.direction.z;
 
