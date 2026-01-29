@@ -409,6 +409,36 @@ class MilsimConnection(FeatureConnection):
 
         self.respawn()
 
+    def reset(self):
+        if defer := self.spawn_call:
+            self.spawn_call = None
+
+            if defer.active():
+                defer.cancel()
+
+        if wo := self.world_object:
+            self.world_object = None
+
+            wo.delete()
+
+        if team := self.team:
+            self.team = None
+
+            self.on_team_changed(team)
+
+        self.on_reset()
+
+        self.kills = 0
+        self.name  = None
+        self.hp    = None
+
+    def spawn(self, loc = None):
+        # To address changing team after `self.spawn_call` was issued
+        if not isfinite(self.get_respawn_time()):
+            return
+
+        FeatureConnection.spawn(self, loc)
+
     def respawn(self):
         if self.spawn_call is not None:
             return
