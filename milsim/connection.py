@@ -18,8 +18,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from math import floor, copysign, isfinite
 from random import choice, uniform
-from math import floor, copysign
 from itertools import product
 from time import monotonic
 
@@ -336,7 +336,9 @@ class MilsimConnection(FeatureConnection):
 
         FeatureConnection.on_client_info(self)
 
-    def on_spawn(self, pos):
+    def on_spawn(self, loc):
+        retval = FeatureConnection.on_spawn(self, loc)
+
         self.last_spawn_time = monotonic()
 
         self.previous_floor_position = self.floor()
@@ -357,11 +359,18 @@ class MilsimConnection(FeatureConnection):
         self.sendWeaponReloadPacket()
 
         self.protocol.engine.on_spawn(self.player_id)
-        FeatureConnection.on_spawn(self, pos)
 
-    def on_kill(self, killer, kill_type, grenade):
+        if isfinite(self.get_respawn_time()):
+            return retval
+        else:
+            self.kill()
+
+    def kill(self, killer = None, kill_type = WEAPON_KILL, grenade = None):
+        if self.hp is None:
+            return
+
         if FeatureConnection.on_kill(self, killer, kill_type, grenade) is False:
-            return False
+            return
 
         if self.tool == GRENADE_TOOL and self.grenade_object.unpin_time > 0:
             dt = max(0, monotonic() - self.grenade_object.unpin_time)
@@ -370,12 +379,48 @@ class MilsimConnection(FeatureConnection):
             self.grenade_object.unpin_time = 0
             self.create_grenade(self.world_object.position.copy(), Vertex3(), fuse)
 
-        self.protocol.engine.on_despawn(self.player_id)
+        self.weapon_object.reset()
+
+        self.drop_flag()
         self.drop_inventory()
+
+        self.protocol.engine.on_despawn(self.player_id)
+
+        self.hp = None
+
+        self.world_object.dead = True
 
         self.last_killer     = killer
         self.last_death_type = kill_type
         self.last_death_time = monotonic()
+
+        if killer is not None and killer.team is not self.team:
+            killer.add_score(1)
+
+        respawn_time = self.get_respawn_time()
+
+        contained              = loaders.KillAction()
+        contained.kill_type    = kill_type
+        contained.player_id    = self.player_id
+        contained.killer_id    = killer.player_id if killer is not None else self.player_id
+        contained.respawn_time = respawn_time + 1 if isfinite(respawn_time) else 0
+
+        self.protocol.broadcast_contained(contained, save = True)
+
+        self.respawn()
+
+    def respawn(self):
+        if self.spawn_call is not None:
+            return
+
+        respawn_time = self.get_respawn_time()
+
+        if not isfinite(respawn_time):
+            return
+        elif respawn_time <= 0:
+            self.spawn()
+        else:
+            self.spawn_call = reactor.callLater(respawn_time, self.spawn)
 
     def get_respawn_time(self):
         if self.respawn_time is None:
