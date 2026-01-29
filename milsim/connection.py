@@ -337,7 +337,7 @@ class MilsimConnection(FeatureConnection):
         FeatureConnection.on_client_info(self)
 
     def on_spawn(self, loc):
-        retval = FeatureConnection.on_spawn(self, loc)
+        FeatureConnection.on_spawn(self, loc)
 
         self.last_spawn_time = monotonic()
 
@@ -361,7 +361,7 @@ class MilsimConnection(FeatureConnection):
         self.protocol.engine.on_spawn(self.player_id)
 
         if isfinite(self.get_respawn_time()):
-            return retval
+            pass
         else:
             self.kill()
 
