@@ -1,6 +1,6 @@
 # Copyright © 2011 triplefox
 # Copyright © 2017 1AmYF
-# Copyright © 2021, 2023–2024 rzrn
+# Copyright © 2021, 2023–2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -15,61 +15,65 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from pyspades.constants import *
+from pyspades.constants import CTF_MODE
 
 from piqueserver.commands import command
+from piqueserver.config import config
 
-WIN_POINTS = 500
-INTEL_POINTS = 10
+tdm_section    = config.section("tdm")
+tdm_kill_limit = tdm_section.option("kill_limit", 500).get()
 
-@command()
-def score(connection):
+@command("score", "tdmscore")
+def c_score(connection):
+    """
+    Report the current TDM score
+    /score
+    """
     return connection.protocol.get_kill_count()
 
 def apply_script(protocol, connection, config):
     class TDMConnection(connection):
-        intel_points = config.get('intel_points', INTEL_POINTS)
-
         def on_spawn(self, pos):
             self.send_chat(self.explain_game_mode())
             self.send_chat(self.protocol.get_kill_count())
             return connection.on_spawn(self, pos)
 
         def on_kill(self, killer, type, grenade):
-            result = connection.on_kill(self, killer, type, grenade)
+            if connection.on_kill(self, killer, type, grenade) is False:
+                return False
+
             self.protocol.check_end_game(killer)
-            return result
 
         def on_flag_capture(self):
-            result = connection.on_flag_capture(self)
-            self.team.kills += self.intel_points
+            connection.on_flag_capture(self)
             self.protocol.check_end_game(self)
-            return result
 
         def explain_game_mode(self):
-            return 'Team Deathmatch: kill the opposing team.'
+            return "Team Deathmatch: kill the opposing team"
 
     class TDMProtocol(protocol):
         game_mode = CTF_MODE
-        kill_limit = config.get('kill_limit', WIN_POINTS)
 
         def get_kill_count(self):
             kills = self.team_1.kills + self.team_2.kills
-            return "%d vs %d: %s left. Playing to %s kills." % (
-                self.team_1.kills,
-                self.team_2.kills,
-                self.kill_limit - kills,
-                self.kill_limit
+
+            return "{team_1} vs {team_2}: {rem} left. Playing to {total} kills".format(
+                team_1 = self.team_1.kills,
+                team_2 = self.team_2.kills,
+                rem    = tdm_kill_limit - kills,
+                total  = tdm_kill_limit
             )
 
         def check_end_game(self, player):
-            if self.team_1.kills + self.team_2.kills >= self.kill_limit:
+            if tdm_kill_limit <= self.team_1.kills + self.team_2.kills:
                 if self.team_1.kills > self.team_2.kills:
-                    self.send_chat("%s Wins, %s : %s" %
-                                   (self.team1_name, self.team_1.kills, self.team_2.kills))
+                    self.send_chat(
+                        "{} wins, {} : {}".format(self.team1_name, self.team_1.kills, self.team_2.kills)
+                    )
                 elif self.team_2.kills > self.team_1.kills:
-                    self.send_chat("%s Wins, %s : %s" %
-                                   (self.team2_name, self.team_2.kills, self.team_1.kills))
+                    self.send_chat(
+                        "{} wins, {} : {}".format(self.team2_name, self.team_2.kills, self.team_1.kills)
+                    )
                 else:
                     self.send_chat("Draw!")
 
