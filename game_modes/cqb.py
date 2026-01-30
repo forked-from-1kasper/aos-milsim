@@ -76,7 +76,7 @@ def apply_script(protocol, connection, config):
     [1] A fixed number `cqb_respawn_tickets` of respawn tickets is assigned to each team.
     [2] Capturing the flag gives `cqb_flag_capture_tickets` more tickets to your team.
     [3] A team that has no living players and no respawn tickets available is considered defeated.
-    [4] A team wins iff it is not defeated and the opposite team is.
+    [4] A team wins iff it is not defeated and the opposing team is.
 
     This game mode is much like TDM, but, unlike TDM, what’s important is not the number
     of kills in itself, but the number of respawns. This approach suits `aos-milsim` more,
