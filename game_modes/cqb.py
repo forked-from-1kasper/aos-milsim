@@ -72,6 +72,20 @@ def c_tickets(connection):
     return get_team_respawn_notice(connection.team)
 
 def apply_script(protocol, connection, config):
+    """
+    [1] A fixed number `cqb_respawn_tickets` of respawn tickets is assigned to each team.
+    [2] Capturing the flag gives `cqb_flag_capture_tickets` more tickets to your team.
+    [3] A team that has no living players and no respawn tickets available is considered defeated.
+    [4] A team wins iff it is not defeated and the opposite team is.
+
+    This game mode is much like TDM, but, unlike TDM, what’s important is not the number
+    of kills in itself, but the number of respawns. This approach suits `aos-milsim` more,
+    because it encourages players to save their lives: e.g., you can’t circumvent bleeding
+    by simply issuing `/kill`, as this will waste your team’s respawn tickets. The other
+    common problem with TDM is that players often die not immediately but after a few
+    seconds due to bleeding, so the kill doesn’t count.
+    """
+
     # We rely on the ability to return `inf` from `get_respawn_time()` here.
     assert issubclass(connection, MilsimConnection)
 
