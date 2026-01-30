@@ -26,7 +26,7 @@ from milsim.grammar.category import (
 
 from milsim.grammar.verb import Verb, ModalVerb, SemiregularVerb, RegularVerb
 
-from milsim.grammar.noun import Noun, SemiregularNoun, RegularNoun
+from milsim.grammar.noun import Noun, SemiregularNoun, RegularNoun, CompoundNoun
 
 from milsim.grammar.syntax import Token, Phrase, NP, VP, Sentence
 
@@ -41,20 +41,11 @@ from milsim.grammar.sentence import (
     Declarative, YesNoInterrogative, Imperative, Compound
 )
 
-from milsim.grammar.paradigms import AnToken, CompoundToken
+from milsim.grammar.paradigms import AnToken, CompoundToken, flatten
 
 # This module is intented to provide a convient AST for natural language generation,
 # but not for the accurate representation of how the language actually works,
 # so we take some liberties compared to the serious software like Grammatical Framework.
-
-def flatten(tokens : Iterator[Token]) -> Iterator[str]:
-    for token in tokens:
-        if isinstance(token, str):
-            yield token
-        else:
-            rem = flatten(tokens)
-            yield from token.emit(rem)
-            yield from rem
 
 def canonicalize(phrase : Phrase) -> str:
     if isinstance(phrase, NP):

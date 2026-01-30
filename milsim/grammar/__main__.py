@@ -14,9 +14,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from milsim.grammar import (
-    Declarative, YesNoInterrogative, Imperative, Compound, VerbNTR, InfinitivePhrase, Possessive,
-    Cardinal, Ordinal, PassiveVoice, PerfectAspect, ProgressiveAspect, RegularNoun, SemiregularVerb, RegularVerb,
-    linearize, VerbVP, VerbNP, VerbNPPP, this_pr, that_pr, zero_pl, an_sg, the_sg, the_pl, not_adv, good_adj,
+    Declarative, YesNoInterrogative, Imperative, Compound, VerbNTR, InfinitivePhrase, Possessive, Cardinal, Ordinal,
+    PassiveVoice, PerfectAspect, ProgressiveAspect, RegularNoun, CompoundNoun, SemiregularVerb, RegularVerb,
+    linearize, VerbVP, VerbNP, VerbNPPP, this_pr, that_pr, zero_sg, zero_pl, an_sg, the_sg, the_pl, not_adv, good_adj,
     I_pr, you_pr, he_pr, she_pr, it_pr, light_n, song_n, be_v, do_v, can_v, turn_v, give_v, sing_v,
     PRES, PAST, SG, INF, PTCP2
 )
@@ -162,3 +162,10 @@ s16_2 = Declarative(np = that_pr, vp = be_vp(an_sg(banana_n)), tense = PRES)
 
 s16 = Compound(s16_1, s16_2, "and")
 print("16)", linearize(s16))
+
+##############################
+cream_n = RegularNoun("cream")
+
+ice_cream_n = CompoundNoun("ice", cream_n)
+s17 = Declarative(np = I_pr, vp = like_vp(zero_sg(ice_cream_n)), tense = PRES)
+print("17)", linearize(s17))

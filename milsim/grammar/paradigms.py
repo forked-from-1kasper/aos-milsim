@@ -13,8 +13,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from collections.abc import Iterator
+
 from milsim.grammar.category import GrammarError
-from milsim.grammar.syntax import HasEmit
+from milsim.grammar.syntax import HasEmit, Token
+
+def flatten(tokens : Iterator[Token]) -> Iterator[str]:
+    for token in tokens:
+        if isinstance(token, str):
+            yield token
+        else:
+            rem = flatten(tokens)
+            yield from token.emit(rem)
+            yield from rem
 
 ascii_vowels = {'a', 'e', 'i', 'o', 'u'}
 
@@ -46,11 +57,11 @@ class AnToken(HasEmit):
         yield w
 
 class CompoundToken(HasEmit):
-    def __init__(self, *words):
-        self.words = words
+    def __init__(self, *tokens):
+        self.tokens = tokens
 
     def emit(self, rem):
-        yield from self.words
+        yield from flatten(self.tokens)
 
 def possessify(w):
     if w is None:

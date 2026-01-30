@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from milsim.grammar.category import GrammarError, Number, SG, PL, Case, NOM, OBL, POS
-from milsim.grammar.paradigms import possessify, pluralize
+from milsim.grammar.paradigms import CompoundToken, possessify, pluralize
 from milsim.grammar.syntax import Token
 
 @dataclass
@@ -52,3 +52,12 @@ class SemiregularNoun(Noun):
 class RegularNoun(SemiregularNoun):
     def __init__(self, sg):
         super().__init__(sg = sg, pl = pluralize(sg))
+
+class CompoundNoun(Noun):
+    def __init__(self, adjunct : Token, noun : Noun):
+        super().__init__(
+            nom_sg = CompoundToken(adjunct, noun.nom_sg),
+            pos_sg = CompoundToken(adjunct, noun.pos_sg),
+            nom_pl = CompoundToken(adjunct, noun.nom_pl),
+            pos_pl = CompoundToken(adjunct, noun.pos_pl)
+        )
