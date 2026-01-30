@@ -279,6 +279,9 @@ class MilsimConnection(FeatureConnection):
 
     # (3) All `on_XXX_YYY` handlers, including the custom ones
 
+    def on_killed(self, killer, kill_type, grenade):
+        pass
+
     def on_reload_complete(self):
         pass
 
@@ -587,6 +590,8 @@ class MilsimConnection(FeatureConnection):
         contained.respawn_time = respawn_time if isfinite(respawn_time) else 0
 
         self.protocol.broadcast_contained(contained, save = True)
+
+        self.on_killed(killer, kill_type, grenade)
 
         self.respawn()
 
