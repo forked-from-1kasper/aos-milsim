@@ -110,11 +110,7 @@ class MilsimConnection(FeatureConnection):
 
         self.spade_friendly_fire = False
 
-    def on_reload_complete(self):
-        pass
-
-    def on_flag_taken(self):
-        pass
+    # (1) Frequently used packets
 
     def newSetTool(self):
         contained           = loaders.SetTool()
@@ -129,6 +125,8 @@ class MilsimConnection(FeatureConnection):
         contained.clip_ammo    = self.weapon_object.magazine.current()
         contained.reserve_ammo = self.weapon_object.reserved()
         self.send_contained(contained)
+
+    # (2) Methods specific to `MilsimConnection`
 
     def handgrenades(self):
         return filter(lambda o: isinstance(o, HandgrenadeItem), self.inventory)
@@ -253,6 +251,40 @@ class MilsimConnection(FeatureConnection):
         else:
             return get_player(self.protocol, nickname)
 
+    def grenade_destroy(self, x, y, z):
+        if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
+            return False
+
+        if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
+            return False
+
+        for X, Y, Z in grenade_zone(x, y, z):
+            self.protocol.engine.smash(self.player_id, X, Y, Z, TNT(gram(60)))
+
+            if e := self.protocol.get_tile_entity(X, Y, Z):
+                e.on_explosion()
+
+        return True
+
+    def grenade_exploded(self, grenade):
+        raise NotImplementedError("Use `HighExplosive.explode()` instead")
+
+    def flashbang_exploded(self, grenade):
+        if self.name is None:
+            return
+
+        reactor.callInThread(
+            flashbang_effect, self.protocol, self.player_id, grenade.position.copy()
+        )
+
+    # (3) All `on_XXX_YYY` handlers, including the custom ones
+
+    def on_reload_complete(self):
+        pass
+
+    def on_flag_taken(self):
+        pass
+
     def on_chat_delivered(self, player, value, team):
         if self.alive() and self.body.deaf:
             return False
@@ -365,6 +397,72 @@ class MilsimConnection(FeatureConnection):
         else:
             self.kill() # if spawn is disabled
 
+    def on_disconnect(self):
+        if o := self.weapon_object:
+            o.reset()
+
+        self.drop_inventory()
+
+        FeatureConnection.on_disconnect(self)
+
+    def on_tool_rapid_hack(self, tool):
+        t1, t2 = self.last_block, reactor.seconds()
+
+        self.last_block = t2
+
+        if self.rapid_hack_detect and t1 is not None and t2 - t1 < TOOL_INTERVAL[tool]:
+            self.rapids.record_event(t2)
+
+            if self.rapids.above_limit():
+                self.on_hack_attempt('Rapid hack detected')
+                return True
+
+        return False
+
+    def on_refill(self):
+        self.inventory.extend(io.mark_renewable() for io in self.default_loadout())
+
+    # (4) Overridden `FeatureConnection` methods
+
+    def set_tool(self, tool, sender = None):
+        self.tool             = tool
+        self.last_tool_update = monotonic()
+
+        if tool == SPADE_TOOL:
+            tool_object = self.spade_object
+        if tool == BLOCK_TOOL:
+            tool_object = self.block_object
+        if tool == WEAPON_TOOL:
+            tool_object = self.weapon_object
+        if tool == GRENADE_TOOL:
+            tool_object = self.grenade_object
+
+        self.tool_object.on_tool_unequipped(tool_object)
+        tool_object.on_tool_equipped(tool_object)
+
+        self.tool_object = tool_object
+
+        self.world_object.set_weapon(tool == WEAPON_TOOL)
+        self.on_tool_changed(tool)
+
+        if self.filter_visibility_data or self.filter_animation_data:
+            return
+
+        self.protocol.broadcast_contained(self.newSetTool(), sender = sender, save = True)
+
+    def set_weapon(self, weapon, local = False, no_kill = False):
+        if weapon_class := self.protocol.get_weapon(weapon):
+            self.weapon        = weapon
+            self.weapon_object = weapon_class(self)
+
+            if not local:
+                contained           = loaders.ChangeWeapon()
+                contained.player_id = self.player_id
+                contained.weapon    = weapon
+
+                self.protocol.broadcast_contained(contained, save = True)
+                if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
+
     def set_team(self, team):
         if team is self.team:
             return
@@ -387,6 +485,66 @@ class MilsimConnection(FeatureConnection):
             self.protocol.broadcast_contained(contained, save = True)
 
         self.kill(kill_type = TEAM_CHANGE_KILL)
+
+    def get_respawn_time(self):
+        if self.respawn_time is None:
+            return 0
+
+        if self.team.spectator:
+            return 0
+
+        if self.protocol.respawn_waves:
+            offset = self.last_death_time % self.respawn_time
+            return self.respawn_time - offset
+
+        if self.last_killer is self:
+            return self.respawn_time
+        elif self.last_death_type == TEAM_CHANGE_KILL or self.last_death_type == CLASS_CHANGE_KILL:
+            return self.respawn_time
+        else:
+            return clamp(0, self.respawn_time, self.last_death_time - self.last_spawn_time)
+
+    def reset(self):
+        if player_id := self.player_id:
+            self.protocol.engine.on_despawn(player_id)
+
+        if defer := self.spawn_call:
+            self.spawn_call = None
+
+            if defer.active():
+                defer.cancel()
+
+        if wo := self.world_object:
+            self.world_object = None
+
+            wo.delete()
+
+        if team := self.team:
+            self.team = None
+
+            self.on_team_changed(team)
+
+        self.on_reset()
+
+        self.kills = 0
+        self.name  = None
+        self.hp    = None
+
+    def respawn(self):
+        if defer := self.spawn_call:
+            if defer.active():
+                defer.cancel()
+
+        self.spawn_call = None
+
+        respawn_time = self.get_respawn_time()
+
+        if not isfinite(respawn_time):
+            return
+        elif respawn_time <= 0:
+            self.spawn()
+        else:
+            self.spawn_call = reactor.callLater(respawn_time, self.spawn)
 
     def kill(self, killer = None, kill_type = WEAPON_KILL, grenade = None):
         if self.hp is None and kill_type != TEAM_CHANGE_KILL:
@@ -431,187 +589,6 @@ class MilsimConnection(FeatureConnection):
         self.protocol.broadcast_contained(contained, save = True)
 
         self.respawn()
-
-    def reset(self):
-        if defer := self.spawn_call:
-            self.spawn_call = None
-
-            if defer.active():
-                defer.cancel()
-
-        if wo := self.world_object:
-            self.world_object = None
-
-            wo.delete()
-
-        if team := self.team:
-            self.team = None
-
-            self.on_team_changed(team)
-
-        self.on_reset()
-
-        self.kills = 0
-        self.name  = None
-        self.hp    = None
-
-    def respawn(self):
-        if defer := self.spawn_call:
-            if defer.active():
-                defer.cancel()
-
-        self.spawn_call = None
-
-        respawn_time = self.get_respawn_time()
-
-        if not isfinite(respawn_time):
-            return
-        elif respawn_time <= 0:
-            self.spawn()
-        else:
-            self.spawn_call = reactor.callLater(respawn_time, self.spawn)
-
-    def get_respawn_time(self):
-        if self.respawn_time is None:
-            return 0
-
-        if self.team.spectator:
-            return 0
-
-        if self.protocol.respawn_waves:
-            offset = self.last_death_time % self.respawn_time
-            return self.respawn_time - offset
-
-        if self.last_killer is self:
-            return self.respawn_time
-        elif self.last_death_type == TEAM_CHANGE_KILL or self.last_death_type == CLASS_CHANGE_KILL:
-            return self.respawn_time
-        else:
-            return clamp(0, self.respawn_time, self.last_death_time - self.last_spawn_time)
-
-    def on_disconnect(self):
-        if o := self.weapon_object:
-            o.reset()
-
-        self.drop_inventory()
-
-        FeatureConnection.on_disconnect(self)
-
-    def reset(self):
-        if self.player_id is not None:
-            self.protocol.engine.on_despawn(self.player_id)
-
-        FeatureConnection.reset(self)
-
-    def set_tool(self, tool, sender = None):
-        self.tool             = tool
-        self.last_tool_update = monotonic()
-
-        if tool == SPADE_TOOL:
-            tool_object = self.spade_object
-        if tool == BLOCK_TOOL:
-            tool_object = self.block_object
-        if tool == WEAPON_TOOL:
-            tool_object = self.weapon_object
-        if tool == GRENADE_TOOL:
-            tool_object = self.grenade_object
-
-        self.tool_object.on_tool_unequipped(tool_object)
-        tool_object.on_tool_equipped(tool_object)
-
-        self.tool_object = tool_object
-
-        self.world_object.set_weapon(tool == WEAPON_TOOL)
-        self.on_tool_changed(tool)
-
-        if self.filter_visibility_data or self.filter_animation_data:
-            return
-
-        self.protocol.broadcast_contained(self.newSetTool(), sender = sender, save = True)
-
-    def on_tool_rapid_hack(self, tool):
-        t1, t2 = self.last_block, reactor.seconds()
-
-        self.last_block = t2
-
-        if self.rapid_hack_detect and t1 is not None and t2 - t1 < TOOL_INTERVAL[tool]:
-            self.rapids.record_event(t2)
-
-            if self.rapids.above_limit():
-                self.on_hack_attempt('Rapid hack detected')
-                return True
-
-        return False
-
-    def take_flag(self):
-        if self.dead(): return
-
-        flag = self.team.other.flag
-
-        # If the flag is already taken.
-        if flag.player is not None:
-            return
-
-        # You cannot take the flag while standing under it.
-        if self.world_object.position.z >= flag.z:
-            return
-
-        # You cannot take the flag without seeing it (for example, underground).
-        if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
-            return
-
-        if self.on_flag_take() == False:
-            return
-
-        flag.player = self
-
-        contained           = loaders.IntelPickup()
-        contained.player_id = self.player_id
-        self.protocol.broadcast_contained(contained, save = True)
-
-        self.on_flag_taken()
-
-    def grenade_destroy(self, x, y, z):
-        if x < 0 or x > 512 or y < 0 or y > 512 or z < 0 or z > 63:
-            return False
-
-        if self.on_block_destroy(x, y, z, GRENADE_DESTROY) == False:
-            return False
-
-        for X, Y, Z in grenade_zone(x, y, z):
-            self.protocol.engine.smash(self.player_id, X, Y, Z, TNT(gram(60)))
-
-            if e := self.protocol.get_tile_entity(X, Y, Z):
-                e.on_explosion()
-
-        return True
-
-    def grenade_exploded(self, grenade):
-        raise NotImplementedError
-
-    def flashbang_exploded(self, grenade):
-        if self.name is None:
-            return
-
-        reactor.callInThread(
-            flashbang_effect, self.protocol, self.player_id, grenade.position.copy()
-        )
-
-    def set_weapon(self, weapon, local = False, no_kill = False):
-        if weapon_class := self.protocol.get_weapon(weapon):
-            self.weapon        = weapon
-            self.weapon_object = weapon_class(self)
-
-            if not local:
-                contained           = loaders.ChangeWeapon()
-                contained.player_id = self.player_id
-                contained.weapon    = weapon
-
-                self.protocol.broadcast_contained(contained, save = True)
-                if not no_kill: self.kill(kill_type = CLASS_CHANGE_KILL)
-
-    def on_refill(self):
-        self.inventory.extend(io.mark_renewable() for io in self.default_loadout())
 
     def refill(self, local = False):
         for P in self.body.values():
@@ -685,6 +662,36 @@ class MilsimConnection(FeatureConnection):
                 self.send_chat_status("You broke your right leg")
 
             self.set_hp(self.body.average(), kill_type = FALL_KILL)
+
+    def take_flag(self):
+        if self.dead(): return
+
+        flag = self.team.other.flag
+
+        # If the flag is already taken.
+        if flag.player is not None:
+            return
+
+        # You cannot take the flag while standing under it.
+        if self.world_object.position.z >= flag.z:
+            return
+
+        # You cannot take the flag without seeing it (for example, underground).
+        if not self.world_object.can_see(flag.x, flag.y, flag.z - 0.5):
+            return
+
+        if self.on_flag_take() == False:
+            return
+
+        flag.player = self
+
+        contained           = loaders.IntelPickup()
+        contained.player_id = self.player_id
+        self.protocol.broadcast_contained(contained, save = True)
+
+        self.on_flag_taken()
+
+    # (5) Overridden packets handlers
 
     @register_packet_handler(loaders.SetTool)
     def on_tool_change_recieved(self, contained):
