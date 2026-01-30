@@ -26,24 +26,25 @@ from milsim.grammar.category import (
 )
 
 from milsim.grammar.paradigms import esize, ingize, edize
+from milsim.grammar.syntax import Token
 
 @dataclass
 class Verb:
-    inf   : Optional[str] = None
-    ving  : Optional[str] = None
-    ved   : Optional[str] = None
-    v1sg  : Optional[str] = None
-    v2sg  : Optional[str] = None
-    v3sg  : Optional[str] = None
-    v1pl  : Optional[str] = None
-    v2pl  : Optional[str] = None
-    v3pl  : Optional[str] = None
-    vp1sg : Optional[str] = None
-    vp2sg : Optional[str] = None
-    vp3sg : Optional[str] = None
-    vp1pl : Optional[str] = None
-    vp2pl : Optional[str] = None
-    vp3pl : Optional[str] = None
+    inf   : Optional[Token] = None
+    ving  : Optional[Token] = None
+    ved   : Optional[Token] = None
+    v1sg  : Optional[Token] = None
+    v2sg  : Optional[Token] = None
+    v3sg  : Optional[Token] = None
+    v1pl  : Optional[Token] = None
+    v2pl  : Optional[Token] = None
+    v3pl  : Optional[Token] = None
+    vp1sg : Optional[Token] = None
+    vp2sg : Optional[Token] = None
+    vp3sg : Optional[Token] = None
+    vp1pl : Optional[Token] = None
+    vp2pl : Optional[Token] = None
+    vp3pl : Optional[Token] = None
 
     def decline(self, vf : VerbForm):
         if self.inf   is not None and vf is INF:     return self.inf

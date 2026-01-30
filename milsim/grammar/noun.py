@@ -18,13 +18,14 @@ from typing import Optional
 
 from milsim.grammar.category import GrammarError, Number, SG, PL, Case, NOM, OBL, POS
 from milsim.grammar.paradigms import possessify, pluralize
+from milsim.grammar.syntax import Token
 
 @dataclass
 class Noun:
-    nom_sg : Optional[str] = None
-    pos_sg : Optional[str] = None
-    nom_pl : Optional[str] = None
-    pos_pl : Optional[str] = None
+    nom_sg : Optional[Token] = None
+    pos_sg : Optional[Token] = None
+    nom_pl : Optional[Token] = None
+    pos_pl : Optional[Token] = None
 
     def inflect(self, n : Number, c : Case):
         if n is SG:
