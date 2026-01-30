@@ -97,10 +97,9 @@ def Team(*, blue, green):
 
         if connection.team is protocol.green_team:
             return green(connection)
-        elif connection.team is protocol.blue_team:
+
+        if connection.team is protocol.blue_team:
             return blue(connection)
-        else:
-            return connection.get_spawn_location()
 
     return retfun
 

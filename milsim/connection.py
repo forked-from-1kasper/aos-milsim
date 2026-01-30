@@ -363,13 +363,36 @@ class MilsimConnection(FeatureConnection):
         if isfinite(self.get_respawn_time()):
             pass
         else:
-            self.kill()
+            self.kill() # if spawn is disabled
 
-    def kill(self, killer = None, kill_type = WEAPON_KILL, grenade = None):
-        if self.hp is None:
+    def set_team(self, team):
+        if team is self.team:
             return
 
-        if FeatureConnection.on_kill(self, killer, kill_type, grenade) is False:
+        old_team, self.team = self.team, team
+        self.on_team_changed(old_team)
+
+        if old_team.spectator or True:
+            x, y, z = self.get_spawn_location()
+
+            contained           = loaders.CreatePlayer()
+            contained.x         = x + 0.5
+            contained.y         = y + 0.5
+            contained.z         = z - 2.4
+            contained.player_id = self.player_id
+            contained.weapon    = self.weapon
+            contained.name      = self.name
+            contained.team      = self.team.id
+
+            self.protocol.broadcast_contained(contained, save = True)
+
+        self.kill(kill_type = TEAM_CHANGE_KILL)
+
+    def kill(self, killer = None, kill_type = WEAPON_KILL, grenade = None):
+        if self.hp is None and kill_type != TEAM_CHANGE_KILL:
+            return
+
+        if self.on_kill(killer, kill_type, grenade) is False:
             return
 
         if self.tool == GRENADE_TOOL and self.grenade_object.unpin_time > 0:
@@ -403,7 +426,7 @@ class MilsimConnection(FeatureConnection):
         contained.kill_type    = kill_type
         contained.player_id    = self.player_id
         contained.killer_id    = killer.player_id if killer is not None else self.player_id
-        contained.respawn_time = respawn_time + 1 if isfinite(respawn_time) else 0
+        contained.respawn_time = respawn_time if isfinite(respawn_time) else 0
 
         self.protocol.broadcast_contained(contained, save = True)
 
@@ -432,16 +455,12 @@ class MilsimConnection(FeatureConnection):
         self.name  = None
         self.hp    = None
 
-    def spawn(self, loc = None):
-        # To address changing team after `self.spawn_call` was issued
-        if not isfinite(self.get_respawn_time()):
-            return
-
-        FeatureConnection.spawn(self, loc)
-
     def respawn(self):
-        if self.spawn_call is not None:
-            return
+        if defer := self.spawn_call:
+            if defer.active():
+                defer.cancel()
+
+        self.spawn_call = None
 
         respawn_time = self.get_respawn_time()
 
@@ -744,7 +763,11 @@ class MilsimConnection(FeatureConnection):
         if contained.team not in self.protocol.teams:
             return
 
-        FeatureConnection.on_new_player_recieved(self, contained)
+        if self.name is None:
+            FeatureConnection.on_new_player_recieved(self, contained)
+        else:
+            self.set_weapon(contained.weapon, local = True)
+            self.set_team(self.protocol.teams[contained.team])
 
     @register_packet_handler(loaders.ChangeTeam)
     def on_team_change_recieved(self, contained):
