@@ -45,6 +45,13 @@ class AnToken(HasEmit):
 
         yield w
 
+class CompoundToken(HasEmit):
+    def __init__(self, *words):
+        self.words = words
+
+    def emit(self, rem):
+        yield from self.words
+
 def possessify(w):
     if w is None:
         return

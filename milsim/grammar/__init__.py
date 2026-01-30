@@ -28,7 +28,7 @@ from milsim.grammar.verb import Verb, ModalVerb, SemiregularVerb, RegularVerb
 
 from milsim.grammar.noun import Noun, SemiregularNoun, RegularNoun
 
-from milsim.grammar.syntax import HasEmit, Token, Phrase, NP, VP, Sentence
+from milsim.grammar.syntax import Token, Phrase, NP, VP, Sentence
 
 from milsim.grammar.np import (
     ProperNoun, ZeroArticle, Determiner, Possessive, Cardinal, Ordinal,
@@ -41,18 +41,11 @@ from milsim.grammar.sentence import (
     Declarative, YesNoInterrogative, Imperative, Compound
 )
 
-from milsim.grammar.paradigms import AnToken
+from milsim.grammar.paradigms import AnToken, CompoundToken
 
 # This module is intented to provide a convient AST for natural language generation,
 # but not for the accurate representation of how the language actually works,
 # so we take some liberties compared to the serious software like Grammatical Framework.
-
-class CompoundToken(HasEmit):
-    def __init__(self, *words):
-        self.words = words
-
-    def emit(self, rem):
-        yield from self.words
 
 def flatten(tokens : Iterator[Token]) -> Iterator[str]:
     for token in tokens:
