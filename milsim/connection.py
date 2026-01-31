@@ -317,7 +317,6 @@ class MilsimConnection(FeatureConnection):
         # [1] https://physics.stackexchange.com/questions/856827/looking-for-a-formula-to-realistically-model-sound-loudness-at-a-given-distance
         # [2] https://physics.stackexchange.com/questions/415409/how-far-can-a-shout-travel
         # [3] https://en.wikibooks.org/wiki/Engineering_Acoustics/Outdoor_Sound_Propagation
-        α = self.protocol.engine.attcoeff(1000.0)
 
         if is_global_message:
             if self.dead(): # dead player can hear anyone anywhere
@@ -337,6 +336,7 @@ class MilsimConnection(FeatureConnection):
             if d < d0:
                 L = L0
             else:
+                α = self.protocol.attenuation_coefficient
                 L = L0 - 20 * log10(d / d0) - α * d
 
             o = self.protocol.environment

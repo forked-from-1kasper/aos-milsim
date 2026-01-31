@@ -196,6 +196,9 @@ class MilsimProtocol(FeatureProtocol):
 
         self.set_fog_color(self.environment.weather.fog())
 
+        # See `milsim/connection.py` for more information.
+        self.attenuation_coefficient = self.engine.attcoeff(1000.0) # Hz
+
     def on_environment_change(self, o):
         self.engine.clear()
 
