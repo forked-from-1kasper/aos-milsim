@@ -305,7 +305,7 @@ class MilsimConnection(FeatureConnection):
 
         return FeatureConnection.on_chat(self, value, is_global_message)
 
-    def on_chat_delivered(self, player, value, team):
+    def on_chat_delivered(self, player, value, is_global_message):
         if self.deaf: return False
 
         if self.alive() and self.body.deaf: return False
@@ -319,7 +319,7 @@ class MilsimConnection(FeatureConnection):
         # [3] https://en.wikibooks.org/wiki/Engineering_Acoustics/Outdoor_Sound_Propagation
         α = self.protocol.engine.attcoeff(1000.0)
 
-        if team is None:
+        if is_global_message:
             if self.dead(): # dead player can hear anyone anywhere
                 return True # TODO: is this a good idea?
 

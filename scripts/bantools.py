@@ -103,7 +103,7 @@ def c_teamdup(connection):
     """
 
     if mesg := connection.last_teamchat_message:
-        connection.broadcast_chat(mesg, team = None)
+        connection.broadcast_chat(mesg, is_global_message = True)
         connection.last_teamchat_message = None
     else:
         return "There's nothing to duplicate"
@@ -370,7 +370,7 @@ def apply_script(protocol, connection, config):
 
             return connection.loader_received(self, loader)
 
-        def on_chat_delivered(self, player, value, team):
+        def on_chat_delivered(self, player, value, is_global_message):
             addr, port = player.address
             if addr in self.ignore_list:
                 return False
@@ -378,12 +378,12 @@ def apply_script(protocol, connection, config):
             if player.name is None and self.ignore_limbo:
                 return False
 
-            return connection.on_chat_delivered(self, player, value, team)
+            return connection.on_chat_delivered(self, player, value, is_global_message)
 
-        def broadcast_chat(self, value, team = None):
+        def broadcast_chat(self, value, is_global_message = True):
             contained           = loaders.ChatMessage()
             contained.player_id = self.player_id
-            contained.chat_type = CHAT_ALL if team is None else CHAT_TEAM
+            contained.chat_type = CHAT_ALL if is_global_message else CHAT_TEAM
             contained.value     = value
 
             addr, port = self.address
@@ -392,7 +392,7 @@ def apply_script(protocol, connection, config):
                 if player.player_id is None:
                     continue
 
-                if player.on_chat_delivered(self, value, team) is False:
+                if player.on_chat_delivered(self, value, is_global_message) is False:
                     continue
 
                 player.send_contained(contained)
@@ -426,7 +426,7 @@ def apply_script(protocol, connection, config):
                     if player.player_id is None:
                         continue
 
-                    if player.on_chat_delivered(self, value, team) is False:
+                    if player.on_chat_delivered(self, value, is_global_message) is False:
                         continue
 
                     player.send_contained(contained)
@@ -441,7 +441,7 @@ def apply_script(protocol, connection, config):
                 elif retval is not None:
                     value = retval
 
-                self.broadcast_chat(value, team)
+                self.broadcast_chat(value, is_global_message)
                 self.on_chat_sent(value, is_global_message)
 
                 self.last_teamchat_message = None if is_global_message else value
