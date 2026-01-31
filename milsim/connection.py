@@ -340,7 +340,8 @@ class MilsimConnection(FeatureConnection):
                 L = L0 - 20 * log10(d / d0) - α * d
 
             o = self.protocol.environment
-            if L <= o.ANL: return False
+
+            return L > o.ANL
         else:
             if wt := self.handheld_radio_item:
                 return wt.team is player.handheld_radio_item.team
