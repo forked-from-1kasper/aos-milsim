@@ -320,8 +320,14 @@ class MilsimConnection(FeatureConnection):
         α = self.protocol.engine.attcoeff(1000.0)
 
         if team is None:
-            if self.world_object is None: return
-            if player.world_object is None: return
+            if self.dead(): # dead player can hear anyone anywhere
+                return True # TODO: is this a good idea?
+
+            if player.team.spectator: # spectators can be heard anywhere
+                return True
+
+            if player.dead():
+                return False # alive players can’t hear dead players
 
             d = toMeters(distance_3d_vector(self.world_object.position, player.world_object.position))
 
