@@ -186,6 +186,12 @@ static PyObject * PyEngineDragRaycast(PyEngine * self, PyObject * w) {
     auto v = self->ref->dragRaycast(CD, m, A, v₀, r1, r2);
     return PyEncode<double>(v);
 }
+static PyObject * PyEngineAttenuationCofficient(PyEngine * self, PyObject * fo) {
+    auto f = PyDecode<double>(fo); RETZIFERR();
+
+    auto α = self->ref->attenuationCoefficient(f);
+    return PyEncode<double>(α);
+}
 
 static PyObject * PyEngineHCCofficient(PyEngine * self, PyObject * Wo) {
     auto W = PyDecode<double>(Wo); RETZIFERR();
@@ -475,24 +481,25 @@ static PyMappingMethods PyEngineMapping = {
 };
 
 static PyMethodDef PyEngineMethods[] = {
-    {"cast",          PyCFunction(PyEngineDragRaycast),          METH_VARARGS,         NULL},
-    {"hccoeff",       PyCFunction(PyEngineHCCofficient),         METH_O,               NULL},
-    {"opvalue",       PyCFunction(PyEngineOverpressureValue),    METH_O,               NULL},
-    {"opduration",    PyCFunction(PyEngineOverpressureDuration), METH_O | METH_STATIC, NULL},
-    {"opimpulse",     PyCFunction(PyEngineOverpressureImpulse),  METH_O | METH_STATIC, NULL},
-    {"exposed",       PyCFunction(PyEngineExposed),              METH_VARARGS,         NULL},
-    {"step",          PyCFunction(PyEngineStep),                 METH_VARARGS,         NULL},
-    {"add",           PyCFunction(PyEngineAdd),                  METH_VARARGS,         NULL},
-    {"update",        PyCFunction(PyEngineUpdate),               METH_O,               NULL},
-    {"dig",           PyCFunction(PyEngineDig),                  METH_VARARGS,         NULL},
-    {"smash",         PyCFunction(PyEngineSmash),                METH_VARARGS,         NULL},
-    {"apply",         PyCFunction(PyEngineApply),                METH_O,               NULL},
-    {"clear",         PyCFunction(PyEngineClearMeth),            METH_NOARGS,          NULL},
-    {"flush",         PyCFunction(PyEngineFlush),                METH_NOARGS,          NULL},
-    {"on_spawn",      PyCFunction(PyEngineOnSpawn),              METH_VARARGS,         NULL},
-    {"on_despawn",    PyCFunction(PyEngineOnDespawn),            METH_VARARGS,         NULL},
-    {"set_animation", PyCFunction(PyEngineSetAnimation),         METH_VARARGS,         NULL},
-    {NULL                                                                                  }
+    {"cast",          PyCFunction(PyEngineDragRaycast),           METH_VARARGS,         NULL},
+    {"attcoeff",      PyCFunction(PyEngineAttenuationCofficient), METH_O,               NULL},
+    {"hccoeff",       PyCFunction(PyEngineHCCofficient),          METH_O,               NULL},
+    {"opvalue",       PyCFunction(PyEngineOverpressureValue),     METH_O,               NULL},
+    {"opduration",    PyCFunction(PyEngineOverpressureDuration),  METH_O | METH_STATIC, NULL},
+    {"opimpulse",     PyCFunction(PyEngineOverpressureImpulse),   METH_O | METH_STATIC, NULL},
+    {"exposed",       PyCFunction(PyEngineExposed),               METH_VARARGS,         NULL},
+    {"step",          PyCFunction(PyEngineStep),                  METH_VARARGS,         NULL},
+    {"add",           PyCFunction(PyEngineAdd),                   METH_VARARGS,         NULL},
+    {"update",        PyCFunction(PyEngineUpdate),                METH_O,               NULL},
+    {"dig",           PyCFunction(PyEngineDig),                   METH_VARARGS,         NULL},
+    {"smash",         PyCFunction(PyEngineSmash),                 METH_VARARGS,         NULL},
+    {"apply",         PyCFunction(PyEngineApply),                 METH_O,               NULL},
+    {"clear",         PyCFunction(PyEngineClearMeth),             METH_NOARGS,          NULL},
+    {"flush",         PyCFunction(PyEngineFlush),                 METH_NOARGS,          NULL},
+    {"on_spawn",      PyCFunction(PyEngineOnSpawn),               METH_VARARGS,         NULL},
+    {"on_despawn",    PyCFunction(PyEngineOnDespawn),             METH_VARARGS,         NULL},
+    {"set_animation", PyCFunction(PyEngineSetAnimation),          METH_VARARGS,         NULL},
+    {NULL                                                                                   }
 };
 
 static PyGetSetDef PyEngineGetset[] = {

@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from math import floor, copysign, isfinite
+from math import log10, floor, copysign, isfinite
 from random import choice, uniform
 from itertools import product
 from time import monotonic
@@ -28,7 +28,7 @@ from twisted.logger import Logger
 
 from piqueserver.commands import get_player
 
-from pyspades.collision import collision_3d, vector_collision
+from pyspades.collision import distance_3d_vector, collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
 from pyspades import contained as loaders
 from pyspades.player import check_nan
@@ -42,6 +42,7 @@ from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
 from milsim.blast import sendGrenadePacket, flashbang_effect
 from milsim.types import Inventory, Body, randbool, logistic
 from milsim.items import HandgrenadeItem
+from milsim.engine import toMeters
 from milsim.constants import Limb
 
 from milsim.grammar import RegularNoun, SemiregularVerb, Cardinal, VerbNTR, PassiveVoice, np_vp_pres
@@ -101,7 +102,9 @@ class MilsimConnection(FeatureConnection):
         self.block_object   = self.protocol.BlockTool(self)
         self.grenade_object = self.protocol.GrenadeTool(self)
 
-        self.inventory      = Inventory()
+        self.handheld_radio_item = None
+
+        self.inventory = Inventory()
 
         self.last_hp_update = None
         self.body           = Body()
@@ -203,11 +206,11 @@ class MilsimConnection(FeatureConnection):
                     if i := self.protocol.get_item_entity(X, Y, Z):
                         yield i
 
-            if vector_collision(r, self.protocol.team_1.base):
-                yield self.protocol.team1_tent_inventory
+            for team in self.protocol.team_1, self.protocol.team_2:
+                if team.base is None: continue
 
-            if vector_collision(r, self.protocol.team_2.base):
-                yield self.protocol.team2_tent_inventory
+                if vector_collision(r, team.base):
+                    yield team.tent_inventory
 
     def get_available_items(self):
         for i in self.get_available_inventory():
@@ -225,10 +228,15 @@ class MilsimConnection(FeatureConnection):
 
     def drop_inventory(self):
         if self.world_object is not None:
-            self.get_drop_inventory().extend(
-                filter(lambda o: o.persistent, self.inventory)
-            )
+            di = self.get_drop_inventory()
 
+            di.extend(filter(lambda o: o.persistent, self.inventory))
+
+            if wt := self.handheld_radio_item:
+                if wt.persistent:
+                    di.push(di)
+
+        self.handheld_radio_item = None
         self.inventory.clear()
 
     def gear_mass(self):
@@ -288,11 +296,50 @@ class MilsimConnection(FeatureConnection):
     def on_flag_taken(self):
         pass
 
-    def on_chat_delivered(self, player, value, team):
-        if self.alive() and self.body.deaf:
-            return False
+    def on_chat(self, value, is_global_message):
+        if is_global_message is False:
+            if self.handheld_radio_item is None:
+                self.send_chat("You don't have an equipped radio")
 
-        return FeatureConnection.on_chat_delivered(self, player, value, team)
+                return False
+
+        return FeatureConnection.on_chat(self, value, is_global_message)
+
+    def on_chat_delivered(self, player, value, team):
+        if self.deaf: return False
+
+        if self.alive() and self.body.deaf: return False
+
+        # We observe that attenuation α = α(f) is a monotonic function of a frequency `f`,
+        # thus if a fixed frequency f = f₀ is getting attenuated below the background noise level,
+        # so does any freqeuncy f > f₀. Cutting of everything above f = 1 kHz will drop many consonants,
+        # therefore we take this frequency as a cutoff frequency.
+        # [1] https://physics.stackexchange.com/questions/856827/looking-for-a-formula-to-realistically-model-sound-loudness-at-a-given-distance
+        # [2] https://physics.stackexchange.com/questions/415409/how-far-can-a-shout-travel
+        # [3] https://en.wikibooks.org/wiki/Engineering_Acoustics/Outdoor_Sound_Propagation
+        α = self.protocol.engine.attcoeff(1000.0)
+
+        if team is None:
+            if self.world_object is None: return
+            if player.world_object is None: return
+
+            d = toMeters(distance_3d_vector(self.world_object.position, player.world_object.position))
+
+            d0 = 0.3 # Some arbitrary distance at which SPL₀ (initial sound pressure level) is measured (m).
+            L0 = 80.0 if value.isupper() else 65.0 # SPL₀ (dB), where we interpret uppercase as shouting.
+
+            if d < d0:
+                L = L0
+            else:
+                L = L0 - 20 * log10(d / d0) - α * d
+
+            o = self.protocol.environment
+            if L <= o.ANL: return False
+        else:
+            if wt := self.handheld_radio_item:
+                return wt.team is player.handheld_radio_item.team
+            else:
+                return False
 
     def on_position_update(self):
         if self.previous_floor_position is not None:

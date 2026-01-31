@@ -198,8 +198,8 @@ def take_charge(player, argval = 1):
     return format_taken_items(take_detonator(player, n))
 
 def apply_script(protocol, connection, config):
-    def explosive_default_tent_loadout(self):
-        yield from protocol.default_tent_loadout(self)
+    def explosive_default_tent_loadout(self, team):
+        yield from protocol.default_tent_loadout(self, team)
 
         for k in range(100):
             yield LandmineItem()

@@ -41,12 +41,16 @@ from milsim.constants import Limb, HitEffect
 from milsim.engine import Engine
 from milsim.common import *
 
-from milsim.items import Kettlebell, CompassItem, ProtractorItem, RangefinderItem, StunHandgrenadeItem
+from milsim.items import (
+    Kettlebell, CompassItem, ProtractorItem,
+    RangefinderItem, StunHandgrenadeItem,
+    TaopengRadioItem, EecomRadioItem
+)
 from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsim.builtin import Buckshot0000, Buckshot00, Bullet
 from milsim.types import CartridgeBox
 
-def milsim_default_tent_loadout(self):
+def milsim_default_tent_loadout(protocol, team):
     for k in range(90):
         yield from (
             GrenadeLauncher(),
@@ -63,6 +67,14 @@ def milsim_default_tent_loadout(self):
             HEIMagazine(),
             StunHandgrenadeItem()
         )
+
+    if team is protocol.team_1:
+        for k in range(24):
+            yield EecomRadioItem(team)
+
+    if team is protocol.team_2:
+        for k in range(24):
+            yield TaopengRadioItem(team)
 
     yield from (
         Kettlebell(1),
@@ -93,14 +105,14 @@ class MilsimProtocol(FeatureProtocol):
         self.tile_entities = {}
         self.item_entities = {}
 
-        self.team1_tent_inventory = Inventory()
-        self.team2_tent_inventory = Inventory()
-
         self.rifle   = type('Rifle',   (Rifle,   self.WeaponTool), dict())
         self.smg     = type('SMG',     (SMG,     self.WeaponTool), dict())
         self.shotgun = type('Shotgun', (Shotgun, self.WeaponTool), dict())
 
         FeatureProtocol.__init__(self, *w, **kw)
+
+        for team in self.team_1, self.team_2:
+            team.tent_inventory = Inventory()
 
         self.team_spectator.kills = 0 # bugfix
         self.available_proto_extensions.extend(milsim_extensions)
@@ -179,9 +191,6 @@ class MilsimProtocol(FeatureProtocol):
         self.tile_entities.clear()
         self.item_entities.clear()
 
-        self.team1_tent_inventory.clear()
-        self.team2_tent_inventory.clear()
-
     def update_weather(self):
         self.engine.update(self.environment)
 
@@ -221,10 +230,14 @@ class MilsimProtocol(FeatureProtocol):
         self.clear_entities()
         Item.reset()
 
-        FeatureProtocol.on_map_change(self, M)
+        for team in self.team_1, self.team_2:
+            team.tent_inventory.clear()
 
-        for i in self.team1_tent_inventory, self.team2_tent_inventory:
-            i.extend(self.default_tent_loadout())
+            team.tent_inventory.extend(
+                self.default_tent_loadout(team)
+            )
+
+        FeatureProtocol.on_map_change(self, M)
 
         t1 = monotonic()
         self.on_environment_change(self.map_info.environment)

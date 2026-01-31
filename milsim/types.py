@@ -121,6 +121,7 @@ class Environment:
     defaults : Iterable[Tuple[Vector3i, Material]] = field(default_factory = void)
     north    : Vertex3 = Vertex3(1, 0, 0)
     weather  : Weather = field(default_factory = StaticWeather)
+    ANL      : float = 30.0 # Ambient noise level (dB)
 
     def apply(self, o):
         o.default = self.default

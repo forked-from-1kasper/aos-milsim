@@ -17,8 +17,9 @@ from math import degrees, fmod, acos
 
 from pyspades.collision import distance_3d_vector
 from pyspades.common import Vertex3
+from pyspades.team import Team
 
-from milsim.common import Success, Failure, toMeters, dot, xOy, azimuth, needle
+from milsim.common import Success, Failure, toMeters, dot, xOy, azimuth, needle, format_item
 from milsim.blast import HighExplosive, HEGrenadeObject, FlashbangObject
 from milsim.types import Item
 
@@ -200,3 +201,26 @@ class StunHandgrenadeItem(HandgrenadeItem):
     name          = "M84 Stun Grenade"
     mass          = 0.370
     grenade_class = FlashbangObject
+
+class HandheldRadioItem(Item):
+    def __init__(self, team):
+        Item.__init__(self)
+        self.team = team
+
+    def apply(self, player):
+        player.inventory.remove(self)
+
+        if o := player.handheld_radio_item:
+            player.inventory.push(o)
+
+        player.handheld_radio_item = self
+
+        return "Equipped {}".format(format_item(self))
+
+class EecomRadioItem(HandheldRadioItem):
+    name = "Eecom V-8C HT"
+    mass = 0.390
+
+class TaopengRadioItem(HandheldRadioItem):
+    name = "Taopeng UV-5A HT"
+    mass = 0.400

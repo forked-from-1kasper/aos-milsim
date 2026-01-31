@@ -78,7 +78,7 @@ void Engine::clear() {
 void Engine::update() {
     using namespace Fundamentals;
 
-    auto t = temperature, p = pressure, φ = humidity; auto & w = wind;
+    const auto & t = temperature, & p = pressure, & φ = humidity; const auto & w = wind;
 
     // 1) Here we assume Dalton’s law.
 
@@ -118,6 +118,17 @@ void Engine::update() {
     _mach = std::sqrt(K / _density);
 
     // See also: http://resource.npl.co.uk/acoustics/techguides/speedair/
+
+    const auto & h = x₁ * 100; // %
+
+    constexpr double p₀ = 101'325, /* Pa */ T₀ = 293.15 /* K */;
+    const double T = t - absoluteZero<double>; /* K */
+
+    /* ISO 9613-1:1993(E), Acoustics — Attenuation of sound during propagation outdoors — 
+       Part 1: Calculation of the absorption of sound by the atmosphere. */
+
+    _oxygenRelaxationFrequency   = (p / p₀) * (24 + 4.04e+4 * h + (0.02 + h) / (0.391 + h));
+    _nitrogenRelaxationFrequency = (p / p₀) * std::sqrt(T₀ / T) * (9 + 280 * h * exp(-4.17 * (std::cbrt(T₀ / T) - 1)));
 }
 
 void Engine::step(const double t1, const double t2) {
@@ -375,7 +386,23 @@ double Engine::HopkinsonCranzCoefficient(double W /* TNT equivalent, kg */) {
     using namespace Fundamentals;
 
     constexpr double p₀ = 101'325, /* Pa */ T₀ = 288.15 /* K */;
-    const double p = pressure, T = temperature - absoluteZero<double>;
+    const double p = pressure, /* Pa */ T = temperature - absoluteZero<double>; /* K */
 
     return std::cbrt(1 / W * p / p₀ * T₀ / T);
+}
+
+double Engine::attenuationCoefficient(double f /* Hz */) {
+    using namespace Fundamentals;
+
+    constexpr double p₀ = 101'325, /* Pa */ T₀ = 293.15 /* K */;
+    const double p = pressure, /* Pa */ T = temperature - absoluteZero<double>; /* K */
+
+    const double & frO = _oxygenRelaxationFrequency;   /* Hz */
+    const double & frN = _nitrogenRelaxationFrequency; /* Hz */
+
+    const double A  = 1.84e-11 * (p₀ / p) * std::sqrt(T / T₀);
+    const double B₁ = 0.01275 * exp(-2239.1 / T) / (frO + f * f / frO);
+    const double B₂ = 0.10680 * exp(-3352.0 / T) / (frN + f * f / frN);
+
+    return 8.686 * f * f * (A + powf(T / T₀, -2.5) * (B₁ + B₂));
 }

@@ -205,9 +205,11 @@ public:
 
 private:
     // Derived variables.
-    double _density; // kg/m³
-    double _mach;    // m/s
-    double _ppo2;    // Pa
+    double _density;                     // kg/m³
+    double _mach;                        // m/s
+    double _ppo2;                        // Pa
+    double _oxygenRelaxationFrequency;   // Hz
+    double _nitrogenRelaxationFrequency; // Hz
 
     double _lag, _peak;
 
@@ -243,9 +245,11 @@ public:
             && get_solid(R.x, R.y, R.z, map);
     }
 
-    inline double density() const { return _density; }
-    inline double mach()    const { return _mach;    }
-    inline double ppo2()    const { return _ppo2;    }
+    inline double density()                     const { return _density;                     }
+    inline double mach()                        const { return _mach;                        }
+    inline double ppo2()                        const { return _ppo2;                        }
+    inline double oxygenRelaxationFrequency()   const { return _oxygenRelaxationFrequency;   }
+    inline double nitrogenRelaxationFrequency() const { return _nitrogenRelaxationFrequency; }
 
     inline double lag()  const { return _lag;  }
     inline double peak() const { return _peak; }
@@ -265,4 +269,5 @@ public:
 
     double dragRaycast(double CD, double m, double A, double v₀, Vector3d, const Vector3d &);
     double HopkinsonCranzCoefficient(double);
+    double attenuationCoefficient(double);
 };
