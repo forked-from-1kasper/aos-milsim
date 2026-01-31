@@ -394,6 +394,8 @@ double Engine::HopkinsonCranzCoefficient(double W /* TNT equivalent, kg */) {
 double Engine::attenuationCoefficient(double f /* Hz */) {
     using namespace Fundamentals;
 
+    // ISO 9613-1:1993(E)
+
     constexpr double p₀ = 101'325, /* Pa */ T₀ = 293.15 /* K */;
     const double p = pressure, /* Pa */ T = temperature - absoluteZero<double>; /* K */
 
