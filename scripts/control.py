@@ -24,7 +24,8 @@ from pyspades.constants import *
 
 from milsim.items import (
     BandageItem, TourniquetItem, SplintItem,
-    RangefinderItem, ProtractorItem, CompassItem
+    RangefinderItem, ProtractorItem, CompassItem,
+    HandheldRadioItem
 )
 from milsim.underbarrel import GrenadeLauncher, GrenadeItem
 from milsim.engine import toMeters
@@ -296,6 +297,22 @@ def takegrenade(player, argval = 1):
 
     if n <= 0: return "Invalid number of grenades"
     return format_taken_items(take_grenade_launcher(player, n))
+
+@command('takeradio', 'tra')
+@alive_only
+def takeradio(player):
+    """
+    Try to take and equip a handheld radio
+    /tra or /takeradio
+    """
+
+    if wt := player.handheld_radio_item:
+        return "You already have an equipped radio"
+
+    for o in take_item(player, HandheldRadioItem):
+        return o.apply(player)
+
+    return "No radio found"
 
 @command('underbarrel', 'ub')
 @alive_only
