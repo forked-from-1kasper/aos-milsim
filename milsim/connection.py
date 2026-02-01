@@ -322,11 +322,11 @@ class MilsimConnection(FeatureConnection):
             if self.dead(): # dead player can hear anyone anywhere
                 return True # TODO: is this a good idea?
 
-            if player.team.spectator: # spectators can be heard anywhere
+            if player.name is None or player.team.spectator: # spectators can be heard anywhere
                 return True
 
-            if player.dead():
-                return False # alive players can’t hear dead players
+            if player.dead(): # alive players can’t hear dead players
+                return False
 
             d = toMeters(distance_3d_vector(self.world_object.position, player.world_object.position))
 
