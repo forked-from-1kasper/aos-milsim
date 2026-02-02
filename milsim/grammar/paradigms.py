@@ -96,33 +96,29 @@ def esize(w):
     else:
         return w + "s"
 
-ascii_doubling_consonants = {'b', 'd', 'f', 'g', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 's', 'v', 'z'}
-
-def ckize(w):
-    if w.endswith("t"):
-        raise GrammarError("Cannot decide whether the final syllable is stressed in ‘{}’".format(w))
-    elif w.endswith("c"):
-        return w.removesuffix("c") + "ck"
-    elif w[-1] in ascii_doubling_consonants:
-        return w + w[-1]
-    else:
-        return w
-
 def edize(w):
     if w.endswith("e"):
         return w + "d"
     elif w[-2] not in ascii_vowels and w.endswith("y"):
         return w.removesuffix("y") + "ied"
+    elif w[-1] in {'h', 'w', 'x', 'y'}:
+        return w + "ed"
+    elif w[-1] not in ascii_vowels:
+        raise GrammarError("Unable to generate past form for ‘{}’ automatically".format(w))
     else:
-        return ckize(w) + "ed"
+        return w + "ed"
 
 def ingize(w):
     if w.endswith("e"):
         return w.removesuffix("e") + "ing"
     elif w.endswith("ie"):
         return w.removesuffix("ie") + "ying"
+    elif w[-1] in {'h', 'w', 'x', 'y'}:
+        return w + "ing"
+    elif w[-1] not in ascii_vowels:
+        raise GrammarError("Unable to generate present participle for ‘{}’ automatically".format(w))
     else:
-        return ckize(w) + "ing"
+        return w + "ing"
 
 def cardinal(k : int) -> str:
     return str(k)

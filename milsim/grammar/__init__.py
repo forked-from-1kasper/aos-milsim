@@ -24,9 +24,9 @@ from milsim.grammar.category import (
     VerbForm, INF, PTCP1, PTCP2
 )
 
-from milsim.grammar.verb import Verb, ModalVerb, SemiregularVerb, RegularVerb
+from milsim.grammar.verb import Verb, ModalVerb, Verb3, Verb4, RegularVerb
 
-from milsim.grammar.noun import Noun, SemiregularNoun, RegularNoun, CompoundNoun
+from milsim.grammar.noun import Noun, Noun2, RegularNoun, CompoundNoun
 
 from milsim.grammar.syntax import Token, Phrase, NP, VP, Sentence
 
@@ -102,15 +102,15 @@ be_v = Verb(
     vp1pl = "were", vp2pl = "were",  vp3pl = "were"
 )
 
-do_v   = SemiregularVerb(bare = "do", ving = "doing", ved = "done", v3sg = "does", vpast = "did")
-have_v = SemiregularVerb(bare = "have", ving = "having", ved = "had", v3sg = "has", vpast = "had")
+do_v   = Verb4(bare = "do", ving = "doing", ved = "done", v3sg = "does", vpast = "did")
+have_v = Verb3(bare = "have", ving = "having", ved = "had", v3sg = "has")
 can_v  = ModalVerb(vpres = "can", vpast = "could")
 will_v = ModalVerb(vpres = "will", vpast = "would")
-go_v   = SemiregularVerb(bare = "go", ving = "going", ved = "gone", v3sg = "goes", vpast = "went")
-give_v = SemiregularVerb(bare = "give", ving = "giving", ved = "given", v3sg = "gives", vpast = "gave")
-sing_v = SemiregularVerb(bare = "sing", ving = "singing", ved = "sung", v3sg = "sings", vpast = "sang")
-put_v  = SemiregularVerb(bare = "put", ving = "putting", ved = "put", v3sg = "puts", vpast = "put")
-turn_v = RegularVerb("turn")
+go_v   = Verb4(bare = "go", ving = "going", ved = "gone", v3sg = "goes", vpast = "went")
+give_v = Verb4(bare = "give", ving = "giving", ved = "given", v3sg = "gives", vpast = "gave")
+sing_v = Verb4(bare = "sing", ving = "singing", ved = "sung", v3sg = "sings", vpast = "sang")
+put_v  = Verb3(bare = "put", ving = "putting", ved = "put", v3sg = "puts")
+turn_v = Verb3(bare = "turn", ving = "turning", ved = "turned", v3sg = "turns")
 
 zero_sg   = ZeroArticle(SG)
 zero_pl   = ZeroArticle(PL)

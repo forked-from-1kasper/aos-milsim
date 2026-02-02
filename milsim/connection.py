@@ -46,14 +46,14 @@ from milsim.engine import toMeters
 from milsim.constants import Limb
 
 from milsim.grammar import (
-    RegularNoun, SemiregularVerb, Cardinal, VerbNTR, VerbNP, VerbNPPP, PassiveVoice,
+    RegularNoun, Verb3, Verb4, Cardinal, VerbNTR, VerbNP, VerbNPPP, PassiveVoice,
     PerfectAspect, Possessive, Adjective, you_pr, an_sg, np_vp_pres, SG
 )
 from milsim.types import arm_n, leg_n, left_adj, right_adj
 
-feel_v    = SemiregularVerb(bare = "feel",  ving = "feeling",  ved = "felt",   v3sg = "feels",  vpast = "felt")
-break_v   = SemiregularVerb(bare = "break", ving = "breaking", ved = "broken", v3sg = "breaks", vpast = "broke")
-leave_v   = SemiregularVerb(bare = "leave", ving = "leaving",  ved = "left",   v3sg = "leaves", vpast = "left")
+feel_v    = Verb3(bare = "feel", ving = "feeling", ved = "felt", v3sg = "feels")
+break_v   = Verb4(bare = "break", ving = "breaking", ved = "broken", v3sg = "breaks", vpast = "broke")
+leave_v   = Verb3(bare = "leave", ving = "leaving", ved = "left", v3sg = "leaves")
 neck_n    = RegularNoun("neck")
 spine_n   = RegularNoun("spine")
 grenade_n = RegularNoun("grenade")

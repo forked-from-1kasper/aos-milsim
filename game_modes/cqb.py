@@ -21,14 +21,14 @@ from pyspades.constants import CTF_MODE
 from piqueserver.commands import command, player_only
 from piqueserver.config import config
 
-from milsim.grammar import RegularNoun, CompoundNoun, SemiregularVerb, Cardinal, VerbNTR, np_vp_past
+from milsim.grammar import RegularNoun, CompoundNoun, Verb3, Cardinal, VerbNTR, np_vp_past
 from milsim.connection import MilsimConnection
 
 cqb_section              = config.section("cqb")
 cqb_respawn_tickets      = cqb_section.option("respawn_tickets", 64).get()
 cqb_flag_capture_tickets = cqb_section.option("flag_capture_tickets", 5).get()
 
-remain_v         = SemiregularVerb(bare = "remain", ving = "remaining", ved = "remained", v3sg = "remains", vpast = "remained")
+remain_v         = Verb3(bare = "remain", ving = "remaining", ved = "remained", v3sg = "remains")
 ticket_n         = RegularNoun("ticket")
 respawn_ticket_n = CompoundNoun("respawn", ticket_n)
 

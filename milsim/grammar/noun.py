@@ -42,14 +42,14 @@ class Noun:
 
         raise GrammarError
 
-class SemiregularNoun(Noun):
+class Noun2(Noun):
     def __init__(self, *, sg = None, pl = None):
         super().__init__(
             nom_sg = sg, pos_sg = possessify(sg),
             nom_pl = pl, pos_pl = possessify(pl)
         )
 
-class RegularNoun(SemiregularNoun):
+class RegularNoun(Noun2):
     def __init__(self, sg):
         super().__init__(sg = sg, pl = pluralize(sg))
 

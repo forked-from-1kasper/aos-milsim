@@ -15,7 +15,7 @@
 
 from milsim.grammar import (
     Declarative, YesNoInterrogative, Imperative, Compound, VerbNTR, InfinitivePhrase, Possessive, Cardinal, Ordinal,
-    PassiveVoice, PerfectAspect, ProgressiveAspect, RegularNoun, CompoundNoun, SemiregularVerb, RegularVerb,
+    PassiveVoice, PerfectAspect, ProgressiveAspect, RegularNoun, CompoundNoun, Verb4, RegularVerb,
     linearize, VerbVP, VerbNP, VerbNPPP, this_pr, that_pr, zero_sg, zero_pl, an_sg, the_sg, the_pl, not_adv, good_adj,
     I_pr, you_pr, he_pr, she_pr, it_pr, light_n, song_n, be_v, do_v, can_v, turn_v, give_v, sing_v,
     PRES, PAST, SG, INF, PTCP2
@@ -141,7 +141,7 @@ s14 = Declarative(np = np14, vp = vp14, tense = PAST)
 print("14)", linearize(s14))
 
 ###################################################################################################
-eat_v = SemiregularVerb(bare = "eat", ving = "eating", ved = "eaten", v3sg = "eats", vpast = "ate")
+eat_v = Verb4(bare = "eat", ving = "eating", ved = "eaten", v3sg = "eats", vpast = "ate")
 
 eat_vp = VerbNTR(eat_v)
 

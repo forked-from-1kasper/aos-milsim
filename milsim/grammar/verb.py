@@ -82,7 +82,7 @@ class ModalVerb(Verb):
             vp1pl = vpast, vp2pl = vpast, vp3pl = vpast
         )
 
-class SemiregularVerb(Verb):
+class Verb4(Verb):
     def __init__(self, *, bare, ving, ved, v3sg, vpast):
         super().__init__(
             inf   = bare,  ving  = ving,  ved   = ved,
@@ -92,8 +92,18 @@ class SemiregularVerb(Verb):
             vp1pl = vpast, vp2pl = vpast, vp3pl = vpast
         )
 
-class RegularVerb(SemiregularVerb):
-    def __init__(self, cry):
-        cries, crying, cried = esize(cry), ingize(cry), edize(cry)
+class Verb3(Verb):
+    def __init__(self, *, bare, ving, ved, v3sg):
+        super().__init__(
+            inf   = bare, ving  = ving, ved   = ved,
+            v1sg  = bare, v2sg  = bare, v3sg  = v3sg,
+            v1pl  = bare, v2pl  = bare, v3pl  = bare,
+            vp1sg = ved,  vp2sg = ved,  vp3sg = ved,
+            vp1pl = ved,  vp2pl = ved,  vp3pl = ved
+        )
 
-        super().__init__(bare = cry, ving = crying, ved = cried, v3sg = cries, vpast = cried)
+class RegularVerb(Verb3):
+    def __init__(self, w):
+        super().__init__(
+            bare = w, ving = ingize(w), ved = edize(w), v3sg = esize(w)
+        )

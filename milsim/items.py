@@ -24,9 +24,8 @@ from milsim.blast import HighExplosive, HEGrenadeObject, FlashbangObject
 from milsim.types import Item
 
 from milsim.grammar import (
-    VerbNTR, VerbNP, VerbNPPP, ProgressiveAspect, Possessive,
-    ProperNoun, RegularNoun, SemiregularVerb, RegularVerb,
-    an_sg, no_pl, you_pr, have_v, not_adv, np_vp_pres, np_vp_past, SG
+    VerbNTR, VerbNP, VerbNPPP, ProgressiveAspect, Possessive, ProperNoun, RegularNoun,
+    Verb3, RegularVerb, an_sg, no_pl, you_pr, have_v, not_adv, np_vp_pres, np_vp_past, SG
 )
 
 class Kettlebell(Item):
@@ -67,7 +66,7 @@ class MedicalItem(Item):
             case Failure(vp):
                 return np_vp_pres(target_np, vp)
 
-bleed_v   = SemiregularVerb(bare = "bleed", ving = "bleeding", ved = "bled", v3sg = "bleeds", vpast = "bled")
+bleed_v   = Verb3(bare = "bleed", ving = "bleeding", ved = "bled", v3sg = "bleeds")
 bandage_v = RegularVerb("bandage")
 
 not_bleeding_vp = ProgressiveAspect(not_adv(VerbNTR(bleed_v)))
@@ -110,7 +109,7 @@ class TourniquetItem(MedicalItem):
         return Failure(not_bleeding_vp)
 
 fracture_n = RegularNoun("fracture")
-splint_v   = SemiregularVerb(bare = "splint", ving = "splinting", ved = "splinted", v3sg = "splints", vpast = "splinted")
+splint_v   = Verb3(bare = "splint", ving = "splinting", ved = "splinted", v3sg = "splints")
 
 splint_vp            = VerbNP(splint_v)
 have_vp              = VerbNP(have_v)
