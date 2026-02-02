@@ -298,6 +298,12 @@ class MilsimProtocol(FeatureProtocol):
                 if player.world_object.sneak:
                     player.tool_object.on_sneak_hold(t, dt)
 
+            if t - player.base_timer > 1.0:
+                player.base_timer = t
+
+                if mesg := player.body.take_message():
+                    player.send_chat_status(mesg)
+
             hp = player.body.average()
             if player.hp != hp: player.set_hp(hp, kill_type = MELEE_KILL)
 

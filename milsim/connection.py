@@ -45,21 +45,40 @@ from milsim.items import HandgrenadeItem
 from milsim.engine import toMeters
 from milsim.constants import Limb
 
-from milsim.grammar import RegularNoun, SemiregularVerb, Cardinal, VerbNTR, PassiveVoice, np_vp_pres
+from milsim.grammar import (
+    RegularNoun, SemiregularVerb, Cardinal, VerbNTR, VerbNP, VerbNPPP, PassiveVoice,
+    PerfectAspect, Possessive, Adjective, you_pr, an_sg, np_vp_pres, SG
+)
+from milsim.types import arm_n, leg_n, left_adj, right_adj
 
-leave_v    = SemiregularVerb(bare = "leave", ving = "leaving", ved = "left", v3sg = "leaves", vpast = "left")
-be_left_vp = PassiveVoice(VerbNTR(leave_v))
-grenade_n  = RegularNoun("grenade")
+feel_v    = SemiregularVerb(bare = "feel",  ving = "feeling",  ved = "felt",   v3sg = "feels",  vpast = "felt")
+break_v   = SemiregularVerb(bare = "break", ving = "breaking", ved = "broken", v3sg = "breaks", vpast = "broke")
+leave_v   = SemiregularVerb(bare = "leave", ving = "leaving",  ved = "left",   v3sg = "leaves", vpast = "left")
+neck_n    = RegularNoun("neck")
+spine_n   = RegularNoun("spine")
+grenade_n = RegularNoun("grenade")
+pain_n    = RegularNoun("pain")
+acute_adj = Adjective("acute")
+dull_adj  = Adjective("dull")
+
+pain_np       = an_sg(pain_n)
+dull_pain_np  = dull_adj(pain_np)
+acute_pain_np = acute_adj(pain_np)
+be_left_vp    = PassiveVoice(VerbNTR(leave_v))
+feel_in_vp    = VerbNPPP(feel_v, "in")
+break_vp      = VerbNP(break_v)
 
 SHOVEL_GUARANTEED_DAMAGE = 50
 
-fracture_warning = {
-    Limb.torso: "You broke your spine",
-    Limb.head:  "You broke your neck",
-    Limb.arml:  "You broke your left arm",
-    Limb.armr:  "You broke your right arm",
-    Limb.legl:  "You broke your left leg",
-    Limb.legr:  "You broke your right leg"
+your_det = Possessive(you_pr, SG)
+
+limb_fracture_np = {
+    Limb.torso: your_det(spine_n),
+    Limb.head:  your_det(neck_n),
+    Limb.arml:  left_adj(your_det(arm_n)),
+    Limb.armr:  right_adj(your_det(arm_n)),
+    Limb.legl:  left_adj(your_det(leg_n)),
+    Limb.legr:  right_adj(your_det(leg_n))
 }
 
 bleeding_warning = "You're bleeding"
@@ -107,6 +126,7 @@ class MilsimConnection(FeatureConnection):
         self.inventory = Inventory()
 
         self.last_hp_update = None
+        self.base_timer     = None
         self.body           = Body()
 
         self.previous_floor_position = None
@@ -439,6 +459,8 @@ class MilsimConnection(FeatureConnection):
         self.last_tool_update = 0
 
         self.last_hp_update = monotonic()
+        self.base_timer     = monotonic()
+
         self.body.reset()
 
         self.hp       = 100
@@ -676,11 +698,30 @@ class MilsimConnection(FeatureConnection):
         if self.hp is not None and self.hp > 0:
             hp = self.body.average()
 
-            if hp > 0:
-                if fractured and not P.fractured:
-                    self.send_chat_status(fracture_warning[limb])
-                elif (venous or arterial) and not self.body.bleeding():
-                    self.send_chat_status(bleeding_warning)
+            if fractured and not P.fractured:
+                self.body.pushl_message(
+                    np_vp_pres(
+                        np = you_pr,
+                        vp = PerfectAspect(break_vp(limb_fracture_np[limb]))
+                    )
+                )
+
+            if arterial and not P.arterial:
+                feeling_np = acute_pain_np
+            elif venous and not P.venous:
+                feeling_np = dull_pain_np
+            elif value > 5:
+                feeling_np = pain_np
+            else:
+                feeling_np = None
+
+            if feeling_np is not None:
+                self.body.pushl_message(
+                    np_vp_pres(
+                        np = you_pr,
+                        vp = feel_in_vp(feeling_np, P.np(your_det))
+                    )
+                )
 
             if fractured and not P.fractured:
                 P.on_fracture(self)
@@ -714,11 +755,11 @@ class MilsimConnection(FeatureConnection):
             legr.hit(damage)
 
             if P and Q:
-                self.send_chat_status("You broke your legs")
+                self.body.pushl_message("You have broken your legs")
             elif P:
-                self.send_chat_status("You broke your left leg")
+                self.body.pushl_message("You have broken your left leg")
             elif Q:
-                self.send_chat_status("You broke your right leg")
+                self.body.pushl_message("You have broken your right leg")
 
             self.set_hp(self.body.average(), kill_type = FALL_KILL)
 

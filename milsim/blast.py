@@ -161,7 +161,7 @@ class HighExplosive:
         Y4 = -12.6 + 1.524 * log(Δp)
 
         if gauss(mu = 5) <= Y4:
-            player.send_chat_error("You feel pain in your ears")
+            player.body.pushl_message("You feel pain in your ears")
             player.body.deaf = True
 
         # (5) Fragment debris

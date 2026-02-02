@@ -319,6 +319,8 @@ class Body:
         self.legl  = Leg("legl", lambda det: left_adj(det(leg_n)))
         self.legr  = Leg("legr", lambda det: right_adj(det(leg_n)))
 
+        self.message_queue = deque()
+
         self.reset()
 
     def __getitem__(self, k):
@@ -362,6 +364,8 @@ class Body:
         for P in self.values():
             P.reset()
 
+        self.message_queue.clear()
+
         self.deaf = False
 
     def update(self, dt):
@@ -371,6 +375,16 @@ class Body:
 
             if P.venous:
                 P.hit(P.venous_rate * dt)
+
+    def take_message(self):
+        if bool(self.message_queue):
+            return self.message_queue.popleft()
+
+    def pushl_message(self, mesg):
+        self.message_queue.appendleft(mesg)
+
+    def pushr_message(self, mesg):
+        self.message_queue.append(mesg)
 
 def digits(n, base = 10):
     while n > 0:
