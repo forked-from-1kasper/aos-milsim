@@ -222,7 +222,6 @@ class Linear(ABCMap):
         return self.w1 + t * (self.w2 - self.w1)
 
 class ABCLimb:
-    bleeding = ABCMap()
     fracture = ABCMap()
     damage   = ABCMap()
 
@@ -235,15 +234,23 @@ class ABCLimb:
         damage, venous, arterial, fractured = 0, False, False, False
 
         if E > 0:
-            e = (E / A) / (100 * 100) # energy per area, J/cm²
+            # [1] A survey of computational models for blast induced human injuries for security and defence applications,
+            #     G. Solomos, M. Larcher, G. Valsamos, V. Karlos, F. Casadei, 2020
+            # [2] Model for risk evaluation for fragment debris after a grenade detonation,
+            #     G. Lund, 2021.
 
-            if randbool(logistic(self.bleeding(e))):
+            a, b = -28.42, 2.94 # TODO: take N-layer uniform into consideration
+
+            e = E / A # energy per area, J/m²
+            Y = a + b * log(e / 5)
+
+            if random() <= logistic(Y):
                 if randbool(self.arterial_density):
                     arterial = True
                 else:
                     venous = True
 
-            fractured = randbool(logistic(self.fracture(E)))
+            fractured = random() <= logistic(self.fracture(E))
             damage    = 100 * logistic(self.damage(E))
 
         return damage, venous, arterial, fractured
@@ -266,7 +273,6 @@ class Torso(ABCLimb):
     venous_rate      = 0.7
     arterial_rate    = 2.8
     arterial_density = 0.4
-    bleeding         = Linear(15, 70)
     fracture         = Linear(500, 1000)
     damage           = Linear(0, 1500)
     rotation_damage  = 0.1
@@ -275,7 +281,6 @@ class Head(ABCLimb):
     venous_rate      = 1.0
     arterial_rate    = 4.3
     arterial_density = 0.65
-    bleeding         = Linear(10, 50)
     fracture         = Linear(40, 70)
     damage           = Linear(0, 500)
 
@@ -283,7 +288,6 @@ class Arm(ABCLimb):
     venous_rate        = 0.35
     arterial_rate      = 1.7
     arterial_density   = 0.7
-    bleeding           = Linear(15, 55)
     fracture           = Linear(450, 600)
     damage             = Linear(0, 3000)
     action_damage_rate = 0.25
