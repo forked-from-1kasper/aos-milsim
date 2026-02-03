@@ -222,8 +222,8 @@ class Linear(ABCMap):
         return self.w1 + t * (self.w2 - self.w1)
 
 class ABCLimb:
-    fracture = ABCMap()
-    damage   = ABCMap()
+    fracture_risk = None
+    damage        = ABCMap()
 
     def __init__(self, abbrev, np):
         self.abbrev, self.np = abbrev, np
@@ -241,7 +241,7 @@ class ABCLimb:
 
             a, b = -28.42, 2.94 # TODO: take N-layer uniform into consideration
 
-            e = E / A # energy per area, J/m²
+            e = E / A # energy surface density or energy per area, J/m²
             Y = a + b * log(e / 5)
 
             if random() <= logistic(Y):
@@ -250,8 +250,30 @@ class ABCLimb:
                 else:
                     venous = True
 
-            fractured = random() <= logistic(self.fracture(E))
-            damage    = 100 * logistic(self.damage(E))
+                # We use lognormal model based on energy surface density:
+                #   P = P(fracture) = (1 + erf([log(e) − μ]/σ√2))/2,
+                # taking the hypothesis (based on intuitive considerations) that, within
+                # reasonable limits, fragments with the same energy density result in similar
+                # damage to bones. Thus, velocity-based lognormal model as in [3] can be rewritten
+                # into energy-density-based model.
+                # [3] Mapping the Risk of Fracture of the Tibia From Penetrating Fragments,
+                #     T.-T. N. Nguyen, D. Carpanen, I. A. Rankin, A. Ramasamy,
+                #     J. Breeze, W. G. Proud, J. C. Clasper, S. D. Masouros.
+                # We see that for P(e₅₀) = 1/2 we have μ = log(e₅₀).
+                # Further, for the threshold probability Pₜₕ and energy density eₜₕ we calculate:
+                #    Pₜₕ = (1 + erf(log(eₜₕ/e₅₀)/σ√2))/2
+                #  ↔ 2Pₜₕ − 1 = erf(log(eₜₕ/e₅₀)/σ√2)
+                #  ↔ log(eₜₕ/e₅₀)/σ√2 = erf⁻¹(2Pₜₕ − 1)
+                #  ↔ σ = log(eₜₕ/e₅₀)/[erf⁻¹(2Pₜₕ − 1)√2] = α · log(eₜₕ/e₅₀).
+                # We take Pₜₕ = 0.01, so α ≈ −0.4299.
+
+                if fr := self.fracture_risk:
+                    α = -0.4299
+                    eth, e50 = fr
+
+                    fractured = gauss(mu = log(e50), sigma = α * log(eth / e50)) <= log(e)
+
+            damage = 100 * logistic(self.damage(E))
 
         return damage, venous, arterial, fractured
 
@@ -273,7 +295,7 @@ class Torso(ABCLimb):
     venous_rate      = 0.7
     arterial_rate    = 2.8
     arterial_density = 0.4
-    fracture         = Linear(500, 1000)
+    fracture_risk    = (1.00e+06, 1.75e+06)
     damage           = Linear(0, 1500)
     rotation_damage  = 0.1
 
@@ -281,14 +303,13 @@ class Head(ABCLimb):
     venous_rate      = 1.0
     arterial_rate    = 4.3
     arterial_density = 0.65
-    fracture         = Linear(40, 70)
     damage           = Linear(0, 500)
 
 class Arm(ABCLimb):
     venous_rate        = 0.35
     arterial_rate      = 1.7
     arterial_density   = 0.7
-    fracture           = Linear(450, 600)
+    fracture_risk      = (1.50e+06, 2.50e+06)
     damage             = Linear(0, 3000)
     action_damage_rate = 0.25
 
@@ -300,7 +321,7 @@ class Leg(ABCLimb):
     arterial_rate      = 2.1
     arterial_density   = 0.75
     bleeding           = Linear(15, 60)
-    fracture           = Linear(500, 650)
+    fracture_risk      = (3.00e+06, 4.25e+06)
     damage             = Linear(0, 4000)
     fall               = Linear(1, 10)
     sprint_damage_rate = 7.5

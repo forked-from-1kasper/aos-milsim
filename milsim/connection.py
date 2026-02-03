@@ -54,8 +54,7 @@ from milsim.types import arm_n, leg_n, left_adj, right_adj
 feel_v    = Verb3(bare = "feel", ving = "feeling", ved = "felt", v3sg = "feels")
 break_v   = Verb4(bare = "break", ving = "breaking", ved = "broken", v3sg = "breaks", vpast = "broke")
 leave_v   = Verb3(bare = "leave", ving = "leaving", ved = "left", v3sg = "leaves")
-neck_n    = RegularNoun("neck")
-spine_n   = RegularNoun("spine")
+rib_n     = RegularNoun("rib")
 grenade_n = RegularNoun("grenade")
 pain_n    = RegularNoun("pain")
 acute_adj = Adjective("acute")
@@ -73,8 +72,7 @@ SHOVEL_GUARANTEED_DAMAGE = 50
 your_det = Possessive(you_pr, SG)
 
 limb_fracture_np = {
-    Limb.torso: your_det(spine_n),
-    Limb.head:  your_det(neck_n),
+    Limb.torso: your_det(rib_n),
     Limb.arml:  left_adj(your_det(arm_n)),
     Limb.armr:  right_adj(your_det(arm_n)),
     Limb.legl:  left_adj(your_det(leg_n)),
@@ -625,11 +623,11 @@ class MilsimConnection(FeatureConnection):
         else:
             self.spawn_call = reactor.callLater(respawn_time, self.spawn)
 
-    def kill(self, killer = None, kill_type = WEAPON_KILL, grenade = None):
+    def kill(self, by = None, kill_type = WEAPON_KILL, grenade = None):
         if self.hp is None and kill_type != TEAM_CHANGE_KILL:
             return
 
-        if self.on_kill(killer, kill_type, grenade) is False:
+        if self.on_kill(by, kill_type, grenade) is False:
             return
 
         if self.tool == GRENADE_TOOL and self.grenade_object.unpin_time > 0:
@@ -650,24 +648,24 @@ class MilsimConnection(FeatureConnection):
 
         self.world_object.dead = True
 
-        self.last_killer     = killer
+        self.last_killer     = by
         self.last_death_type = kill_type
         self.last_death_time = monotonic()
 
-        if killer is not None and killer.team is not self.team:
-            killer.add_score(1)
+        if by is not None and by.team is not self.team:
+            by.add_score(1)
 
         respawn_time = self.get_respawn_time()
 
         contained              = loaders.KillAction()
         contained.kill_type    = kill_type
         contained.player_id    = self.player_id
-        contained.killer_id    = killer.player_id if killer is not None else self.player_id
+        contained.killer_id    = by.player_id if by is not None else self.player_id
         contained.respawn_time = respawn_time if isfinite(respawn_time) else 0
 
         self.protocol.broadcast_contained(contained, save = True)
 
-        self.on_killed(killer, kill_type, grenade)
+        self.on_killed(by, kill_type, grenade)
 
         self.respawn()
 
@@ -706,6 +704,8 @@ class MilsimConnection(FeatureConnection):
                     )
                 )
 
+                P.on_fracture(self)
+
             if arterial and not P.arterial:
                 feeling_np = acute_pain_np
             elif venous and not P.venous:
@@ -723,10 +723,8 @@ class MilsimConnection(FeatureConnection):
                     )
                 )
 
-            if fractured and not P.fractured:
-                P.on_fracture(self)
-
             self.set_hp(hp, hit_by = hit_by, kill_type = kill_type)
+
             P.venous    = P.venous or venous
             P.arterial  = P.arterial or arterial
             P.fractured = P.fractured or fractured
