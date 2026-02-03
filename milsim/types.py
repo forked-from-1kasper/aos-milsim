@@ -222,6 +222,10 @@ class Linear(ABCMap):
         return self.w1 + t * (self.w2 - self.w1)
 
 class ABCLimb:
+    bone_hit_probability   = None
+    fracture_ked_threshold = None
+    fracture_ked_fifty     = None
+
     fracture_risk = None
     damage        = ABCMap()
 
@@ -241,7 +245,7 @@ class ABCLimb:
 
             a, b = -28.42, 2.94 # TODO: take N-layer uniform into consideration
 
-            e = E / A # energy surface density or energy per area, J/m²
+            e = E / A # energy density or energy per area, J/m²
             Y = a + b * log(e / 5)
 
             if random() <= logistic(Y):
@@ -250,7 +254,7 @@ class ABCLimb:
                 else:
                     venous = True
 
-                # We use lognormal model based on energy surface density:
+                # We use lognormal model based on energy density:
                 #   P = P(fracture) = (1 + erf([log(e) − μ]/σ√2))/2,
                 # taking the hypothesis (based on intuitive considerations) that, within
                 # reasonable limits, fragments with the same energy density result in similar
@@ -267,10 +271,16 @@ class ABCLimb:
                 #  ↔ σ = log(eₜₕ/e₅₀)/[erf⁻¹(2Pₜₕ − 1)√2] = α · log(eₜₕ/e₅₀).
                 # We take Pₜₕ = 0.01, so α ≈ −0.4299.
 
-                if fr := self.fracture_risk:
-                    α = -0.4299
-                    eth, e50 = fr
+                if random() <= self.bone_hit_probability:
+                    # We can, in principle, to make some geometric test of the intesection
+                    # of a bullet’s path with an AABB of bone, but since a bullet usually
+                    # behaves unpredictably after entering the body, a simple probability
+                    # test seems more natural. Moreover, a fracture can occur even without
+                    # the bullet hitting the bone, but as the effect of the temporary cavity.
 
+                    α = -0.4299
+
+                    eth, e50 = self.fracture_ked_threshold, self.fracture_ked_fifty
                     fractured = gauss(mu = log(e50), sigma = α * log(eth / e50)) <= log(e)
 
             damage = 100 * logistic(self.damage(E))
@@ -292,41 +302,48 @@ class ABCLimb:
         pass
 
 class Torso(ABCLimb):
-    venous_rate      = 0.7
-    arterial_rate    = 2.8
-    arterial_density = 0.4
-    fracture_risk    = (1.00e+06, 1.75e+06)
-    damage           = Linear(0, 1500)
-    rotation_damage  = 0.1
+    venous_rate            = 0.7
+    arterial_rate          = 2.8
+    arterial_density       = 0.4
+    bone_hit_probability   = 0.35
+    fracture_ked_threshold = 1.00e+06
+    fracture_ked_fifty     = 1.75e+06
+    damage                 = Linear(0, 1500)
+    rotation_damage        = 0.1
 
 class Head(ABCLimb):
-    venous_rate      = 1.0
-    arterial_rate    = 4.3
-    arterial_density = 0.65
-    damage           = Linear(0, 500)
+    venous_rate          = 1.0
+    arterial_rate        = 4.3
+    arterial_density     = 0.65
+    bone_hit_probability = -inf
+    damage               = Linear(0, 500)
 
 class Arm(ABCLimb):
-    venous_rate        = 0.35
-    arterial_rate      = 1.7
-    arterial_density   = 0.7
-    fracture_risk      = (1.50e+06, 2.50e+06)
-    damage             = Linear(0, 3000)
-    action_damage_rate = 0.25
+    venous_rate            = 0.35
+    arterial_rate          = 1.7
+    arterial_density       = 0.7
+    bone_hit_probability   = 0.50
+    fracture_ked_threshold = 1.50e+06
+    fracture_ked_fifty     = 2.50e+06
+    damage                 = Linear(0, 3000)
+    action_damage_rate     = 0.25
 
     def on_fracture(self, player):
         player.set_tool(SPADE_TOOL)
 
 class Leg(ABCLimb):
-    venous_rate        = 0.55
-    arterial_rate      = 2.1
-    arterial_density   = 0.75
-    bleeding           = Linear(15, 60)
-    fracture_risk      = (3.00e+06, 4.25e+06)
-    damage             = Linear(0, 4000)
-    fall               = Linear(1, 10)
-    sprint_damage_rate = 7.5
-    walk_damage_rate   = 3.5
-    jump_damage        = 9.0
+    venous_rate            = 0.55
+    arterial_rate          = 2.1
+    arterial_density       = 0.75
+    bleeding               = Linear(15, 60)
+    bone_hit_probability   = 0.45
+    fracture_ked_threshold = 3.00e+06
+    fracture_ked_fifty     = 4.25e+06
+    damage                 = Linear(0, 4000)
+    fall                   = Linear(1, 10)
+    sprint_damage_rate     = 7.5
+    walk_damage_rate       = 3.5
+    jump_damage            = 9.0
 
 left_adj, right_adj = Adjective("left"), Adjective("right")
 
