@@ -225,9 +225,7 @@ class ABCLimb:
     bone_hit_probability   = None
     fracture_ked_threshold = None
     fracture_ked_fifty     = None
-
-    fracture_risk = None
-    damage        = ABCMap()
+    damage                 = ABCMap()
 
     def __init__(self, abbrev, np):
         self.abbrev, self.np = abbrev, np
