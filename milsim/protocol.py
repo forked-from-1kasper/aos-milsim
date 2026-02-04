@@ -304,8 +304,8 @@ class MilsimProtocol(FeatureProtocol):
                 if mesg := player.body.take_message():
                     player.send_chat_status(mesg)
 
-            hp = player.body.average()
-            if player.hp != hp: player.set_hp(hp, kill_type = MELEE_KILL)
+                hp = player.body.average()
+                if player.hp != hp: player.set_hp(hp, kill_type = MELEE_KILL)
 
             player.last_hp_update = t
 
