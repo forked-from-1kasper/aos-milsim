@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from libcpp cimport bool as bool_t
 from cpython.ref cimport PyTypeObject
+from libcpp cimport bool as bool_t
 from libc.math cimport floor
 
 from pyspades.common cimport Vector, Vertex3
@@ -68,6 +68,7 @@ cdef public Vector * vectorRef(object o):
 cdef class WorldObject(Character):
     cdef:
         int x, y, z
+        bool_t location_changed
     cdef public:
         object on_block_stepped
 
@@ -80,17 +81,17 @@ cdef class WorldObject(Character):
 
         z += 2 if self.player.crouch else 3
 
-        if self.player.jump:
-            self.x = 0
-            self.y = 0
-            self.z = 0
-        else:
-            if self.x != x or self.y != y or self.z != z:
-                self.on_block_stepped(x, y, z)
-
+        if self.x != x or self.y != y or self.z != z:
             self.x = x
             self.y = y
             self.z = z
+
+            self.location_changed = True
+
+        if self.location_changed and not self.player.airborne:
+            self.on_block_stepped(x, y, z)
+
+            self.location_changed = False
 
         return retval
 
