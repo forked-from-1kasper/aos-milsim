@@ -124,7 +124,6 @@ class MilsimConnection(FeatureConnection):
         self.inventory = Inventory()
 
         self.last_hp_update = None
-        self.base_timer     = None
         self.body           = Body()
 
         self.previous_floor_position = None
@@ -457,7 +456,6 @@ class MilsimConnection(FeatureConnection):
         self.last_tool_update = 0
 
         self.last_hp_update = monotonic()
-        self.base_timer     = monotonic()
 
         self.body.reset()
 

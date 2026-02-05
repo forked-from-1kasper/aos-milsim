@@ -250,15 +250,13 @@ class MilsimProtocol(FeatureProtocol):
 
     def on_world_update(self):
         t = monotonic()
+        dt = t - self.time
 
         if o := self.environment:
-            dt = t - self.time
-
             if o.weather.update(dt):
                 self.update_weather()
 
         self.engine.step(self.time, t)
-        self.time = t
 
         for x, y, z in islice(onDeleteQueue(), 50):
             if e := self.get_tile_entity(x, y, z):
@@ -267,8 +265,6 @@ class MilsimProtocol(FeatureProtocol):
             self.drop_item_entity(x, y, z)
 
         for player in self.living():
-            dt = t - player.last_hp_update
-
             if self.environment.size.inside(player.world_object.position) is False:
                 player.kill()
                 continue
@@ -298,8 +294,8 @@ class MilsimProtocol(FeatureProtocol):
                 if player.world_object.sneak:
                     player.tool_object.on_sneak_hold(t, dt)
 
-            if t - player.base_timer > 1.0:
-                player.base_timer = t
+            if t - player.last_hp_update > 1.0:
+                player.last_hp_update = t
 
                 if mesg := player.body.take_message():
                     player.send_chat_status(mesg)
@@ -307,7 +303,7 @@ class MilsimProtocol(FeatureProtocol):
                 hp = player.body.average()
                 if player.hp != hp: player.set_hp(hp, kill_type = MELEE_KILL)
 
-            player.last_hp_update = t
+        self.time = t
 
         FeatureProtocol.on_world_update(self)
 
