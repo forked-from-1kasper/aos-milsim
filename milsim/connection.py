@@ -30,9 +30,9 @@ from piqueserver.commands import get_player
 
 from pyspades.collision import distance_3d_vector, collision_3d, vector_collision
 from pyspades.packet import register_packet_handler
+from pyspades.world import Character, cube_line
 from pyspades import contained as loaders
 from pyspades.player import check_nan
-from pyspades.world import cube_line
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
@@ -41,8 +41,8 @@ from piqueserver.player import FeatureConnection
 from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
 from milsim.blast import sendGrenadePacket, flashbang_effect
 from milsim.types import Inventory, Body, randbool, logistic
+from milsim.engine import WorldObject, toMeters
 from milsim.items import HandgrenadeItem
-from milsim.engine import toMeters
 from milsim.constants import Limb
 
 from milsim.grammar import (
@@ -100,6 +100,8 @@ def milsim_default_loadout(self):
 log = Logger()
 
 class MilsimConnection(FeatureConnection):
+    world_object_class = WorldObject
+
     default_loadout = milsim_default_loadout
 
     bleeding_spread_modifier    = 4.5
@@ -132,8 +134,6 @@ class MilsimConnection(FeatureConnection):
         self.suppression_warning_sent = False
         self.last_hp_update           = None
         self.body                     = Body()
-
-        self.previous_floor_position = None
 
         self.spade_friendly_fire = False
 
@@ -381,20 +381,6 @@ class MilsimConnection(FeatureConnection):
             else:
                 return False
 
-    def on_position_update(self):
-        if self.previous_floor_position is not None:
-            r1, r2 = self.previous_floor_position, self.floor()
-
-            M = self.protocol.map
-            for x, y, z in cube_line(*r1, *r2):
-                if M.get_solid(x, y, z):
-                    if e := self.protocol.get_tile_entity(x, y, z):
-                        e.on_pressure()
-
-            self.previous_floor_position = r2
-
-        FeatureConnection.on_position_update(self)
-
     def on_orientation_update(self, x, y, z):
         ε = 1e-9
 
@@ -461,9 +447,9 @@ class MilsimConnection(FeatureConnection):
     def on_spawn(self, loc):
         FeatureConnection.on_spawn(self, loc)
 
-        self.last_spawn_time = monotonic()
+        self.world_object.on_block_stepped = self.on_block_stepped
 
-        self.previous_floor_position = self.floor()
+        self.last_spawn_time = monotonic()
 
         self.tool_object = self.weapon_object
         self.tool_object.on_tool_equipped(None)
@@ -515,6 +501,12 @@ class MilsimConnection(FeatureConnection):
 
     def on_refill(self):
         self.inventory.extend(io.mark_renewable() for io in self.default_loadout())
+
+    def on_block_stepped(self, x, y, z):
+        M = self.protocol.map
+        if M.get_solid(x, y, z):
+            if e := self.protocol.get_tile_entity(x, y, z):
+                e.on_pressure()
 
     # (4) Overridden `FeatureConnection` methods
 
@@ -1058,4 +1050,5 @@ class MilsimConnection(FeatureConnection):
         if self.grenades <= 0 or rem <= 0:
             self.sync()
 
+assert FeatureConnection.world_object_class is Character
 assert MilsimConnection.on_connect is FeatureConnection.on_connect

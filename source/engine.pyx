@@ -1,4 +1,4 @@
-# Copyright © 2024 rzrn
+# Copyright © 2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -15,10 +15,13 @@
 
 from libcpp cimport bool as bool_t
 from cpython.ref cimport PyTypeObject
+from libc.math cimport floor
 
 from pyspades.common cimport Vector, Vertex3
 from pyspades.vxl cimport VXLData, MapData
 from pyspades.common import Vertex3
+
+from pyspades.world cimport Character
 
 cdef public class Material[object Material, type MaterialType]:
     cdef public str name
@@ -61,6 +64,35 @@ cdef public Vector * vectorRef(object o):
 
     assert v.is_ref
     return v.value
+
+cdef class WorldObject(Character):
+    cdef:
+        int x, y, z
+    cdef public:
+        object on_block_stepped
+
+    cdef int update(self, double dt) except -1:
+        cdef int retval = Character.update(self, dt)
+
+        cdef int x = <int> floor(self.player.p.x)
+        cdef int y = <int> floor(self.player.p.y)
+        cdef int z = <int> floor(self.player.p.z)
+
+        z += 2 if self.player.crouch else 3
+
+        if self.player.jump:
+            self.x = 0
+            self.y = 0
+            self.z = 0
+        else:
+            if self.x != x or self.y != y or self.z != z:
+                self.on_block_stepped(x, y, z)
+
+            self.x = x
+            self.y = y
+            self.z = z
+
+        return retval
 
 cdef extern from "Milsim/PyEngine.hxx":
     cdef T c_ofMeters "ofMeters"[T](const T)
