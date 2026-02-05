@@ -102,6 +102,10 @@ log = Logger()
 class MilsimConnection(FeatureConnection):
     default_loadout = milsim_default_loadout
 
+    bleeding_spread_modifier    = 4.5
+    fracture_spread_modifier    = 9.5
+    suppression_spread_modifier = 7.0
+
     lmb_spade_speed = 1.0
     rmb_spade_speed = 0.7
 
@@ -123,8 +127,11 @@ class MilsimConnection(FeatureConnection):
 
         self.inventory = Inventory()
 
-        self.last_hp_update = None
-        self.body           = Body()
+        self.courage_value            = 1.0
+        self.suppression_value        = 0.0
+        self.suppression_warning_sent = False
+        self.last_hp_update           = None
+        self.body                     = Body()
 
         self.previous_floor_position = None
 
@@ -147,6 +154,15 @@ class MilsimConnection(FeatureConnection):
         self.send_contained(contained)
 
     # (2) Methods specific to `MilsimConnection`
+
+    def get_spread_modifier(self):
+        svth = self.protocol.suppression_threshold
+
+        return max(
+            self.suppression_spread_modifier * max(0, self.suppression_value - svth) / (1 - svth),
+            self.bleeding_spread_modifier if self.body.bleeding() else 0.0,
+            self.fracture_spread_modifier if self.body.fractured() else 0.0,
+        )
 
     def handgrenades(self):
         return filter(lambda o: isinstance(o, HandgrenadeItem), self.inventory)
@@ -454,6 +470,9 @@ class MilsimConnection(FeatureConnection):
 
         self.last_sprint      = 0
         self.last_tool_update = 0
+
+        self.suppression_value        = 0.0
+        self.suppression_warning_sent = False
 
         self.last_hp_update = monotonic()
 

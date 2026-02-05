@@ -21,6 +21,7 @@ import os
 from twisted.internet import threads
 from twisted.logger import Logger
 
+from pyspades.collision import distance_3d_vector
 import pyspades.contained as loaders
 from pyspades.common import Vertex3
 from pyspades.constants import *
@@ -38,7 +39,7 @@ from milsim.weapon import ABCWeapon, Rifle, SMG, Shotgun, HEIMagazine
 from milsim.vxl import onDeleteQueue, deleteQueueClear
 from milsim.map import MapInfo, check_rotation
 from milsim.constants import Limb, HitEffect
-from milsim.engine import Engine
+from milsim.engine import Engine, toMeters
 from milsim.common import *
 
 from milsim.items import (
@@ -88,6 +89,13 @@ def milsim_default_tent_loadout(protocol, team):
 log = Logger()
 
 class MilsimProtocol(FeatureProtocol):
+    suppression_rate_min   = 12.0
+    suppression_rate_max   = 60.0
+    suppression_threshold  = 0.5
+    suppression_per_joule  = 0.15 / 1000
+    suppression_near_range = 1.0
+    suppression_far_range  = 20.0
+
     default_tent_loadout = milsim_default_tent_loadout
 
     WeaponTool  = ABCWeapon
@@ -264,10 +272,24 @@ class MilsimProtocol(FeatureProtocol):
 
             self.drop_item_entity(x, y, z)
 
+        τ1, τ2 = self.suppression_rate_min, self.suppression_rate_max
+
         for player in self.living():
             if self.environment.size.inside(player.world_object.position) is False:
                 player.kill()
                 continue
+
+            τ = τ2 + (τ1 - τ2) * player.courage_value
+            player.suppression_value = τ * player.suppression_value / (τ + dt)
+
+            if player.suppression_warning_sent:
+                if player.suppression_value < 0.5:
+                    player.suppression_warning_sent = False
+            else:
+                if player.suppression_value > 0.7:
+                    player.suppression_warning_sent = True
+
+                    player.body.pushl_message("You feel getting suppressed")
 
             player.body.update(dt)
 
@@ -363,10 +385,22 @@ class MilsimProtocol(FeatureProtocol):
             rule = hasHitEffects
         )
 
+        r = Vertex3(x, y, z)
+        v = Vertex3(vx, vy, vz)
+
         if callable(o.on_block_hit):
-            return o.on_block_hit(
-                self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A
-            )
+            return o.on_block_hit(self, r, v, X, Y, Z, thrower, E, A)
+
+        svpj, d1, d2 = self.suppression_per_joule, self.suppression_near_range, self.suppression_far_range
+
+        for player in self.living():
+            if player.player_id == thrower: continue
+
+            d = toMeters(distance_3d_vector(r, player.world_object.position))
+
+            if d < d2:
+                Δsv = svpj * E / pow(max(d1, d), 2.0)
+                player.suppression_value = min(player.suppression_value + Δsv, 1.0)
 
     def onPlayerHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower, E, A, target, limb_index):
         player    = self.players.get(target)

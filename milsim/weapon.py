@@ -151,10 +151,12 @@ class ABCWeapon(Tool):
 
             engine = self.player.protocol.engine
 
+            spread = cartridge.grouping * self.player.get_spread_modifier()
+
             for i in range(cartridge.pellets):
                 u = toMeters3(o.velocity * 32)
                 v = n * gauss(mu = cartridge.muzzle, sigma = cartridge.muzzle * cartridge.deviation)
-                engine.add(self.player.player_id, r, u + cone(v, cartridge.grouping), t, cartridge)
+                engine.add(self.player.player_id, r, u + cone(v, spread), t, cartridge)
 
             self.player.sendWeaponReloadPacket()
 
