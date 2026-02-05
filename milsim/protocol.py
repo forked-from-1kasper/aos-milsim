@@ -379,7 +379,7 @@ class MilsimProtocol(FeatureProtocol):
             player.on_block_removed(x, y, z)
             player.total_blocks_removed += count
 
-    def onBlockHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower, E, A):
+    def onBlockHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower_id, E, A):
         self.broadcast_contained(
             HitEffectPacket(x, y, z, X, Y, Z, HitEffect.block),
             rule = hasHitEffects
@@ -389,22 +389,22 @@ class MilsimProtocol(FeatureProtocol):
         v = Vertex3(vx, vy, vz)
 
         if callable(o.on_block_hit):
-            return o.on_block_hit(self, r, v, X, Y, Z, thrower, E, A)
+            return o.on_block_hit(self, r, v, X, Y, Z, thrower_id, E, A)
 
         svpj, d1, d2 = self.suppression_per_joule, self.suppression_near_range, self.suppression_far_range
 
         for player in self.living():
-            if player.player_id == thrower: continue
+            if player.player_id == thrower_id: continue
 
             d = toMeters(distance_3d_vector(r, player.world_object.position))
 
             if d < d2:
-                Δsv = svpj * E / pow(max(d1, d), 2.0)
+                Δsv = svpj * E / max(d1 * d1, d * d)
                 player.suppression_value = min(player.suppression_value + Δsv, 1.0)
 
-    def onPlayerHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower, E, A, target, limb_index):
-        player    = self.players.get(target)
-        hit_by    = self.players.get(thrower, player)
+    def onPlayerHit(self, o, x, y, z, vx, vy, vz, X, Y, Z, thrower_id, E, A, target_id, limb_index):
+        player    = self.players.get(target_id)
+        hit_by    = self.players.get(thrower_id, player)
         limb      = Limb(limb_index)
         kill_type = GRENADE_KILL if o.grenade else HEADSHOT_KILL if limb == Limb.head else WEAPON_KILL
 
@@ -425,7 +425,7 @@ class MilsimProtocol(FeatureProtocol):
 
             if callable(o.on_player_hit):
                 return o.on_player_hit(
-                    self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower, E, A, target, limb
+                    self, Vertex3(x, y, z), Vertex3(vx, vy, vz), X, Y, Z, thrower_id, E, A, target_id, limb
                 )
 
         return True
