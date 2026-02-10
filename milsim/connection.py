@@ -646,7 +646,8 @@ class MilsimConnection(FeatureConnection):
             self.grenade_object.unpin_time = 0
             self.create_grenade(self.world_object.position.copy(), Vertex3(), fuse)
 
-        self.weapon_object.reset()
+        if o := self.weapon_object:
+            o.reset()
 
         self.drop_flag()
         self.drop_inventory()
@@ -655,7 +656,8 @@ class MilsimConnection(FeatureConnection):
 
         self.hp = None
 
-        self.world_object.dead = True
+        if wo := self.world_object:
+            wo.dead = True
 
         self.last_killer     = by
         self.last_death_type = kill_type
