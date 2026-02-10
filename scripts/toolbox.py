@@ -367,36 +367,34 @@ def advancecancel(connection):
             protocol.broadcast_chat('Map advance cancelled.')
 
 @command('listroles', 'roles', 'lsr')
-def c_roles(connection, nickname):
+def c_roles(connection, argval = None):
     """
     List roles of the given player
-    /listroles <player>
+    /listroles [player]
     """
 
-    player = get_player(connection.protocol, nickname)
+    player   = connection if argval is None else get_player(connection.protocol, argval)
+    nickname = player.name or "#{}".format(player.player_id)
 
     if bool(player.user_types):
-        return "{}: {}".format(
-            player.name, ", ".join(player.user_types)
-        )
+        return "{}: {}".format(nickname, ", ".join(player.user_types))
     else:
-        return "{} has no roles".format(player.name)
+        return "{} has no roles".format(nickname)
 
 @command('listrights', 'rights', 'lsrights')
-def c_listrights(connection, nickname = None):
+def c_listrights(connection, argval = None):
     """
     List additional rights of the specified player
-    /listrights [nickname]
+    /listrights [player]
     """
 
-    player = connection if nickname is None else get_player(connection.protocol, nickname)
+    player   = connection if argval is None else get_player(connection.protocol, argval)
+    nickname = player.name or "#{}".format(player.player_id)
 
     if bool(player.rights):
-        return "{}: {}".format(
-            player.name, ", ".join(player.rights)
-        )
+        return "{}: {}".format(nickname, ", ".join(player.rights))
     else:
-        return "{} has no additional rights".format(player.name)
+        return "{} has no additional rights".format(nickname)
 
 @command('grant', admin_only = True)
 def c_grant(connection, nickname, argval):
