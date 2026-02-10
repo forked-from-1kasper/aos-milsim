@@ -25,7 +25,7 @@ from pyspades.constants import *
 from milsim.items import (
     BandageItem, TourniquetItem, SplintItem,
     RangefinderItem, ProtractorItem, CompassItem,
-    HandheldRadioItem
+    HandheldRadioItem, is_reachable
 )
 from milsim.underbarrel import GrenadeLauncher, GrenadeItem
 from milsim.engine import toMeters
@@ -293,6 +293,7 @@ def c_takegrenade(player, argval = 1):
     Try to take a given number of grenades and a grenade launcher
     /tg [n] or /takegrenade
     """
+
     n = int(argval)
 
     if n <= 0: return "Invalid number of grenades"
@@ -364,6 +365,7 @@ def c_next(player, argval = None):
     Scroll to the next or specified page
     /n [page number | search query] or /next
     """
+
     player.page = scroll(player, argval, +1)
     return format_page(player.page, available(player))
 
@@ -374,6 +376,7 @@ def c_prev(player, argval = None):
     Scroll to the previous or specified page
     /p [page number | search query] or /prev
     """
+
     player.page = scroll(player, argval, -1)
     return format_page(player.page, available(player))
 
@@ -384,6 +387,7 @@ def c_backpack(player, argval = None):
     Print specified page in the player's inventory
     /bp [page number | search query] or /backpack
     """
+
     if argval is None:
         page = 1
     elif argval.isdigit():
@@ -400,6 +404,7 @@ def c_take(player, ID):
     Take an item with the given ID to the inventory
     /take <ID>
     """
+
     for i in player.get_available_inventory():
         if o := i[ID]:
             i.remove(o)
@@ -450,11 +455,46 @@ def c_prioritize(player, ID):
     Give the highest priority to an item with the given ID
     /pr <ID> or /priority
     """
+
     i = player.inventory
 
     if o := i[ID]:
         i.remove(o)
         i.push(o)
+    else:
+        return "There's no [{}] in your backpack".format(ID.upper())
+
+@command('handover', 'hdo')
+@alive_only
+def c_handover(player, nickname, ID):
+    """
+    Hand an item with the given ID over to the given player
+    /hdo <nickname> <ID> or /handover
+    """
+
+    protocol = player.protocol
+    target = get_player(protocol, nickname)
+
+    if target is player:
+        return "{} is you".format(target.name)
+
+    if errmsg := is_reachable(player, target):
+        return errmsg
+
+    i1 = player.inventory
+    i2 = target.inventory
+
+    if o := i1[ID]:
+        i1.remove(o)
+        i2.push(o)
+
+        player.sync()
+        target.sync()
+
+        target.send_chat(
+            "{} has handed [{}] over to you".format(player.name, ID.upper())
+        )
+        return "You have handed [{}] over to {}".format(ID.upper(), target.name)
     else:
         return "There's no [{}] in your backpack".format(ID.upper())
 
@@ -466,6 +506,7 @@ def give(connection, nickname, *w):
     Give an item to the specific player
     /give <player> <item>
     """
+
     protocol = connection.protocol
     player = get_player(protocol, nickname)
 
@@ -492,6 +533,7 @@ def sync(connection):
     Restore block count
     /sync
     """
+
     connection.sync()
 
 @command('togglespade', 'ts')
