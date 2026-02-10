@@ -170,9 +170,9 @@ limbs = {
     "legr":  Limb.legr
 }
 
-@command()
+@command('fracture')
 @alive_only
-def fracture(player, target = None):
+def c_fracture(player, target = None):
     """
     Break the specified limb (useful for debug)
     /fracture
@@ -182,9 +182,9 @@ def fracture(player, target = None):
     else:
         return "Usage: /fracture (torso|head|arml|armr|legl|legr)"
 
-@command()
+@command('vein')
 @alive_only
-def vein(player, target = None):
+def c_vein(player, target = None):
     """
     Cut a vein in the specified limb (useful for debug)
     /vein
@@ -194,9 +194,9 @@ def vein(player, target = None):
     else:
         return "Usage: /vein (torso|head|arml|armr|legl|legr)"
 
-@command()
+@command('artery')
 @alive_only
-def artery(player, target = None):
+def c_artery(player, target = None):
     """
     Cut an artery in the specified limb (useful for debug)
     /artery
@@ -208,7 +208,7 @@ def artery(player, target = None):
 
 @command('bandage', 'b')
 @alive_only
-def bandage(player, nickname = None):
+def c_bandage(player, nickname = None):
     """
     Put the bandage (used to stop venous bleeding)
     /b or /bandage [player]
@@ -217,7 +217,7 @@ def bandage(player, nickname = None):
 
 @command('tourniquet', 't')
 @alive_only
-def tourniquet(player, nickname = None):
+def c_tourniquet(player, nickname = None):
     """
     Put the tourniquet (used to stop arterial bleeding)
     /t or /tourniquet [player]
@@ -226,7 +226,7 @@ def tourniquet(player, nickname = None):
 
 @command('splint', 's')
 @alive_only
-def splint(player, nickname = None):
+def c_splint(player, nickname = None):
     """
     Splint a broken limb
     /s or /splint [player]
@@ -235,25 +235,25 @@ def splint(player, nickname = None):
 
 @command('rangefinder', 'rf')
 @alive_only
-def rangefinder(player):
+def c_rangefinder(player):
     """
     Measure the distance between the player and a given point
     /rangefinder
     """
     return apply_item(RangefinderItem, player, errmsg = "You do not have a rangefinder")
 
-@command()
+@command('protractor')
 @alive_only
-def protractor(player):
+def c_protractor(player):
     """
     Measure the angle between the player and two specified points
     /protractor
     """
     return apply_item(ProtractorItem, player, errmsg = "You do not have a protractor")
 
-@command()
+@command('compass')
 @alive_only
-def compass(player):
+def c_compass(player):
     """
     Print the current azimuth
     /compass
@@ -262,7 +262,7 @@ def compass(player):
 
 @command('grenade', 'gr')
 @alive_only
-def grenade(player):
+def c_grenade(player):
     """
     Load a grenade into a grenade launcher
     /gr or /grenade
@@ -271,7 +271,7 @@ def grenade(player):
 
 @command('launcher', 'gl')
 @alive_only
-def grenade(player):
+def c_launcher(player):
     """
     Equip a grenade launcher
     /gl or /launcher
@@ -288,7 +288,7 @@ def take_grenade_launcher(player, n):
 
 @command('takegrenade', 'tg')
 @alive_only
-def takegrenade(player, argval = 1):
+def c_takegrenade(player, argval = 1):
     """
     Try to take a given number of grenades and a grenade launcher
     /tg [n] or /takegrenade
@@ -300,7 +300,7 @@ def takegrenade(player, argval = 1):
 
 @command('takeradio', 'tra')
 @alive_only
-def takeradio(player):
+def c_takeradio(player):
     """
     Try to take and equip a handheld radio
     /tra or /takeradio
@@ -393,9 +393,9 @@ def c_backpack(player, argval = None):
 
     return format_page(page, player.inventory)
 
-@command()
+@command('take')
 @alive_only
-def take(player, ID):
+def c_take(player, ID):
     """
     Take an item with the given ID to the inventory
     /take <ID>
@@ -410,9 +410,9 @@ def take(player, ID):
 
     return "There's no [{}] nearby".format(ID.upper())
 
-@command()
+@command('drop')
 @alive_only
-def drop(player, ID):
+def c_drop(player, ID):
     """
     Drop an item with the given ID from the inventory
     /drop <ID>
@@ -425,7 +425,7 @@ def drop(player, ID):
 
 @command('use', 'u')
 @alive_only
-def use(player, ID, *w, **kw):
+def c_use(player, ID, *w, **kw):
     """
     Use an item from the inventory with the given ID
     /u <ID> or /use
@@ -445,7 +445,7 @@ def use(player, ID, *w, **kw):
 
 @command('prioritize', 'pr')
 @alive_only
-def prioritize(player, ID):
+def c_prioritize(player, ID):
     """
     Give the highest priority to an item with the given ID
     /pr <ID> or /priority
