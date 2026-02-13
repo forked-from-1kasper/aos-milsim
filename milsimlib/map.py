@@ -115,7 +115,7 @@ class MapInfo:
 
         if not isinstance(self.environment, Environment):
             raise TypeError(
-                "expected milsim.types.Environment instance, found {}: {}".format(
+                "expected milsimlib.types.Environment instance, found {}: {}".format(
                     type(self.environment), self.environment
                 )
             )
