@@ -21,8 +21,8 @@ from pyspades.constants import CTF_MODE
 from piqueserver.commands import command, player_only
 from piqueserver.config import config
 
-from milsim.grammar import RegularNoun, CompoundNoun, Verb3, Cardinal, VerbNTR, np_vp_past
-from milsim.connection import MilsimConnection
+from milsimlib.grammar import RegularNoun, CompoundNoun, Verb3, Cardinal, VerbNTR, np_vp_past
+from milsimlib.connection import MilsimConnection
 
 cqb_section              = config.section("cqb")
 cqb_respawn_tickets      = cqb_section.option("respawn_tickets", 64).get()
