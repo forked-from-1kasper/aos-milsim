@@ -81,7 +81,7 @@ limb_fracture_np = {
 
 bleeding_warning = "You're bleeding"
 
-from milsim.items import BandageItem, TourniquetItem, SplintItem, F1GrenadeItem
+from milsimlib.items import BandageItem, TourniquetItem, SplintItem, F1GrenadeItem
 
 def milsim_default_loadout(self):
     yield BandageItem()
