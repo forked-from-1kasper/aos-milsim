@@ -19,8 +19,8 @@ from math import radians
 
 from pyspades.common import make_color
 
-from milsim.vxl import VxlData
-from milsim.maptools import *
+from milsimlib.vxl import VxlData
+from milsimlib.maptools import *
 
 name    = 'Tower'
 version = '1.1'

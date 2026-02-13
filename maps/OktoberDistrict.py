@@ -14,9 +14,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from itertools import product
-from milsim.maptools import *
 
-from milsim.weather.openmeteo import OpenMeteo
+from milsimlib.maptools import *
+from milsimlib.weather.openmeteo import OpenMeteo
 
 name        = "OktoberDistrict"
 version     = "1.1"

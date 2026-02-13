@@ -20,9 +20,9 @@ from random import randint, choice
 
 from pyspades.common import make_color
 
-from milsim.types import StaticWeather
-from milsim.vxl import VxlData
-from milsim.maptools import *
+from milsimlib.types import StaticWeather
+from milsimlib.vxl import VxlData
+from milsimlib.maptools import *
 
 name    = 'Babylon'
 version = '1.1'

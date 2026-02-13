@@ -17,9 +17,9 @@ from itertools import product
 
 from pyspades.common import make_color
 
-from milsim.types import StaticWeather
-from milsim.vxl import VxlData
-from milsim.maptools import *
+from milsimlib.types import StaticWeather
+from milsimlib.vxl import VxlData
+from milsimlib.maptools import *
 
 name        = "pinline2"
 version     = "1.0"
