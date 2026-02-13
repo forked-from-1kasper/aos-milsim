@@ -18,6 +18,9 @@ all: build
 build:
 	mkdir -p build
 
+grammar:
+	$(PYTHON) -m milsimlib.grammar
+
 clean:
 	rm -f build/*.o build/*.h build/*.cxx milsimlib/*.so
 
