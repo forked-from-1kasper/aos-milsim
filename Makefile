@@ -19,7 +19,7 @@ build:
 	mkdir -p build
 
 clean:
-	rm -f build/*.o build/*.h build/*.cxx milsim/*.so
+	rm -f build/*.o build/*.h build/*.cxx milsimlib/*.so
 
 build/%.cxx: source/%.pyx
 	$(CYTHON) --cplus -3 $< -o $@
@@ -30,13 +30,13 @@ build/%.o: build/%.cxx
 build/%.o: source/%.cxx
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
-milsim/%.so: build/%.o
+milsimlib/%.so: build/%.o
 	$(CXX) $(LDFLAGS) $^ -o $@
 
 %.hxx:
 	touch $@
 
-all: milsim/packets.so milsim/engine.so milsim/vxl.so
+all: milsimlib/packets.so milsimlib/engine.so milsimlib/vxl.so
 
 build/engine.h: build/engine.o
 
@@ -47,8 +47,8 @@ build/Engine.o: include/Milsim/Engine.hxx
 build/PyEngine.o: include/Milsim/Engine.hxx include/Milsim/PyEngine.hxx
 build/VXL.o: include/VXL.hxx
 
-milsim/vxl.so: build/VXL.o
-milsim/engine.so: build/PyEngine.o build/Engine.o
+milsimlib/vxl.so: build/VXL.o
+milsimlib/engine.so: build/PyEngine.o build/Engine.o
 
 include/Milsim/AABB.hxx: include/Milsim/Vector.hxx
 include/Milsim/Engine.hxx: build/engine.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
