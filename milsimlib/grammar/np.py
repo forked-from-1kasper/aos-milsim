@@ -15,13 +15,13 @@
 
 from dataclasses import dataclass
 
-from milsim.grammar.category import (
+from milsimlib.grammar.category import (
     GrammarError, Number, Person, Case,
     SG, PL, NOM, OBL, POS, INF, P3RD, PTCP1
 )
-from milsim.grammar.paradigms import cardinal, ordinal
-from milsim.grammar.syntax import NP, VP
-from milsim.grammar.noun import Noun
+from milsimlib.grammar.paradigms import cardinal, ordinal
+from milsimlib.grammar.syntax import NP, VP
+from milsimlib.grammar.noun import Noun
 
 def ProperNoun(value, number = SG):
     def left(c : Case):

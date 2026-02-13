@@ -27,10 +27,10 @@ from pyspades.color import interpolate_rgb
 from pyspades.constants import SPADE_TOOL
 from pyspades.common import Vertex3
 
-from milsim.constants import Pound, Inch, Limb
-from milsim.engine import Material
+from milsimlib.constants import Pound, Inch, Limb
+from milsimlib.engine import Material
 
-from milsim.grammar import Adjective, RegularNoun
+from milsimlib.grammar import Adjective, RegularNoun
 
 randbool = lambda prob: random() <= prob
 

@@ -19,12 +19,12 @@ from pyspades.common import Vertex3
 
 from piqueserver.commands import command, player_only
 
-from milsim.common import (
+from milsimlib.common import (
     alive_only, apply_item, has_item,
     take_item, take_items, format_taken_items
 )
-from milsim.blast import HighExplosive, sendGrenadePacket
-from milsim.types import TileEntity, Item
+from milsimlib.blast import HighExplosive, sendGrenadePacket
+from milsimlib.types import TileEntity, Item
 
 class ExplosiveEntity(TileEntity):
     Δx, Δy, Δz = 0, 0, 0

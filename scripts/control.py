@@ -22,15 +22,15 @@ from piqueserver.commands import command, get_player, player_only
 from pyspades.common import Vertex3
 from pyspades.constants import *
 
-from milsim.items import (
+from milsimlib.items import (
     BandageItem, TourniquetItem, SplintItem,
     RangefinderItem, ProtractorItem, CompassItem,
     HandheldRadioItem, is_reachable
 )
-from milsim.underbarrel import GrenadeLauncher, GrenadeItem
-from milsim.engine import toMeters
-from milsim.constants import Limb
-from milsim.common import *
+from milsimlib.underbarrel import GrenadeLauncher, GrenadeItem
+from milsimlib.engine import toMeters
+from milsimlib.constants import Limb
+from milsimlib.common import *
 
 yn = lambda b: "yes" if b else "no"
 
@@ -522,7 +522,7 @@ def give(connection, nickname, *w):
 
             return "Given {} to {}".format(format_item(o), player.name)
         else:
-            return "milsim.types.Item instance expected, got {}: {}".format(
+            return "milsimlib.types.Item instance expected, got {}: {}".format(
                 type(o).__name__, o
             )
 

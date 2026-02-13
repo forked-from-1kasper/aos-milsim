@@ -22,9 +22,9 @@ from pyspades.common import Vertex3
 
 from piqueserver.commands import CommandError
 
-from milsim.constants import Pound, Yard, Inch
-from milsim.engine import toMeters
-from milsim.types import *
+from milsimlib.constants import Pound, Yard, Inch
+from milsimlib.engine import toMeters
+from milsimlib.types import *
 
 class Result:
     __match_args__ = ("value",)

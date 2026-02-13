@@ -15,7 +15,7 @@
 
 from collections.abc import Iterator
 
-from milsim.grammar.category import (
+from milsimlib.grammar.category import (
     GrammarError,
     Number, SG, PL,
     Person, P1ST, P2ND, P3RD,
@@ -24,24 +24,24 @@ from milsim.grammar.category import (
     VerbForm, INF, PTCP1, PTCP2
 )
 
-from milsim.grammar.verb import Verb, ModalVerb, Verb3, Verb4, RegularVerb
+from milsimlib.grammar.verb import Verb, ModalVerb, Verb3, Verb4, RegularVerb
 
-from milsim.grammar.noun import Noun, Noun2, RegularNoun, CompoundNoun
+from milsimlib.grammar.noun import Noun, Noun2, RegularNoun, CompoundNoun
 
-from milsim.grammar.syntax import Token, Phrase, NP, VP, Sentence
+from milsimlib.grammar.syntax import Token, Phrase, NP, VP, Sentence
 
-from milsim.grammar.np import (
+from milsimlib.grammar.np import (
     ProperNoun, ZeroArticle, Determiner, Possessive, Cardinal, Ordinal,
     Pronoun, Adjective, NotNP, InfinitivePhrase, Gerund
 )
-from milsim.grammar.vp import (
+from milsimlib.grammar.vp import (
     AdverbPrefix, AdverbPostfix, VerbNTR, VerbNP, VerbNPPP, VerbVP, VerbVPPP
 )
-from milsim.grammar.sentence import (
+from milsimlib.grammar.sentence import (
     Declarative, YesNoInterrogative, Imperative, Compound
 )
 
-from milsim.grammar.paradigms import AnToken, CompoundToken, flatten
+from milsimlib.grammar.paradigms import AnToken, CompoundToken, flatten
 
 # This module is intented to provide a convient AST for natural language generation,
 # but not for the accurate representation of how the language actually works,

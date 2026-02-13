@@ -16,9 +16,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from milsim.grammar.category import GrammarError, Number, SG, PL, Case, NOM, OBL, POS
-from milsim.grammar.paradigms import CompoundToken, possessify, pluralize
-from milsim.grammar.syntax import Token
+from milsimlib.grammar.category import GrammarError, Number, SG, PL, Case, NOM, OBL, POS
+from milsimlib.grammar.paradigms import CompoundToken, possessify, pluralize
+from milsimlib.grammar.syntax import Token
 
 @dataclass
 class Noun:

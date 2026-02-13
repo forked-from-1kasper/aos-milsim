@@ -18,11 +18,11 @@ from math import radians
 
 from pyspades.common import Vertex3
 
-from milsim.engine import Material
+from milsimlib.engine import Material
 
-from milsim.common import grain, gram, isosceles, yard, inch, mm, MOA
-from milsim.blast import HighExplosive, sendGrenadePacket
-from milsim.types import G1, G7, Shotshell
+from milsimlib.common import grain, gram, isosceles, yard, inch, mm, MOA
+from milsimlib.blast import HighExplosive, sendGrenadePacket
+from milsimlib.types import G1, G7, Shotshell
 
 @dataclass
 class G7HEI(G7):

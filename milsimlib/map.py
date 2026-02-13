@@ -28,7 +28,7 @@ from twisted.logger import Logger
 from piqueserver.map import MapNotFound
 from piqueserver.config import config
 
-from milsim.types import Environment
+from milsimlib.types import Environment
 
 log = Logger()
 

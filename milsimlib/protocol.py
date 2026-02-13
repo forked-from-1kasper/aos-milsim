@@ -29,27 +29,27 @@ from pyspades.constants import *
 from piqueserver.server import FeatureProtocol
 from piqueserver.config import config
 
-from milsim.packets import (
+from milsimlib.packets import (
     TracerPacket, HitEffectPacket,
     hasTraceExtension, hasHitEffects,
     milsim_extensions
 )
 
-from milsim.weapon import ABCWeapon, Rifle, SMG, Shotgun, HEIMagazine
-from milsim.vxl import onDeleteQueue, deleteQueueClear
-from milsim.map import MapInfo, check_rotation
-from milsim.constants import Limb, HitEffect
-from milsim.engine import Engine, toMeters
-from milsim.common import *
+from milsimlib.weapon import ABCWeapon, Rifle, SMG, Shotgun, HEIMagazine
+from milsimlib.vxl import onDeleteQueue, deleteQueueClear
+from milsimlib.map import MapInfo, check_rotation
+from milsimlib.constants import Limb, HitEffect
+from milsimlib.engine import Engine, toMeters
+from milsimlib.common import *
 
-from milsim.items import (
+from milsimlib.items import (
     Kettlebell, CompassItem, ProtractorItem,
     RangefinderItem, StunHandgrenadeItem,
     TaopengRadioItem, EecomRadioItem
 )
-from milsim.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
-from milsim.builtin import Buckshot0000, Buckshot00, Bullet
-from milsim.types import CartridgeBox
+from milsimlib.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
+from milsimlib.builtin import Buckshot0000, Buckshot00, Bullet
+from milsimlib.types import CartridgeBox
 
 def milsim_default_tent_loadout(protocol, team):
     for k in range(90):

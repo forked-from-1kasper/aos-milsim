@@ -16,7 +16,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from milsim.grammar.category import (
+from milsimlib.grammar.category import (
     GrammarError, VerbForm,
     INF,     PTCP1,   PTCP2,
     PRES1SG, PRES2SG, PRES3SG,
@@ -25,8 +25,8 @@ from milsim.grammar.category import (
     PAST1PL, PAST2PL, PAST3PL
 )
 
-from milsim.grammar.paradigms import esize, ingize, edize
-from milsim.grammar.syntax import Token
+from milsimlib.grammar.paradigms import esize, ingize, edize
+from milsimlib.grammar.syntax import Token
 
 @dataclass
 class Verb:

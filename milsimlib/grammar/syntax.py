@@ -17,7 +17,7 @@ from collections.abc import Callable, Iterator
 from abc import ABC, abstractmethod
 from typing import Any, Protocol
 
-from milsim.grammar.category import Number, Person, Case, VerbForm
+from milsimlib.grammar.category import Number, Person, Case, VerbForm
 
 class HasEmit(Protocol):
     def emit(rem : Iterator[str]) -> Iterator[str]:

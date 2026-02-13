@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from milsim.grammar import (
+from milsimlib.grammar import (
     Declarative, YesNoInterrogative, Imperative, Compound, VerbNTR, InfinitivePhrase, Possessive, Cardinal, Ordinal,
     PassiveVoice, PerfectAspect, ProgressiveAspect, RegularNoun, CompoundNoun, Verb4, RegularVerb,
     linearize, VerbVP, VerbNP, VerbNPPP, this_pr, that_pr, zero_sg, zero_pl, an_sg, the_sg, the_pl, not_adv, good_adj,
@@ -22,7 +22,7 @@ from milsim.grammar import (
 )
 
 # Some useful examples & tests of this formal grammar.
-# To run these use `python -m milsim.grammar`.
+# To run these use `python -m milsimlib.grammar`.
 
 ################################
 player_n = RegularNoun("player")

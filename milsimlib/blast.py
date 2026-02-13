@@ -25,9 +25,9 @@ from pyspades.contained import GrenadePacket
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
 
-from milsim.engine import toMeters
-from milsim.constants import Limb
-from milsim.vxl import can_see
+from milsimlib.engine import toMeters
+from milsimlib.constants import Limb
+from milsimlib.vxl import can_see
 
 class HEGrenadeObject(Grenade):
     @property

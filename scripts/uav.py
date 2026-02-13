@@ -27,8 +27,8 @@ from pyspades.team import Team
 from piqueserver.commands import command, get_player, CommandError
 from piqueserver.config import config
 
-from milsim.blast import HighExplosive, HEGrenadeObject, sendGrenadePacket
-from milsim.common import alive_only
+from milsimlib.blast import HighExplosive, HEGrenadeObject, sendGrenadePacket
+from milsimlib.common import alive_only
 
 section = config.section("drone")
 

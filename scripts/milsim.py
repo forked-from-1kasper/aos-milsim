@@ -18,9 +18,9 @@
 
 from piqueserver.commands import command
 
-from milsim.connection import MilsimConnection
-from milsim.protocol import MilsimProtocol
-from milsim.map import check_map
+from milsimlib.connection import MilsimConnection
+from milsimlib.protocol import MilsimProtocol
+from milsimlib.map import check_map
 
 @command()
 def seed(connection):

@@ -15,8 +15,8 @@
 
 from dataclasses import dataclass
 
-from milsim.grammar.category import Tense, fvf, NOM, INF
-from milsim.grammar.syntax import NP, VP, Sentence
+from milsimlib.grammar.category import Tense, fvf, NOM, INF
+from milsimlib.grammar.syntax import NP, VP, Sentence
 
 @dataclass(repr = False)
 class Declarative(Sentence):

@@ -19,11 +19,11 @@ from pyspades.collision import distance_3d_vector
 from pyspades.common import Vertex3
 from pyspades.team import Team
 
-from milsim.common import Success, Failure, toMeters, dot, xOy, azimuth, needle, format_item
-from milsim.blast import HighExplosive, HEGrenadeObject, FlashbangObject
-from milsim.types import Item
+from milsimlib.common import Success, Failure, toMeters, dot, xOy, azimuth, needle, format_item
+from milsimlib.blast import HighExplosive, HEGrenadeObject, FlashbangObject
+from milsimlib.types import Item
 
-from milsim.grammar import (
+from milsimlib.grammar import (
     VerbNTR, VerbNP, VerbNPPP, ProgressiveAspect, Possessive, ProperNoun, RegularNoun,
     Verb3, RegularVerb, an_sg, no_pl, you_pr, have_v, not_adv, np_vp_pres, np_vp_past, SG
 )

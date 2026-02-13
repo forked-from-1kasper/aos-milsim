@@ -19,10 +19,10 @@ from pyspades.constants import UPDATE_FREQUENCY
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
 
-from milsim.blast import HighExplosive, HEGrenadeObject, FlashbangObject, sendGrenadePacket
-from milsim.weapon import UnderbarrelItem
-from milsim.common import format_item
-from milsim.types import Item
+from milsimlib.blast import HighExplosive, HEGrenadeObject, FlashbangObject, sendGrenadePacket
+from milsimlib.weapon import UnderbarrelItem
+from milsimlib.common import format_item
+from milsimlib.types import Item
 
 class GrenadeLauncher(UnderbarrelItem):
     basename = "M203 Grenade Launcher"

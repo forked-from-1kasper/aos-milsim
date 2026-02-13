@@ -22,14 +22,16 @@ from twisted.internet import reactor
 
 from pyspades.protocol import BaseProtocol
 from pyspades.constants import WEAPON_TOOL
-from piqueserver.config import config
 from pyspades.common import Vertex3
 from pyspades.team import Team
 
-from milsim.blast import HighExplosive, sendGrenadePacket
-from milsim.weapon import UnderbarrelItem
 from piqueserver.commands import command
-from milsim.common import alive_only
+from piqueserver.config import config
+
+from milsimlib.blast import HighExplosive, sendGrenadePacket
+from milsimlib.weapon import UnderbarrelItem
+
+from milsimlib.common import alive_only
 
 section = config.section("airstrike")
 

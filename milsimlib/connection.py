@@ -38,18 +38,18 @@ from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 
-from milsim.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
-from milsim.blast import sendGrenadePacket, flashbang_effect
-from milsim.types import Inventory, Body, randbool, logistic
-from milsim.engine import WorldObject, toMeters
-from milsim.items import HandgrenadeItem
-from milsim.constants import Limb
+from milsimlib.common import grenade_zone, TNT, gram, ilen, iempty, floor3, clamp
+from milsimlib.blast import sendGrenadePacket, flashbang_effect
+from milsimlib.types import Inventory, Body, randbool, logistic
+from milsimlib.engine import WorldObject, toMeters
+from milsimlib.items import HandgrenadeItem
+from milsimlib.constants import Limb
 
-from milsim.grammar import (
+from milsimlib.grammar import (
     RegularNoun, Verb3, Verb4, Cardinal, VerbNTR, VerbNP, VerbNPPP, PassiveVoice,
     PerfectAspect, Possessive, Adjective, you_pr, an_sg, np_vp_pres, SG
 )
-from milsim.types import arm_n, leg_n, left_adj, right_adj
+from milsimlib.types import arm_n, leg_n, left_adj, right_adj
 
 feel_v    = Verb3(bare = "feel", ving = "feeling", ved = "felt", v3sg = "feels")
 break_v   = Verb4(bare = "break", ving = "breaking", ved = "broken", v3sg = "breaks", vpast = "broke")

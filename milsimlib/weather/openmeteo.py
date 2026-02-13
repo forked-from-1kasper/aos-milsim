@@ -20,8 +20,8 @@ import requests
 from twisted.internet import threads
 from twisted.logger import Logger
 
-from milsim.types import Weather
-from milsim.common import clamp
+from milsimlib.types import Weather
+from milsimlib.common import clamp
 
 logger = Logger()
 

@@ -15,8 +15,8 @@
 
 from collections.abc import Iterator
 
-from milsim.grammar.category import GrammarError
-from milsim.grammar.syntax import HasEmit, Token
+from milsimlib.grammar.category import GrammarError
+from milsimlib.grammar.syntax import HasEmit, Token
 
 def flatten(tokens : Iterator[Token]) -> Iterator[str]:
     for token in tokens:

@@ -16,9 +16,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from milsim.grammar.category import VerbForm, OBL
-from milsim.grammar.syntax import NP, VP
-from milsim.grammar.verb import Verb
+from milsimlib.grammar.category import VerbForm, OBL
+from milsimlib.grammar.syntax import NP, VP
+from milsimlib.grammar.verb import Verb
 
 @dataclass(repr = False)
 class AdverbPrefix:

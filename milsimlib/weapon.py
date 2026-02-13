@@ -18,10 +18,10 @@ from math import inf
 
 from pyspades.constants import *
 
-from milsim.types import CartridgeBox, BoxMagazine, TubularMagazine, Shotshell
-from milsim.builtin import R762x54mm, HEI762x54mm, Parabellum, Buckshot0000
-from milsim.engine import cone
-from milsim.common import *
+from milsimlib.types import CartridgeBox, BoxMagazine, TubularMagazine, Shotshell
+from milsimlib.builtin import R762x54mm, HEI762x54mm, Parabellum, Buckshot0000
+from milsimlib.engine import cone
+from milsimlib.common import *
 
 class UnderbarrelItem(Item):
     def on_press(self, player):
