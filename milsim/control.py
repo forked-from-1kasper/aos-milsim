@@ -547,6 +547,40 @@ def togglespade(connection):
     connection.spade_friendly_fire = not connection.spade_friendly_fire
     return "Spade friendly fire is {} now".format("enabled" if connection.spade_friendly_fire else "disabled")
 
+@command('heal', admin_only = True)
+def c_heal(connection, nickname = None):
+    """
+    Heal you or a given player
+    /heal [player]
+    """
+
+    protocol = connection.protocol
+    player = get_player(protocol, nickname)
+
+    if player.alive():
+        player.body.reset()
+
+        protocol.broadcast_chat(
+            "{} has been healed by {}".format(player.name, connection.name)
+        )
+
+@command('refill', admin_only = True)
+def c_refill(connection, nickname = None):
+    """
+    Refill you or a given player
+    /refill [player]
+    """
+
+    protocol = connection.protocol
+    player = get_player(protocol, nickname)
+
+    if player.alive():
+        player.refill()
+
+        protocol.broadcast_chat(
+            "{} has been refilled by {}".format(player.name, connection.name)
+        )
+
 def apply_script(protocol, connection, config):
     class ControlConnection(connection):
         def __init__(self, *w, **kw):
