@@ -681,18 +681,11 @@ class MilsimConnection(FeatureConnection):
         self.respawn()
 
     def refill(self, local = False):
-        for P in self.body.values():
-            if P.fractured:
-                P.splint = True
-
-            P.arterial = False
-            P.venous   = False
-
         self.inventory.remove_if(lambda o: not o.persistent)
         self.weapon_object.refill()
         self.on_refill()
 
-        if not local: self.sync()
+        if local is False: self.sync()
 
     def hit(self, value, hit_by = None, kill_type = WEAPON_KILL, limb = Limb.torso,
             venous = False, arterial = False, fractured = False):
