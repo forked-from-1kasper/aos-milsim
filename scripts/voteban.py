@@ -13,6 +13,45 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+"""
+  This is a drop-in replacement for the default `piqueserver.scripts.votekick` script.
+  The default script is modelled after votekick system of a typical FPS game, so it suffers
+  from problems common to most online games as well as from several AoS-specific ones, namely:
+  1) There can be only one active votekick at once, and this feature is often abused by starting
+     a false votekick immediately after joining the server, thus rendering the votekick system
+     useless for a short period of time.
+  2) Votes are being counted on a per-connection basis, which can be easily abused unless the limit
+     of connections per IP is very small (although even 3 simultaneous connections can typically be
+     used to votekick someone at a time when there are only few players on the server).
+  3) Again, as votes are being counted on a per-connection basis, to prevent bypassing a votekick
+     by simply rejoining the server, a player is automatically banned if he leaves while there is
+     an active votekick against him. Thus, a poor network connection can result in an accidental ban.
+     Moreover, as many servers have unreasonably strict policy against ‘ban evasion’, an attempt
+     to rejoin the server from the other IP after getting such a ban can result in an even longer ban.
+  4) In many cases, a problematic player affects only one team (i.e., an aimbot targets on the opposing
+     team and a griefer targets on the allied team), so the other team votes very reluctantly.
+     In the absense of moderators this often means complete impunity.
+  5) Moderators are fully immune to votekicks. Moreover, many servers have a special category
+     of ‘trusted’ players that are immune too, which is proven to be a legitimatized way to play
+     with cheats.
+
+  This script is an attempt to solve these problems. Firstly, votekicks here have no time limits
+  as well as any restrictions on simultaneous votes. Secondly, all votes are counted on a per-IP
+  basis. Thirdly, no players are immune to votekicks. Finally, the possibility to votekick some
+  player by one team if there are enough votes in that team is provided.
+
+  As a replacement for the ‘/cancel’ command, which no longer makes sense here, ‘/veto’ and ‘/rvo’
+  commands are provided for moderators. ‘/veto’ postpones the ban until at least one veto is imposed,
+  without stopping the votekick itself. ‘/rvo’ revokes all votes made against a given player.
+
+  To prevent abuse, ‘/rvo’ is limited by the timeout and ‘/veto’ against moderator eliminates any
+  capability of that moderator to manage bans until at least one veto is imposed. In addition,
+  a moderator against whom at least one vote has been made is also partially restricted.
+
+  To increase the degree of self-governance of the players, ‘/voteunban’ and ‘/votepunish’ commands
+  are also provided as the exact opposite of ‘/voteban’ and ‘/votepardon’.
+"""
+
 from collections import Counter
 from itertools import chain
 from math import ceil
