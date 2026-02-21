@@ -18,8 +18,7 @@
 
 from piqueserver.commands import command
 
-from milsimlib.connection import MilsimConnection
-from milsimlib.protocol import MilsimProtocol
+from milsimlib import MilsimProtocol, MilsimConnection
 from milsimlib.map import check_map
 
 @command()
