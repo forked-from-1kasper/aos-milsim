@@ -29,6 +29,7 @@ from piqueserver.commands import command, player_only
 from piqueserver.config import config
 
 from milsimlib.blast import HighExplosive, sendGrenadePacket
+from milsimlib import ismilsim
 
 section = config.section("kamikaze")
 
@@ -116,6 +117,8 @@ def boom(player, fuse = 0):
     return player.belt.start(fuse)
 
 def apply_script(protocol, connection, config):
+    assert ismilsim(protocol, connection)
+
     class KamikazeConnection(connection):
         def __init__(self, *w, **kw):
             connection.__init__(self, *w, **kw)

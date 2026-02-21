@@ -29,6 +29,7 @@ from piqueserver.config import config
 
 from milsimlib.blast import HighExplosive, HEGrenadeObject, sendGrenadePacket
 from milsimlib.common import alive_only
+from milsimlib import ismilsim
 
 section = config.section("drone")
 
@@ -185,6 +186,8 @@ def drone(conn, nickname = None):
             drone.track(conn, player)
 
 def apply_script(protocol, connection, config):
+    assert ismilsim(protocol, connection)
+
     class UAVProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)

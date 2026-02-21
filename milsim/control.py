@@ -30,6 +30,7 @@ from milsimlib.items import (
 from milsimlib.underbarrel import GrenadeLauncher, GrenadeItem
 from milsimlib.engine import toMeters
 from milsimlib.constants import Limb
+from milsimlib import ismilsim
 from milsimlib.common import *
 
 yn = lambda b: "yes" if b else "no"
@@ -582,6 +583,8 @@ def c_refill(connection, nickname = None):
         )
 
 def apply_script(protocol, connection, config):
+    assert ismilsim(protocol, connection)
+
     class ControlConnection(connection):
         def __init__(self, *w, **kw):
             self.previous_grid_position = None

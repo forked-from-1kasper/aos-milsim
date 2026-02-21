@@ -32,6 +32,7 @@ from milsimlib.blast import HighExplosive, sendGrenadePacket
 from milsimlib.weapon import UnderbarrelItem
 
 from milsimlib.common import alive_only
+from milsimlib import ismilsim
 
 section = config.section("airstrike")
 
@@ -203,6 +204,8 @@ class Bomber:
             return None
 
 def apply_script(protocol, connection, config):
+    assert ismilsim(protocol, connection)
+
     class AirstrikeProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)

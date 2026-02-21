@@ -25,6 +25,7 @@ from milsimlib.common import (
 )
 from milsimlib.blast import HighExplosive, sendGrenadePacket
 from milsimlib.types import TileEntity, Item
+from milsimlib import ismilsim
 
 class ExplosiveEntity(TileEntity):
     Δx, Δy, Δz = 0, 0, 0
@@ -198,6 +199,8 @@ def take_charge(player, argval = 1):
     return format_taken_items(take_detonator(player, n))
 
 def apply_script(protocol, connection, config):
+    assert ismilsim(protocol, connection)
+
     def explosive_default_tent_loadout(self, team):
         yield from protocol.default_tent_loadout(self, team)
 
