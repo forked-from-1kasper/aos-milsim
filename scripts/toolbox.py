@@ -135,7 +135,7 @@ mailbox   = config.section("mailbox")
 mailfile  = mailbox.option("file", "mailbox.txt").get()
 maildelay = mailbox.option("delay", 90).get()
 
-@command('mail', 'admin')
+@command('admin', 'mail')
 @player_only
 def mail(connection, *w):
     """
