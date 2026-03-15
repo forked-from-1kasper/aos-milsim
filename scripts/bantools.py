@@ -347,8 +347,6 @@ def apply_script(protocol, connection, config):
             contained.secondary = False
             contained.player_id = self.player_id
 
-            print(contained)
-
             self.protocol.broadcast_contained(contained, sender = self, save = True)
 
             connection.ban(self, reason, duration)
