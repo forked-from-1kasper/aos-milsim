@@ -342,6 +342,15 @@ def apply_script(protocol, connection, config):
         def ban(self, reason = None, duration = None):
             self.drop_flag()
 
+            contained           = loaders.WeaponInput()
+            contained.primary   = False
+            contained.secondary = False
+            contained.player_id = self.player_id
+
+            print(contained)
+
+            self.protocol.broadcast_contained(contained, sender = self, save = True)
+
             connection.ban(self, reason, duration)
 
         def kick(self, reason = None, silent = False):
