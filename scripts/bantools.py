@@ -43,6 +43,7 @@ prohibited = {
 bantools_section = config.section("bantools")
 
 bantools_maximum_timelimit = bantools_section.option("maximum_timelimit", default = "3h", cast = cast_duration).get()
+bantools_command_whitelist = bantools_section.option("command_whitelist", default = ["status", "admin", "ping", "pm"]).get()
 
 log = Logger()
 
@@ -325,12 +326,7 @@ def apply_script(protocol, connection, config):
     )
 
     class BantoolsConnection(connection):
-        command_whitelist = {
-            "status",
-            "admin",
-            "ping",
-            "pm"
-        }
+        command_whitelist = set(bantools_command_whitelist)
 
         def __init__(self, *w, **kw):
             self.banned = False
