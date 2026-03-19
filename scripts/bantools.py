@@ -1,4 +1,5 @@
 # Copyright © 2011–2012 Mathias Kaerlev
+# Copyright © 2019 godwhoa
 # Copyright © 2022–2024 DryByte
 # Copyright © 2024–2026 rzrn
 
@@ -21,12 +22,13 @@ from twisted.internet import reactor
 from twisted.logger import Logger
 
 from piqueserver.commands import CommandError, _alias_map, command, player_only, get_player
+from piqueserver.config import config, cast_duration
 from piqueserver.player import FeatureConnection
 from piqueserver.server import FeatureProtocol
 
+from pyspades.common import prettify_timespan, escape_control_codes
 from pyspades.player import ServerConnection, parse_command
 from pyspades.packet import register_packet_handler
-from pyspades.common import escape_control_codes
 from pyspades import contained as loaders
 from pyspades.constants import *
 
@@ -38,7 +40,30 @@ prohibited = {
     loaders.BlockLine.id
 }
 
+bantools_section = config.section("bantools")
+
+bantools_maximum_timelimit = bantools_section.option("maximum_timelimit", default = "3h", cast = cast_duration).get()
+
 log = Logger()
+
+@command('timelimit', 'settimelimit', admin_only = True)
+def c_timelimit(connection, duration):
+    """
+    Set this match time limit
+    /timelimit <duration>
+    """
+
+    protocol = connection.protocol
+
+    timelimit = min(cast_duration(duration), bantools_maximum_timelimit)
+    protocol.set_time_limit(timelimit / 60) # takes time in minutes
+
+    protocol.broadcast_chat(
+        "Time limit set to {} by {}".format(
+            prettify_timespan(timelimit), connection.name
+        ),
+        irc = True
+    )
 
 @command()
 def kill(connection, value = None):
