@@ -1,4 +1,4 @@
-# Copyright © 2025 rzrn
+# Copyright © 2025–2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -20,8 +20,8 @@ import random
 
 from pyspades.common import prettify_timespan
 
-from piqueserver.commands import command, player_only
 from piqueserver.config import config, cast_duration
+from piqueserver.commands import command
 
 votemap_config = config.section('votemap')
 votemap_ratio = votemap_config.option('percentage', 60).get() / 100.0
@@ -76,7 +76,6 @@ def check_map_vote_end(protocol):
                 protocol.advance_rotation('Mapvote ended.')
 
 @command('vote')
-@player_only
 def c_vote(connection, *w):
     """
     (Re-)vote for a given map
@@ -87,6 +86,9 @@ def c_vote(connection, *w):
 
     protocol = connection.protocol
 
+    if isinstance(connection, protocol.connection_class) is False:
+        return "Only players can use this command"
+
     query = " ".join(w).lower()
 
     for rot_info in protocol.maps:
@@ -96,7 +98,9 @@ def c_vote(connection, *w):
 
             connection.map_vote = rot_info
             protocol.broadcast_chat(
-                "{} voted for {}".format(connection.name, rot_info.name)
+                "{} voted for {}".format(
+                    connection.name or "#{}".format(connection.player_id), rot_info.name
+                )
             )
 
             check_map_vote_end(protocol)
@@ -115,7 +119,6 @@ def c_vote(connection, *w):
     return "'{}' map not found".format(query)
 
 @command('voteskip', 'skip')
-@player_only
 def c_voteskip(connection, *w):
     """
     Vote to skip the current map
@@ -124,18 +127,22 @@ def c_voteskip(connection, *w):
 
     protocol = connection.protocol
 
+    if isinstance(connection, protocol.connection_class) is False:
+        return "Only players can use this command"
+
     if connection.map_vote is vote_skip_candidate:
         return "You already voted to skip the current map"
 
     connection.map_vote = vote_skip_candidate
     protocol.broadcast_chat(
-        "{} voted to skip the current map".format(connection.name)
+        "{} voted to skip the current map".format(
+            connection.name or "#{}".format(connection.player_id)
+        )
     )
 
     check_map_vote_end(protocol)
 
 @command('voteextend', 'extend')
-@player_only
 def c_voteextend(connection, *w):
     """
     Vote to extend the current map
@@ -144,18 +151,22 @@ def c_voteextend(connection, *w):
 
     protocol = connection.protocol
 
+    if isinstance(connection, protocol.connection_class) is False:
+        return "Only players can use this command"
+
     if connection.map_vote is vote_extend_candidate:
         return "You already voted to extend the current map"
 
     connection.map_vote = vote_extend_candidate
     protocol.broadcast_chat(
-        "{} voted to extend the current map".format(connection.name)
+        "{} voted to extend the current map".format(
+            connection.name or "#{}".format(connection.player_id)
+        )
     )
 
     check_map_vote_end(protocol)
 
 @command('voteback')
-@player_only
 def c_voteback(connection, *w):
     """
     Take your map vote back
@@ -164,10 +175,15 @@ def c_voteback(connection, *w):
 
     protocol = connection.protocol
 
+    if isinstance(connection, protocol.connection_class) is False:
+        return "Only players can use this command"
+
     if map_vote := connection.map_vote:
         connection.map_vote = None
         protocol.broadcast_chat(
-            "{} took back his vote for {}".format(connection.name, map_vote.name)
+            "{} took back his vote for {}".format(
+                connection.name or "#{}".format(connection.player_id), map_vote.name
+            )
         )
     else:
         return "You haven't voted yet"
