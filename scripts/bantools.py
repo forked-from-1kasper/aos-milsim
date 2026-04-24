@@ -409,10 +409,24 @@ def apply_script(protocol, connection, config):
             return connection.on_chat_delivered(self, player, value, is_global_message)
 
         def broadcast_chat(self, value, is_global_message = True):
-            contained           = loaders.ChatMessage()
-            contained.player_id = self.player_id
-            contained.chat_type = CHAT_ALL if is_global_message else CHAT_TEAM
-            contained.value     = value
+            if self.name is None:
+                log.info("{{Anonymous}} {value}", value = escape_control_codes(value))
+
+                contained           = loaders.ChatMessage()
+                contained.chat_type = CHAT_SYSTEM
+                contained.value     = "Anonymous: {}".format(value)
+            else:
+                retval = self.on_chat(value, is_global_message)
+
+                if retval is False:
+                    return
+                elif retval is not None:
+                    value = retval
+
+                contained           = loaders.ChatMessage()
+                contained.player_id = self.player_id
+                contained.chat_type = CHAT_ALL if is_global_message else CHAT_TEAM
+                contained.value     = value
 
             addr, port = self.address
 
@@ -425,12 +439,15 @@ def apply_script(protocol, connection, config):
 
                 player.send_contained(contained)
 
+            self.on_chat_sent(value, is_global_message)
+
+            self.last_teamchat_message = None if is_global_message else value
+
         @register_packet_handler(loaders.ChatMessage)
         def on_chat_message_recieved(self, contained):
             value = sanitize_message(contained.value)
 
             is_global_message = contained.chat_type == CHAT_ALL
-            team = None if is_global_message else self.team
 
             if message_maximum_length < len(contained.value):
                 log.info(
@@ -442,36 +459,7 @@ def apply_script(protocol, connection, config):
 
             if value.startswith('/'):
                 self.on_command(*parse_command(value[1:]))
-
-            elif self.name is None:
-                contained           = loaders.ChatMessage()
-                contained.chat_type = CHAT_SYSTEM
-                contained.value     = "Anonymous: {}".format(value)
-
-                addr, port = self.address
-
-                for player in self.protocol.connections.values():
-                    if player.player_id is None:
-                        continue
-
-                    if player.on_chat_delivered(self, value, is_global_message) is False:
-                        continue
-
-                    player.send_contained(contained)
-
-                log.info("{{Anonymous}} {value}", value = escape_control_codes(value))
-
             else:
-                retval = self.on_chat(value, is_global_message)
-
-                if retval is False:
-                    return
-                elif retval is not None:
-                    value = retval
-
                 self.broadcast_chat(value, is_global_message)
-                self.on_chat_sent(value, is_global_message)
-
-                self.last_teamchat_message = None if is_global_message else value
 
     return BantoolsProtocol, BantoolsConnection
