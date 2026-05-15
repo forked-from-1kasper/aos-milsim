@@ -25,8 +25,19 @@ from milsimlib.constants import Limb
 
 randbool = lambda prob: random() <= prob
 
-logit    = lambda t: -log(1 / t - 1)
-logistic = lambda t: 1 / (1 + exp(-t))
+logit = lambda t: -log(1 / t - 1)
+
+def logistic(t):
+    # This implementation avoids (rare but possible) `OverflowError`.
+    # [1] https://stackoverflow.com/questions/3985619/how-to-calculate-a-logistic-sigmoid-function-in-python
+    # [2] https://timvieira.github.io/blog/exp-normalize-trick/
+
+    if t > 0:
+        z = exp(-t)
+        return 1 / (1 + z)
+    else:
+        z = exp(t)
+        return z / (1 + z)
 
 class ABCMap:
     def __call__(self, v):
