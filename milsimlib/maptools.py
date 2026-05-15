@@ -24,6 +24,7 @@ from pyspades.constants import BLUE_FLAG, GREEN_FLAG, BLUE_BASE, GREEN_BASE
 from milsimlib.vxl import VxlData
 from milsimlib.builtin import *
 from milsimlib.common import *
+from milsimlib.types import *
 
 byte = lambda x: int(x * 255)
 

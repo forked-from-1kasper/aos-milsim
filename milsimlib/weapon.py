@@ -14,14 +14,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from time import monotonic
+from random import gauss
 from math import inf
 
-from pyspades.constants import *
-
-from milsimlib.types import CartridgeBox, BoxMagazine, TubularMagazine, Shotshell
+from milsimlib.types import Tool, Item, CartridgeBox, BoxMagazine, TubularMagazine, Shotshell
 from milsimlib.builtin import R762x54mm, HEI762x54mm, Parabellum, Buckshot0000
 from milsimlib.engine import cone
-from milsimlib.common import *
+
+from milsimlib.common import toMeters3, format_item, icons
 
 class UnderbarrelItem(Item):
     def on_press(self, player):

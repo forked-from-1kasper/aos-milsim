@@ -17,10 +17,10 @@ from itertools import product
 
 from twisted.internet import reactor
 
+from pyspades.constants import GRENADE_DESTROY, SPADE_TOOL, BLOCK_TOOL, WEAPON_TOOL, GRENADE_TOOL
 from pyspades.collision import vector_collision
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
-from pyspades.constants import *
 
 from milsimlib.common import grenade_zone, TNT, gram, iempty, floor3
 from milsimlib.blast import flashbang_effect

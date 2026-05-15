@@ -24,7 +24,12 @@ from twisted.logger import Logger
 from pyspades.collision import distance_3d_vector
 import pyspades.contained as loaders
 from pyspades.common import Vertex3
-from pyspades.constants import *
+
+from pyspades.constants import (
+    RIFLE_WEAPON, SMG_WEAPON, SHOTGUN_WEAPON,
+    WEAPON_KILL, HEADSHOT_KILL, MELEE_KILL, GRENADE_KILL,
+    BUILD_BLOCK, DESTROY_BLOCK, SPADE_DESTROY, GRENADE_DESTROY
+)
 
 from piqueserver.server import FeatureProtocol
 from piqueserver.config import config
@@ -40,7 +45,9 @@ from milsimlib.vxl import onDeleteQueue, deleteQueueClear
 from milsimlib.map import MapInfo, check_rotation
 from milsimlib.constants import Limb, HitEffect
 from milsimlib.engine import Engine, toMeters
-from milsimlib.common import *
+from milsimlib.common import grenade_zone
+
+from milsimlib.types import Item, ItemEntity, Inventory, SpadeTool, BlockTool, GrenadeTool
 
 from milsimlib.items import (
     Kettlebell, CompassItem, ProtractorItem,

@@ -19,8 +19,8 @@ from time import monotonic
 from twisted.internet import reactor
 from twisted.logger import Logger
 
+from pyspades.constants import GRENADE_TOOL, TOOL_INTERVAL
 from pyspades.collision import distance_3d_vector
-from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 

@@ -25,7 +25,11 @@ from twisted.internet import reactor
 
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
-from pyspades.constants import *
+
+from pyspades.constants import (
+    SPADE_TOOL, BLOCK_TOOL, WEAPON_TOOL, GRENADE_TOOL,
+    WEAPON_KILL, FALL_KILL, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL
+)
 
 from milsimlib.types import randbool, logistic
 from milsimlib.constants import Limb

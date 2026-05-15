@@ -28,7 +28,11 @@ from pyspades import contained as loaders
 from pyspades.player import check_nan
 from pyspades.world import cube_line
 from pyspades.common import Vertex3
-from pyspades.constants import *
+
+from pyspades.constants import (
+    SPADE_TOOL, BLOCK_TOOL, GRENADE_TOOL, MELEE, MELEE_KILL,
+    BUILD_BLOCK, DESTROY_BLOCK, MAX_BLOCK_DISTANCE
+)
 
 from piqueserver.player import FeatureConnection
 

@@ -15,7 +15,6 @@
 
 from pyspades import contained as loaders
 from pyspades.world import Character
-from pyspades.constants import *
 
 from piqueserver.player import FeatureConnection
 
