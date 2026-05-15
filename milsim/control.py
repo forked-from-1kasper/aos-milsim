@@ -19,19 +19,25 @@ from itertools import product, islice
 import inspect
 
 from piqueserver.commands import command, get_player, player_only
+from pyspades.constants import MELEE_KILL
 from pyspades.common import Vertex3
-from pyspades.constants import *
 
 from milsimlib.items import (
     BandageItem, TourniquetItem, SplintItem,
     RangefinderItem, ProtractorItem, CompassItem,
     HandheldRadioItem, is_reachable
 )
+
+from milsimlib.common import (
+    apply_item, format_item, format_taken_items, has_item, take_item, take_items,
+    alive_only, azimuth, needle, floor3, xOy
+)
+
 from milsimlib.underbarrel import GrenadeLauncher, GrenadeItem
 from milsimlib.engine import toMeters
+from milsimlib.types import Item, ite
 from milsimlib.constants import Limb
 from milsimlib import ismilsim
-from milsimlib.common import *
 
 yn = lambda b: "yes" if b else "no"
 
