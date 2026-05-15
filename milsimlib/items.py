@@ -216,10 +216,10 @@ class HandheldRadioItem(Item):
 
         return "Equipped {}".format(format_item(self))
 
-class EecomRadioItem(HandheldRadioItem):
-    name = "Eecom V-8C HT"
+class PulsarRadioItem(HandheldRadioItem):
+    name = "PulsarTec AN-200 HT"
     mass = 0.390
 
-class TaopengRadioItem(HandheldRadioItem):
-    name = "Taopeng UV-5A HT"
+class LiantongxinRadioItem(HandheldRadioItem):
+    name = "Liantongxin L-1 HT"
     mass = 0.400

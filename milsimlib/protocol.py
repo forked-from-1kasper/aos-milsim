@@ -52,7 +52,7 @@ from milsimlib.types import Item, ItemEntity, Inventory, SpadeTool, BlockTool, G
 from milsimlib.items import (
     Kettlebell, CompassItem, ProtractorItem,
     RangefinderItem, StunHandgrenadeItem,
-    TaopengRadioItem, EecomRadioItem
+    PulsarRadioItem, LiantongxinRadioItem
 )
 from milsimlib.underbarrel import GrenadeLauncher, GrenadeItem, FlashbangItem
 from milsimlib.builtin import Buckshot0000, Buckshot00, Bullet
@@ -78,11 +78,11 @@ def milsim_default_tent_loadout(protocol, team):
 
     if team is protocol.team_1:
         for k in range(24):
-            yield EecomRadioItem(team)
+            yield PulsarRadioItem(team)
 
     if team is protocol.team_2:
         for k in range(24):
-            yield TaopengRadioItem(team)
+            yield LiantongxinRadioItem(team)
 
     yield from (
         Kettlebell(1),
