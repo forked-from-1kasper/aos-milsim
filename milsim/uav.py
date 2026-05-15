@@ -192,8 +192,8 @@ def apply_script(protocol, connection, config):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
             self.drones = {
-                self.team_1.id : Drone("DJI Mavic 3",   self.team_1, self),
-                self.team_2.id : Drone("DJI Phantom 4", self.team_2, self)
+                self.team_1.id : Drone("AER Razor 1",         self.team_1, self),
+                self.team_2.id : Drone("SHUO North Star 400", self.team_2, self)
             }
 
         def on_map_change(self, M):
