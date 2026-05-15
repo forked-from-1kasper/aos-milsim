@@ -202,10 +202,6 @@ class StunHandgrenadeItem(HandgrenadeItem):
     grenade_class = FlashbangObject
 
 class HandheldRadioItem(Item):
-    def __init__(self, team):
-        Item.__init__(self)
-        self.team = team
-
     def apply(self, player):
         player.inventory.remove(self)
 
@@ -223,3 +219,7 @@ class PulsarRadioItem(HandheldRadioItem):
 class LiantongxinRadioItem(HandheldRadioItem):
     name = "Liantongxin L-1 HT"
     mass = 0.400
+
+class DurobandRadioItem(HandheldRadioItem):
+    name = "Duroband EasyTalk 2 HT"
+    mass = 0.250
