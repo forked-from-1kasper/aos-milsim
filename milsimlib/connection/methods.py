@@ -138,7 +138,7 @@ def drop_inventory(self):
 
         if wt := self.handheld_radio_item:
             if wt.persistent:
-                di.push(di)
+                di.push(wt)
 
     self.handheld_radio_item = None
     self.inventory.clear()
