@@ -212,6 +212,14 @@ class HandheldRadioItem(Item):
 
         return "Equipped {}".format(format_item(self))
 
+    def is_listening_to(self, wt):
+        return type(wt) is type(self)
+
+    def broadcast_chat(self, protocol, mesg):
+        for player in protocol.living():
+            if player.handheld_radio_item.is_listening_to(self):
+                player.send_chat(mesg)
+
 class PulsarRadioItem(HandheldRadioItem):
     name = "PulsarTec AN-200 HT"
     mass = 0.390
