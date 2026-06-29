@@ -22,12 +22,13 @@ from twisted.internet import reactor
 from pyspades.protocol import BaseProtocol
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
-from pyspades.team import Team
 
 from piqueserver.commands import command, get_player, CommandError
 from piqueserver.config import config
 
+from milsimlib.items import RadioChannel, military_radio_channel_1, military_radio_channel_2
 from milsimlib.blast import HighExplosive, HEGrenadeObject, sendGrenadePacket
+
 from milsimlib.common import alive_only
 from milsimlib import ismilsim
 
@@ -50,9 +51,9 @@ class Status(Enum):
 
 @dataclass
 class Drone:
-    name     : str
-    team     : Team
-    protocol : BaseProtocol
+    name          : str
+    radio_channel : RadioChannel
+    protocol      : BaseProtocol
 
     def __post_init__(self):
         self.init()
@@ -68,10 +69,9 @@ class Drone:
         if by_server:
             self.callback = reactor.callLater(drone_phase, self.start)
 
-    def report(self, msg):
-        self.protocol.broadcast_chat(
-            "<{}> {}. Over.".format(self.name, msg),
-            global_message=False, team=self.team
+    def broadcast_report(self, mesg):
+        self.radio_channel.broadcast_chat(
+            self.protocol, "<{}> {}. Over.".format(self.name, mesg)
         )
 
     def start(self):
@@ -88,7 +88,7 @@ class Drone:
     def arrive(self):
         self.grenades = drone_grenades
         self.status = Status.awaiting
-        self.report("Drone on the battlefield")
+        self.broadcast_report("Drone on the battlefield")
 
     def track(self, player, target):
         self.player_id = player.player_id
@@ -96,7 +96,7 @@ class Drone:
         self.status    = Status.inwork
         self.passed    = 0
 
-        self.report("Received. Watching for {}".format(target.name))
+        self.broadcast_report("Received. Watching for {}".format(target.name))
         self.callback = reactor.callLater(drone_rate, self.ping)
 
     def free(self):
@@ -109,13 +109,13 @@ class Drone:
         self.passed += drone_rate
 
         if self.target_id not in self.protocol.players:
-            self.report("Don't see the target. Awaiting for further instructions")
+            self.broadcast_report("Don't see the target. Awaiting for further instructions")
             return self.free()
 
         target = self.protocol.players[self.target_id]
 
         if self.passed > drone_timeout:
-            self.report("Don't see {}. Awaiting for further instructions".format(target.name))
+            self.broadcast_report("Don't see {}. Awaiting for further instructions".format(target.name))
             return self.free()
 
         if target.dead():
@@ -148,11 +148,11 @@ class Drone:
                 if self.grenades > 0:
                     self.status   = Status.awaiting
                     self.callback = None
-                    self.report("Bombed out. Awaiting for further instructions")
+                    self.broadcast_report("Bombed out. Awaiting for further instructions")
                 else:
                     self.status   = Status.inflight
                     self.callback = reactor.callLater(drone_delay, self.arrive)
-                    self.report("Bombed out. Will be ready in {} seconds".format(drone_delay))
+                    self.broadcast_report("Bombed out. Will be ready in {} seconds".format(drone_delay))
         else:
             self.callback = reactor.callLater(drone_rate, self.ping)
 
@@ -172,9 +172,9 @@ def drone(conn, nickname = None):
         if drone.status == Status.inflight:
             if rem := drone.remaining():
                 approx = (rem // 5 + 1) * 5
-                drone.report("Will be on the battlefield in {:.0f} seconds".format(approx))
+                drone.broadcast_report("Will be on the battlefield in {:.0f} seconds".format(approx))
         elif drone.status == Status.inwork:
-            drone.report("Drone is busy")
+            drone.broadcast_report("Drone is busy")
         elif nickname is None:
             return "Usage: /drone <player>"
         elif drone.status == Status.awaiting:
@@ -184,6 +184,8 @@ def drone(conn, nickname = None):
                 raise CommandError("Expected enemy's nickname")
 
             drone.track(conn, player)
+    else:
+        return "You haven't equipped an appropriate radio"
 
 def apply_script(protocol, connection, config):
     assert ismilsim(protocol, connection)
@@ -191,13 +193,12 @@ def apply_script(protocol, connection, config):
     class UAVProtocol(protocol):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
-            self.drones = {
-                self.team_1.id : Drone("AER Razor 1",         self.team_1, self),
-                self.team_2.id : Drone("SHUO North Star 400", self.team_2, self)
-            }
+
+            self.drone_1 = Drone("AER Razor 1",         military_radio_channel_1, self)
+            self.drone_2 = Drone("SHUO North Star 400", military_radio_channel_2, self)
 
         def on_map_change(self, M):
-            for drone in self.drones.values():
+            for drone in self.drone_1, self.drone_2:
                 drone.stop()
                 drone.init(by_server = True)
 
@@ -205,6 +206,11 @@ def apply_script(protocol, connection, config):
 
     class UAVConnection(connection):
         def get_drone(self):
-            return self.protocol.drones.get(self.team.id)
+            if wt := self.handheld_radio_item:
+                if wt.radio_channel is military_radio_channel_1:
+                    return self.protocol.drone_1
+
+                if wt.radio_channel is military_radio_channel_2:
+                    return self.protocol.drone_2
 
     return UAVProtocol, UAVConnection
