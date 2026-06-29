@@ -232,12 +232,12 @@ military_radio_channel_2 = RadioChannel()
 class PulsarRadioItem(HandheldRadioItem):
     name          = "PulsarTec AN-200 HT"
     mass          = 0.390
-    radio_channel = military_radio_channel_2
+    radio_channel = military_radio_channel_1
 
 class LiantongxinRadioItem(HandheldRadioItem):
     name          = "Liantongxin L-1 HT"
     mass          = 0.400
-    radio_channel = military_radio_channel_1
+    radio_channel = military_radio_channel_2
 
 class DurobandRadioItem(HandheldRadioItem):
     name          = "Duroband EasyTalk 2 HT"
