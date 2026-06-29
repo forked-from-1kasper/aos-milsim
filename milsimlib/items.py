@@ -204,8 +204,9 @@ class StunHandgrenadeItem(HandgrenadeItem):
 class RadioChannel:
     def broadcast_chat(self, protocol, mesg):
         for player in protocol.living():
-            if player.handheld_radio_item.is_listening_to(self):
-                player.send_chat(mesg)
+            if wt := player.handheld_radio_item:
+                if wt.is_listening_to(self):
+                    player.send_chat(mesg)
 
 class HandheldRadioItem(Item):
     def apply(self, player):

@@ -23,11 +23,14 @@ from twisted.internet import reactor
 from pyspades.protocol import BaseProtocol
 from pyspades.constants import WEAPON_TOOL
 from pyspades.common import Vertex3
-from pyspades.team import Team
 
 from piqueserver.commands import command
 from piqueserver.config import config
 
+from milsimlib.items import (
+    RadioChannel, civil_radio_channel,
+    military_radio_channel_1, military_radio_channel_2
+)
 from milsimlib.blast import HighExplosive, sendGrenadePacket
 from milsimlib.weapon import UnderbarrelItem
 
@@ -81,17 +84,17 @@ def do_bombing(protocol, player_id, x, y, vx, vy, nbombs):
         x += vx * BOMBING_DELAY
         y += vy * BOMBING_DELAY
 
-def do_airstrike(name, connection):
+def do_airstrike(name, radio_channel, connection):
     protocol = connection.protocol
 
     if wo := connection.world_object:
         if loc := wo.cast_ray(AIRSTRIKE_CAST_DISTANCE):
-            protocol.broadcast_chat(
-                "<{}> Coordinates recieved. Over.".format(name),
-                global_message = False, team = connection.team
+            radio_channel.broadcast_chat(
+                protocol, "<{}> Coordinates recieved. Over.".format(name)
             )
 
             x, y, z = loc
+
             o = wo.orientation
             v = Vertex3(o.x, o.y, 0).normal() * BOMBER_SPEED
 
@@ -100,7 +103,7 @@ def do_airstrike(name, connection):
 @command(admin_only = True)
 @alive_only
 def gift(connection):
-    do_airstrike("Panavia Tornado ECR", connection)
+    do_airstrike("Panavia Tornado ECR", civil_radio_channel, connection)
 
 @command('airstrike', 'air')
 @alive_only
@@ -113,14 +116,16 @@ def air(player, loc = None):
     if loc is not None:
         return "To initiate an airstrike scope and then hold V. Use /air to check the readiness"
 
-    if o := player.team.bomber:
+    if o := player.get_bomber():
         remaining = o.remaining()
 
         if remaining is not None:
             approx = round((remaining / 10 + 1) * 10)
-            o.report("Will be ready in {} seconds".format(approx))
+            o.broadcast_report("Will be ready in {} seconds".format(approx))
         else:
-            o.report("Awaiting for coordinates")
+            o.broadcast_report("Awaiting for coordinates")
+    else:
+        return "You haven't equipped an appropriate radio"
 
 class Laser(UnderbarrelItem):
     name = "Laser"
@@ -139,14 +144,14 @@ class Laser(UnderbarrelItem):
         if self.timer > airstrike_zoomv_time:
             self.timer = 0
 
-            if o := player.team.bomber:
+            if o := player.get_bomber():
                 o.point(player)
 
 @dataclass
 class Bomber:
-    name     : str
-    team     : Team
-    protocol : BaseProtocol
+    name          : str
+    radio_channel : RadioChannel
+    protocol      : BaseProtocol
 
     def __post_init__(self):
         self.init()
@@ -163,7 +168,7 @@ class Bomber:
     def point(self, connection):
         if not self.active() and self.ready:
             self.player_id = connection.player_id
-            do_airstrike(self.name, connection)
+            do_airstrike(self.name, self.radio_channel, connection)
             self.restart()
 
     def active(self):
@@ -181,9 +186,10 @@ class Bomber:
     def start(self):
         if self.ready: return
 
-        self.report("Air support is ready")
         self.preparation = None
         self.ready       = True
+
+        self.broadcast_report("Air support is ready")
 
     def restart(self):
         self.stop()
@@ -191,10 +197,9 @@ class Bomber:
         self.ready       = False
         self.preparation = reactor.callLater(airstrike_delay, self.start)
 
-    def report(self, msg):
-        self.protocol.broadcast_chat(
-            "<{}> {}. Over.".format(self.name, msg),
-            global_message = False, team = self.team
+    def broadcast_report(self, mesg):
+        self.radio_channel.broadcast_chat(
+            self.protocol, "<{}> {}. Over.".format(self.name, mesg)
         )
 
     def remaining(self):
@@ -210,14 +215,11 @@ def apply_script(protocol, connection, config):
         def __init__(self, *w, **kw):
             protocol.__init__(self, *w, **kw)
 
-            self.team_1.bomber         = Bomber("B-52",   self.team_1, self)
-            self.team_2.bomber         = Bomber("Tu-22M", self.team_2, self)
-            self.team_spectator.bomber = None
+            self.bomber_1 = Bomber("B-52",   military_radio_channel_1, self)
+            self.bomber_2 = Bomber("Tu-22M", military_radio_channel_2, self)
 
         def on_map_change(self, M):
-            for team in self.team_1, self.team_2:
-                bomber = team.bomber
-
+            for bomber in self.bomber_1, self.bomber_2:
                 if bomber.preparation and bomber.preparation.active():
                     bomber.preparation.cancel()
 
@@ -231,5 +233,13 @@ def apply_script(protocol, connection, config):
             connection.on_spawn(self, pos)
 
             self.weapon_object.item_underbarrel = Laser().mark_renewable()
+
+        def get_bomber(self):
+            if wt := self.handheld_radio_item:
+                if wt.radio_channel is military_radio_channel_1:
+                    return self.protocol.bomber_1
+
+                if wt.radio_channel is military_radio_channel_2:
+                    return self.protocol.bomber_2
 
     return AirstrikeProtocol, AirstrikeConnection
