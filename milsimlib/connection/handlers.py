@@ -86,7 +86,7 @@ def on_chat_delivered(self, player, value, is_global_message):
         return L > o.ANL
     else:
         if wt := self.handheld_radio_item:
-            return wt.is_listening_to(player.handheld_radio_item)
+            return wt.is_listening_to(player.handheld_radio_item.radio_channel)
         else:
             return False
 

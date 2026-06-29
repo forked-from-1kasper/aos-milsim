@@ -201,6 +201,12 @@ class StunHandgrenadeItem(HandgrenadeItem):
     mass          = 0.370
     grenade_class = FlashbangObject
 
+class RadioChannel:
+    def broadcast_chat(self, protocol, mesg):
+        for player in protocol.living():
+            if player.handheld_radio_item.is_listening_to(self):
+                player.send_chat(mesg)
+
 class HandheldRadioItem(Item):
     def apply(self, player):
         player.inventory.remove(self)
@@ -212,22 +218,27 @@ class HandheldRadioItem(Item):
 
         return "Equipped {}".format(format_item(self))
 
-    def is_listening_to(self, wt):
-        return type(wt) is type(self)
+    def is_listening_to(self, channel):
+        return self.radio_channel is channel
 
     def broadcast_chat(self, protocol, mesg):
-        for player in protocol.living():
-            if player.handheld_radio_item.is_listening_to(self):
-                player.send_chat(mesg)
+        self.radio_channel.broadcast_chat(protocol, mesg)
+
+civil_radio_channel      = RadioChannel()
+military_radio_channel_1 = RadioChannel()
+military_radio_channel_2 = RadioChannel()
 
 class PulsarRadioItem(HandheldRadioItem):
-    name = "PulsarTec AN-200 HT"
-    mass = 0.390
+    name          = "PulsarTec AN-200 HT"
+    mass          = 0.390
+    radio_channel = military_radio_channel_2
 
 class LiantongxinRadioItem(HandheldRadioItem):
-    name = "Liantongxin L-1 HT"
-    mass = 0.400
+    name          = "Liantongxin L-1 HT"
+    mass          = 0.400
+    radio_channel = military_radio_channel_1
 
 class DurobandRadioItem(HandheldRadioItem):
-    name = "Duroband EasyTalk 2 HT"
-    mass = 0.250
+    name          = "Duroband EasyTalk 2 HT"
+    mass          = 0.250
+    radio_channel = civil_radio_channel
