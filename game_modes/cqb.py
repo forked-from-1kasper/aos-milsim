@@ -98,12 +98,14 @@ def apply_script(protocol, connection, config):
             for team in self.team_1, self.team_2, self.team_spectator:
                 team.available_tickets = None
 
-        def on_map_change(self, M):
-            self.max_score = 0
-
+        def reset_respawn_tickets(self):
             self.team_1.available_tickets = cqb_respawn_tickets
             self.team_2.available_tickets = cqb_respawn_tickets
 
+        def on_map_change(self, M):
+            self.max_score = 0
+
+            self.reset_respawn_tickets()
             protocol.on_map_change(self, M)
 
         def check_game_end(self):
@@ -118,6 +120,10 @@ def apply_script(protocol, connection, config):
                 player = next(self.team_1.get_players(), None)
             else:
                 return # Neither team is defeated, the game continues.
+
+            # So that (i) no draw happens if the last player standing dies before the map switches
+            # and (ii) it is possible to do ‘/adc’ and continue to play on the current map.
+            self.reset_respawn_tickets()
 
             announce_game_end(self, winner = player)
 
