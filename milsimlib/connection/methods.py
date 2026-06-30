@@ -39,7 +39,7 @@ def handgrenades(self):
     return filter(lambda o: isinstance(o, HandgrenadeItem), self.inventory)
 
 def sync(self):
-    if self.blocks <= 0 or self.grenades <= 0 and not iempty(self.handgrenades()):
+    if self.blocks <= self.blocks_refill_threshold or self.grenades <= 0 and not iempty(self.handgrenades()):
         self.blocks = 50 # due to the limitations of protocol we simply assume that each player has unlimited blocks
         self.grenades = 3 # this is what shown to player, not the actual count
 

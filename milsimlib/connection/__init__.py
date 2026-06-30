@@ -42,6 +42,8 @@ class MilsimConnection(FeatureConnection):
 
     default_loadout = milsim_default_loadout
 
+    blocks_refill_threshold = 5
+
     bleeding_spread_modifier    = 4.5
     fracture_spread_modifier    = 9.5
     suppression_spread_modifier = 7.0

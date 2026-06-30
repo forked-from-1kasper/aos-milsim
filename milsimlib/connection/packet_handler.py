@@ -200,7 +200,8 @@ def on_block_line_recieved(self, contained):
         self.handle_block_line(x1, y1, z1, x2, y2, z2)
 
     self.blocks = max(0, blocks - len(cube_line(x1, y1, z1, x2, y2, z2)))
-    if self.blocks <= 0:
+
+    if self.blocks <= self.blocks_refill_threshold:
         self.sync()
 
 @register_packet_handler(loaders.BlockAction)
@@ -235,7 +236,7 @@ def on_block_action_recieved(self, contained):
 
     self.blocks = max(0, blocks - 1)
 
-    if self.blocks <= 0:
+    if self.blocks <= self.blocks_refill_threshold:
         self.sync()
 
 def handle_grenade_packet(self, x, y, z, vx, vy, vz, value):
