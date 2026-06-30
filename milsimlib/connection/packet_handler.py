@@ -208,7 +208,18 @@ def on_block_action_recieved(self, contained):
     if self.dead(): return
 
     if self.tool == SPADE_TOOL and contained.value == DESTROY_BLOCK:
-        self.blocks = min(50, self.blocks + 1)
+        if self.client_info.get("client") == "OpenSpades":
+            # OpenSpades behavior differs here from that one of voxlap and BetterSpades:
+            # 1. The latter send `BlockAction` only once on the second hit on the block
+            #    and add one block regardless of the server’s response.
+            # 2. The former sends `BlockAction` on the second and all subsequent hits
+            #    and add one block only when `BlockAction` from the server arrives.
+            # Because of this `self.blocks` is sometimes lower than the value shown on the client for OpenSpades,
+            # but we are actually interested only in making sure that this value is never *higher* than the client one.
+            # In particular, I don’t know which logic does OpenSpades follow when the player uses spade + RMB.
+            pass
+        else:
+            self.blocks = min(50, self.blocks + 1)
 
     # Everything else is handled server-side.
     if contained.value != BUILD_BLOCK:
@@ -223,6 +234,7 @@ def on_block_action_recieved(self, contained):
         FeatureConnection.on_block_action_recieved(self, contained)
 
     self.blocks = max(0, blocks - 1)
+
     if self.blocks <= 0:
         self.sync()
 
