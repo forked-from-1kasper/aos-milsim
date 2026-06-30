@@ -69,12 +69,12 @@ class Weather:
         )
 
 class StaticWeather(Weather):
-    def __init__(self, t = 15, p = 101325, φ = 0.3, w = (0, 0), k = 0):
+    def __init__(self, t = 15, p = 101325, φ = 0.3, w = (0, 0), c = 0):
         self.t = t
         self.p = p
         self.φ = φ
         self.w = w
-        self.k = k
+        self.c = c
 
     def update(self, dt):
         return False
@@ -92,7 +92,7 @@ class StaticWeather(Weather):
         return self.w
 
     def cloudiness(self):
-        return self.k
+        return self.c
 
 Vector3i = Tuple[int, int, int]
 
