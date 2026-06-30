@@ -95,6 +95,10 @@ def milsim_default_tent_loadout(protocol, team):
         Kettlebell(50)
     )
 
+milsim_config           = config.section("milsim")
+milsim_google_maps_key  = milsim_config.option("google_maps_key", None).get()
+milsim_weather_provider = milsim_config.option("weather_provider", "openmeteo").get()
+
 log = Logger()
 
 class MilsimProtocol(FeatureProtocol):
