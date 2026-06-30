@@ -1,4 +1,4 @@
-# Copyright © 2024 rzrn
+# Copyright © 2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -16,7 +16,7 @@
 from itertools import product
 
 from milsimlib.maptools import *
-from milsimlib.weather.openmeteo import OpenMeteo
+from milsimlib.weather import DefaultProviderWeather
 
 name        = "OktoberDistrict"
 version     = "1.1"
@@ -78,7 +78,7 @@ def on_environment_generation(dirname, seed):
         water    = Water,
         palette  = palette,
         size     = Box(xmin = 160, xmax = 356, ymin = 142, ymax = 370),
-        weather  = OpenMeteo(53.902735, 27.555696) # Minsk
+        weather  = DefaultProviderWeather(53.902735, 27.555696) # Minsk
     )
 
 on_map_generation = VXL("OktoberDistrict.vxl")
