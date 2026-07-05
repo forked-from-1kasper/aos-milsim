@@ -129,6 +129,12 @@ The [OktoberDistrict](maps/OktoberDistrict.vxl) map by Bubochka.
 * [Explosive Shocks in Air](https://link.springer.com/book/10.1007/978-3-642-86682-1), G. F. Kinney, K. J. Graham.
 * [Dynamic Behavior of Materials](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470172278), M. A. Meyers.
 
+# See also
+
+* [Arma: Cold War Assault Remastered Source Code Repository](https://github.com/BohemiaInteractive/CWR/): GPL-3.0-or-later version of the engine powering the original ‘Operation Flashpoint: Cold War Crisis’ game, which was later rereleased as ‘Arma: Cold War Assault’. Also check out [the community fork](https://github.com/ofpisnotdead-com/CWR-CE).
+* [ACE3](https://github.com/acemod/ACE3): open-source realism mod for Arma 3.
+* [ACE-Anvil](https://github.com/acemod/ACE-Anvil): an experimental realism mod for Arma Reforger, the first Arma game running on the Enfusion engine.
+
 # License
 
 Copyright © 2021–2026 rzrn
