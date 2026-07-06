@@ -225,7 +225,7 @@ class ABCWeapon(Tool):
 
             engine = self.player.protocol.engine
 
-            spread = cartridge.grouping * self.player.get_spread_modifier()
+            spread = cartridge.grouping * (self.player.get_spread_modifier() + 1)
 
             for i in range(cartridge.pellets):
                 v = n * gauss(mu = cartridge.muzzle, sigma = cartridge.muzzle * cartridge.deviation)
