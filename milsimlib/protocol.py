@@ -317,7 +317,7 @@ class MilsimProtocol(FeatureProtocol):
                 if player.world_object.primary_fire and arm.fractured:
                     arm.hit(arm.action_damage_rate * dt)
 
-            player.weapon_object.update(t)
+            player.weapon_object.update(t, dt)
 
             if player.item_shown(t):
                 if player.world_object.primary_fire:

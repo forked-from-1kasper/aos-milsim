@@ -257,7 +257,7 @@ static PyObject * PyEngineAdd(PyEngine * self, PyObject * w) {
 
     self->ref->trace(o.index(), o.position, 1.0, true);
 
-    Py_RETURN_NONE;
+    return PyFloat_FromDouble(o.energy());
 }
 
 static PyObject * PyEngineStep(PyEngine * self, PyObject * w) {

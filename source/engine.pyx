@@ -96,6 +96,12 @@ cdef class WorldObject(Character):
         return retval
 
 cdef extern from "Milsim/PyEngine.hxx":
+    cdef double c_stefanBoltzmann     "Fundamentals::stefanBoltzmann<double>"
+    cdef double c_molarMassDryAir     "Fundamentals::molarMassDryAir<double>"
+    cdef double c_molarMassWaterVapor "Fundamentals::molarMassWaterVapor<double>"
+    cdef double c_gasConstant         "Fundamentals::gasConstant<double>"
+    cdef double c_absoluteZero        "Fundamentals::absoluteZero<double>"
+
     cdef T c_ofMeters "ofMeters"[T](const T)
     cdef T c_toMeters "toMeters"[T](const T)
 
@@ -109,6 +115,12 @@ cdef extern from "Milsim/PyEngine.hxx":
 
     void PyEngineReady()
     PyTypeObject PyEngineType
+
+stefanBoltzmann     = c_stefanBoltzmann
+molarMassDryAir     = c_molarMassDryAir
+molarMassWaterVapor = c_molarMassWaterVapor
+gasConstant         = c_gasConstant
+absoluteZero        = c_absoluteZero
 
 PyEngineReady()
 Engine = <type> &PyEngineType

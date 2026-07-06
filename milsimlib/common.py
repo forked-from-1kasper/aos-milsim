@@ -25,6 +25,10 @@ from piqueserver.commands import CommandError
 from milsimlib.constants import Pound, Yard, Inch
 from milsimlib.engine import toMeters
 
+@property
+def NotImplementedField(self):
+    raise NotImplementedError
+
 class Result:
     __match_args__ = ("value",)
 

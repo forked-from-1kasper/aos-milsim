@@ -115,6 +115,7 @@ namespace Fundamentals {
 
     template<typename T> constexpr Vector3<T> g(0, 0, 9.81); // m/s²
 
+    template<typename T> constexpr T stefanBoltzmann     = 5.67e-08;  // W / (m² · K⁴)
     template<typename T> constexpr T molarMassDryAir     = 0.0289652; // kg/mol
     template<typename T> constexpr T molarMassWaterVapor = 0.018016;  // kg/mol
     template<typename T> constexpr T gasConstant         = 8.31446;   // J / (K · mol)
