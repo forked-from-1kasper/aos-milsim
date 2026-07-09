@@ -265,7 +265,7 @@ def status(connection, nickname = None):
     else:
         return "{} is not banned".format(format_nickname(player))
 
-message_maximum_length = 108
+message_maximum_length = 255
 
 message_translation_table = {
     0x00 : '␀', 0x01 : '␁', 0x02 : '␂', 0x03 : '␃',
