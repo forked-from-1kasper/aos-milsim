@@ -21,6 +21,8 @@ from math import inf
 from piqueserver.commands import command, player_only, handle_command, get_player
 from piqueserver.config import config
 
+from pyspades.enet import PEER_PACKET_LOSS_SCALE
+
 from pyspades import contained as loaders
 from pyspades.constants import *
 
@@ -121,14 +123,12 @@ def c_ping(connection, nickname = None):
     player = connection if nickname is None else get_player(connection.protocol, nickname)
 
     if peer := getattr(player, 'peer', None):
-        ENET_PEER_PACKET_LOSS_SCALE = (1 << 16) # TODO: should be moved to `enet`
-
         return "{nickname}: average = {average} ms, minimum = {minimum} ms, variance = {variance} ms, packet loss = {loss:.2f} %".format(
             nickname = player.name,
             average  = peer.roundTripTime,
             minimum  = peer.lowestRoundTripTime,
             variance = peer.roundTripTimeVariance,
-            loss     = peer.packetLoss * 100 / ENET_PEER_PACKET_LOSS_SCALE
+            loss     = peer.packetLoss * 100 / PEER_PACKET_LOSS_SCALE
         )
 
 mailbox   = config.section("mailbox")
