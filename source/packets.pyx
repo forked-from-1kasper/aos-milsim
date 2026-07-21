@@ -1,4 +1,4 @@
-# Copyright © 2024 rzrn
+# Copyright © 2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -42,17 +42,17 @@ cdef class TracerPacket(Loader):
         self.origin = origin
 
     cpdef write(self, ByteWriter writer):
-        writer.writeByte(self.id, True)
+        writer.writeUInt8LE(self.id)
 
-        writer.writeByte(self.index, False)
+        writer.writeUInt8LE(self.index)
 
-        writer.writeFloat(self.x, False)
-        writer.writeFloat(self.y, False)
-        writer.writeFloat(self.z, False)
+        writer.writeFloat32LE(self.x)
+        writer.writeFloat32LE(self.y)
+        writer.writeFloat32LE(self.z)
 
-        writer.writeFloat(self.value, False)
+        writer.writeFloat32LE(self.value)
 
-        writer.writeByte(0xFF if self.origin else 0x00, False)
+        writer.writeUInt8LE(0xFF if self.origin else 0x00)
 
 def hasTraceExtension(player):
     return EXTENSION_TRACE_BULLETS in player.proto_extensions
@@ -75,17 +75,17 @@ cdef class HitEffectPacket(Loader):
         self.target = target
 
     cpdef write(self, ByteWriter writer):
-        writer.writeByte(self.id, True)
+        writer.writeUInt8LE(self.id)
 
-        writer.writeFloat(self.xf, False)
-        writer.writeFloat(self.yf, False)
-        writer.writeFloat(self.zf, False)
+        writer.writeFloat32LE(self.xf)
+        writer.writeFloat32LE(self.yf)
+        writer.writeFloat32LE(self.zf)
 
-        writer.writeInt(self.xi, False, False)
-        writer.writeInt(self.yi, False, False)
-        writer.writeInt(self.zi, False, False)
+        writer.writeInt32LE(self.xi)
+        writer.writeInt32LE(self.yi)
+        writer.writeInt32LE(self.zi)
 
-        writer.writeByte(self.target, False)
+        writer.writeUInt8LE(self.target)
 
 def hasHitEffects(player):
     return EXTENSION_HIT_EFFECTS in player.proto_extensions

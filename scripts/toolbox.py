@@ -42,10 +42,10 @@ class StressPacket:
         self.length = randint(0, 4096) if length is None else length
 
     def write(self, writer):
-        writer.writeByte(self.id, True)
+        writer.writeUInt8LE(self.id)
 
         for i in range(self.length):
-            writer.writeByte(randbyte(), False)
+            writer.writeUInt8LE(randbyte())
 
 @command()
 @player_only

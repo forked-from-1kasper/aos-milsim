@@ -1,5 +1,5 @@
 # Copyright © 2011–2012 Mathias Kaerlev
-# Copyright © 2024 rzrn
+# Copyright © 2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,7 +43,7 @@ class WorldUpdate:
         self.incomplete = incomplete
 
     def write(self, writer):
-        writer.writeByte(self.id, True)
+        writer.writeUInt8LE(self.id)
 
         for player in self.protocol.players.values():
             x = y = z = ox = oy = oz = 0
@@ -61,13 +61,13 @@ class WorldUpdate:
             except (KeyError, TypeError, AttributeError):
                 pass
 
-            writer.writeByte(player.player_id, True)
-            writer.writeFloat(x, False)
-            writer.writeFloat(y, False)
-            writer.writeFloat(z, False)
-            writer.writeFloat(ox, False)
-            writer.writeFloat(oy, False)
-            writer.writeFloat(oz, False)
+            writer.writeUInt8LE(player.player_id)
+            writer.writeFloat32LE(x)
+            writer.writeFloat32LE(y)
+            writer.writeFloat32LE(z)
+            writer.writeFloat32LE(ox)
+            writer.writeFloat32LE(oy)
+            writer.writeFloat32LE(oz)
 
 @command()
 @player_only
@@ -88,9 +88,9 @@ class MapStart:
     def write(self, writer):
         size, crc = crc32(self.protocol.map.get_generator())
 
-        writer.writeByte(self.id, True)
-        writer.writeInt(size, True, False)
-        writer.writeInt(crc, True, False)
+        writer.writeUInt8LE(self.id)
+        writer.writeUInt32LE(size)
+        writer.writeUInt32LE(crc)
         writer.writeString(encode(self.protocol.map_info.short_name))
 
 # `HandShakeInit` is wrongly registered as client-side packet.
@@ -101,7 +101,7 @@ class MapCached(Loader):
     id = 31
 
     def read(self, reader):
-        self.cached = reader.readByte(True)
+        self.cached = reader.readUInt8LE()
 
 def apply_script(protocol, connection, config):
     class Protocol076(protocol):
