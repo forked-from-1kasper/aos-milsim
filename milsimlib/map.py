@@ -2,7 +2,7 @@
 # Copyright © 2011–2012 duckslingers
 # Copyright © 2011–2012 triplefox
 # Copyright © 2014–2018 Samuel Walladge
-# Copyright © 2024 rzrn
+# Copyright © 2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,14 +23,14 @@ from random import randint
 from zlib import crc32
 import os
 
-from twisted.logger import Logger
+from pyspades.logger import getLogger
 
 from piqueserver.map import MapNotFound
 from piqueserver.config import config
 
 from milsimlib.types import Environment
 
-log = Logger()
+log = getLogger()
 
 def seed():
     return randint(0, 2 << 30)

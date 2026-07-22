@@ -16,12 +16,12 @@
 from math import radians
 import requests
 
-from twisted.logger import Logger
+from pyspades.logger import getLogger
 
 from milsimlib.weather.webapi import WebProviderWeather
 from milsimlib.protocol import milsim_google_maps_key
 
-logger = Logger()
+log = getLogger()
 
 class GoogleWeather(WebProviderWeather):
     url = 'https://weather.googleapis.com/v1/currentConditions:lookup'
@@ -38,7 +38,7 @@ class GoogleWeather(WebProviderWeather):
 
     def apply_response(self, json):
         if err := json.get('error'):
-            logger.error('{mesg}', mesg = err['message'])
+            log.error('{mesg}', mesg = err['message'])
         else:
             wind = json['wind']
 

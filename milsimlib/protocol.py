@@ -18,9 +18,9 @@ from time import monotonic
 from random import choice
 import os
 
-from twisted.logger import Logger
-
 import asyncio
+
+from pyspades.logger import getLogger
 
 from pyspades.collision import distance_3d_vector
 import pyspades.contained as loaders
@@ -100,7 +100,7 @@ milsim_config           = config.section("milsim")
 milsim_google_maps_key  = milsim_config.option("google_maps_key", None).get()
 milsim_weather_provider = milsim_config.option("weather_provider", "openmeteo").get()
 
-log = Logger()
+log = getLogger()
 
 class MilsimProtocol(FeatureProtocol):
     suppression_rate_min   = 12.0

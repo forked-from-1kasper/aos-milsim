@@ -18,8 +18,6 @@
 
 from time import strftime, gmtime, time, monotonic
 
-from twisted.logger import Logger
-
 from piqueserver.commands import CommandError, _alias_map, command, player_only, get_player
 from piqueserver.config import config, cast_duration
 from piqueserver.player import FeatureConnection
@@ -30,6 +28,8 @@ from pyspades.player import ServerConnection, parse_command
 from pyspades.packet import register_packet_handler
 from pyspades import contained as loaders
 from pyspades.constants import *
+
+from pyspades.logger import getLogger
 
 prohibited = {
     loaders.WeaponInput.id,
@@ -44,7 +44,7 @@ bantools_section = config.section("bantools")
 bantools_maximum_timelimit = bantools_section.option("maximum_timelimit", default = "3h", cast = cast_duration).get()
 bantools_command_whitelist = bantools_section.option("command_whitelist", default = ["status", "admin", "ping", "pm"]).get()
 
-log = Logger()
+log = getLogger()
 
 @command('timelimit', 'settimelimit', admin_only = True)
 def c_timelimit(connection, duration):

@@ -21,12 +21,13 @@ from requests.exceptions import RequestException
 from requests.models import Response
 
 from twisted.internet import threads
-from twisted.logger import Logger
+
+from pyspades.logger import getLogger
 
 from milsimlib.types import StaticWeather
 from milsimlib.common import clamp
 
-logger = Logger()
+log = getLogger()
 
 class Stopwatch:
     def __init__(self, delay, pingback):
@@ -140,9 +141,9 @@ class WebProviderWeather(NoiseWeather):
         try:
             resp = self.send_payload()
         except RequestException as exc:
-            logger.error('GET {url}: {err}', url = self.url, err = str(exc))
+            log.error('GET {url}: {err}', url = self.url, err = str(exc))
         else:
-            logger.info('GET {url} ({status}) took {duration:.2f} s',
+            log.info('GET {url} ({status}) took {duration:.2f} s',
                 url      = self.url,
                 status   = resp.status_code,
                 duration = resp.elapsed.total_seconds()

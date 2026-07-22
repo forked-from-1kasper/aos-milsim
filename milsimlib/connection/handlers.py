@@ -17,17 +17,17 @@ from math import log10, copysign, isfinite
 from time import monotonic
 
 from twisted.internet import reactor
-from twisted.logger import Logger
 
 from pyspades.constants import GRENADE_TOOL, TOOL_INTERVAL
 from pyspades.collision import distance_3d_vector
+from pyspades.logger import getLogger
 
 from piqueserver.player import FeatureConnection
 
 from milsimlib.engine import toMeters
 from milsimlib.common import iempty
 
-log = Logger()
+log = getLogger()
 
 def on_killed(self, killer, kill_type, grenade):
     pass

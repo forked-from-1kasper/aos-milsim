@@ -58,10 +58,9 @@ from math import ceil
 
 from time import monotonic
 
-from twisted.logger import Logger
-
 from pyspades.constants import ERROR_BANNED, ERROR_UNDEFINED
 from pyspades.common import prettify_timespan
+from pyspades.logger import getLogger
 
 from piqueserver.commands import command, player_only, get_player, join_arguments
 from piqueserver.config import config, cast_duration
@@ -78,7 +77,7 @@ voteban_minvotes_team   = voteban_config.option('voteban_minvotes_team', 3).get(
 voteunban_percentage    = voteban_config.option('voteunban_percentage', 51).get()
 voteunban_minvotes      = voteban_config.option('voteunban_minvotes', 3).get()
 
-log = Logger()
+log = getLogger()
 
 def format_reason(ws):
     if len(ws) > 0:
