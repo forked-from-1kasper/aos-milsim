@@ -18,8 +18,9 @@ from time import monotonic
 from random import choice
 import os
 
-from twisted.internet import threads
 from twisted.logger import Logger
+
+import asyncio
 
 from pyspades.collision import distance_3d_vector
 import pyspades.contained as loaders
@@ -119,6 +120,8 @@ class MilsimProtocol(FeatureProtocol):
     def __init__(self, *w, **kw):
         self.map_dir = os.path.join(config.config_dir, 'maps')
 
+        self.map_tasks_pool = set()
+
         self.environment = None
         self.engine      = Engine(self)
         self.time        = monotonic()
@@ -138,11 +141,20 @@ class MilsimProtocol(FeatureProtocol):
         self.team_spectator.kills = 0 # bugfix
         self.available_proto_extensions.extend(milsim_extensions)
 
+    def create_map_task(self, coro):
+        task = asyncio.create_task(coro)
+        self.map_tasks_pool.add(task)
+
+        task.add_done_callback(self.map_tasks_pool.discard)
+
+        return task
+
     def set_map_rotation(self, maps):
         self.maps = check_rotation(maps, self.map_dir)
         self.map_rotator = self.map_rotator_type(self.maps)
 
     def make_map(self, rot_info):
+        from twisted.internet import threads
         return threads.deferToThread(MapInfo, rot_info, self.map_dir)
 
     def on_connect(self, peer):
@@ -245,6 +257,10 @@ class MilsimProtocol(FeatureProtocol):
         self.drop_item_entity(x, y, z)
 
     def on_map_change(self, M):
+        for task in self.map_tasks_pool:
+            task.cancel()
+        self.map_tasks_pool.clear()
+
         deleteQueueClear()
 
         for player in self.players.values():

@@ -16,7 +16,8 @@
 from math import floor, sqrt, cbrt, pi, sin, cos, exp, log, erf
 from random import choice, uniform, binomialvariate, gauss
 from dataclasses import dataclass
-from time import sleep
+
+import asyncio
 
 from pyspades.collision import distance_3d_vector
 from pyspades.constants import GRENADE_KILL
@@ -67,9 +68,9 @@ def sendGrenadePacket(protocol, player_id, position, velocity, fuse):
 
     protocol.broadcast_contained(contained)
 
-def flashbang_effect(protocol, player_id, position):
+async def flashbang_effect(protocol, player_id, position):
     for i in range(50):
-        sleep(uniform(0.05, 0.25))
+        await asyncio.sleep(uniform(0.05, 0.25))
 
         r = position.copy()
         r.x += uniform(-5.0, 5.0)

@@ -15,8 +15,6 @@
 
 from itertools import product
 
-from twisted.internet import reactor
-
 from pyspades.constants import GRENADE_DESTROY, SPADE_TOOL, BLOCK_TOOL, WEAPON_TOOL, GRENADE_TOOL
 from pyspades.collision import vector_collision
 from pyspades import contained as loaders
@@ -189,6 +187,6 @@ def flashbang_exploded(self, grenade):
     if self.name is None:
         return
 
-    reactor.callInThread(
-        flashbang_effect, self.protocol, self.player_id, grenade.position.copy()
+    self.protocol.create_map_task(
+        flashbang_effect(self.protocol, self.player_id, grenade.position.copy())
     )
