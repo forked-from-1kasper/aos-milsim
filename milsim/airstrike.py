@@ -98,7 +98,9 @@ def do_airstrike(name, radio_channel, connection):
             o = wo.orientation
             v = Vertex3(o.x, o.y, 0).normal() * BOMBER_SPEED
 
-            return asyncio.create_task(do_bombing(protocol, connection.player_id, x, y, v.x, v.y, BOMBS_COUNT))
+            return protocol.create_map_task(
+                do_bombing(protocol, connection.player_id, x, y, v.x, v.y, BOMBS_COUNT)
+            )
 
 @command(admin_only = True)
 @alive_only
@@ -159,29 +161,20 @@ class Bomber:
     def init(self, by_server = False):
         self.player_id   = None
         self.preparation = None
-        self.call        = None
         self.ready       = False
 
         if by_server:
             self.preparation = asyncio.get_running_loop().call_later(aitstrike_phase, self.start)
 
     def point(self, connection):
-        if not self.active() and self.ready:
+        if self.ready is True:
             self.player_id = connection.player_id
-            self.call = do_airstrike(self.name, self.radio_channel, connection)
+            do_airstrike(self.name, self.radio_channel, connection)
             self.restart()
-
-    def active(self):
-        return self.call is not None and not self.call.done()
 
     def stop(self, player_id = None):
         if player_id is not None and player_id != self.player_id:
             return
-
-        if self.call is not None:
-            self.call.cancel()
-
-        self.call = None
 
     def start(self):
         if self.ready: return
