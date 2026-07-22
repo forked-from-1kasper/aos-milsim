@@ -173,6 +173,8 @@ def on_spawn(self, loc):
 
     self.last_hp_update = monotonic()
 
+    self.handheld_radio_item = None
+
     self.body.reset()
 
     self.hp       = 100
