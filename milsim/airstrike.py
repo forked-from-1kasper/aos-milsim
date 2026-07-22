@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from math import floor, inf
 from time import sleep
 
-from twisted.internet import reactor
+import asyncio
 
 from pyspades.protocol import BaseProtocol
 from pyspades.constants import WEAPON_TOOL
@@ -55,7 +55,7 @@ AIRSTRIKE_CAST_DISTANCE = 300
 
 airbomb_high_explosive = HighExplosive(350.0, 10_000, 3000, 1 / 1000, 0.017, 0.50)
 
-def airbomb_explode(protocol, player_id, x, y, z):
+async def airbomb_explode(protocol, player_id, x, y, z):
     if player := protocol.take_player(player_id):
         airbomb_high_explosive.explode(protocol, Vertex3(x, y, z), hit_by = player)
 
@@ -67,19 +67,19 @@ def airbomb_explode(protocol, player_id, x, y, z):
             player.grenade_destroy(X, Y, Z)
             sendGrenadePacket(protocol, player.player_id, Vertex3(X, Y, Z), Vertex3(0, 0, 0), 0)
 
-            sleep(uniform(0.0, 0.05))
+            await asyncio.sleep(uniform(0.0, 0.05))
 
-def drop_airbomb(protocol, player_id, x, y):
+async def drop_airbomb(protocol, player_id, x, y):
     X = floor(x)
     Y = floor(y)
     Z = protocol.map.get_z(X, Y) - 2
 
-    airbomb_explode(protocol, player_id, X, Y, Z)
+    await airbomb_explode(protocol, player_id, X, Y, Z)
 
-def do_bombing(protocol, player_id, x, y, vx, vy, nbombs):
+async def do_bombing(protocol, player_id, x, y, vx, vy, nbombs):
     for k in range(nbombs):
-        sleep(BOMBING_DELAY)
-        drop_airbomb(protocol, player_id, x, y)
+        await asyncio.sleep(BOMBING_DELAY)
+        await drop_airbomb(protocol, player_id, x, y)
 
         x += vx * BOMBING_DELAY
         y += vy * BOMBING_DELAY
@@ -98,7 +98,7 @@ def do_airstrike(name, radio_channel, connection):
             o = wo.orientation
             v = Vertex3(o.x, o.y, 0).normal() * BOMBER_SPEED
 
-            reactor.callInThread(do_bombing, protocol, connection.player_id, x, y, v.x, v.y, BOMBS_COUNT)
+            return asyncio.create_task(do_bombing(protocol, connection.player_id, x, y, v.x, v.y, BOMBS_COUNT))
 
 @command(admin_only = True)
 @alive_only
@@ -163,22 +163,22 @@ class Bomber:
         self.ready       = False
 
         if by_server:
-            self.preparation = reactor.callLater(aitstrike_phase, self.start)
+            self.preparation = asyncio.get_running_loop().call_later(aitstrike_phase, self.start)
 
     def point(self, connection):
         if not self.active() and self.ready:
             self.player_id = connection.player_id
-            do_airstrike(self.name, self.radio_channel, connection)
+            self.call = do_airstrike(self.name, self.radio_channel, connection)
             self.restart()
 
     def active(self):
-        return self.call and self.call.active()
+        return self.call is not None and not self.call.done()
 
     def stop(self, player_id = None):
         if player_id is not None and player_id != self.player_id:
             return
 
-        if self.call and self.call.active():
+        if self.call is not None:
             self.call.cancel()
 
         self.call = None
@@ -192,10 +192,8 @@ class Bomber:
         self.broadcast_report("Air support is ready")
 
     def restart(self):
-        self.stop()
-
         self.ready       = False
-        self.preparation = reactor.callLater(airstrike_delay, self.start)
+        self.preparation = asyncio.get_running_loop().call_later(airstrike_delay, self.start)
 
     def broadcast_report(self, mesg):
         self.radio_channel.broadcast_chat(
@@ -204,7 +202,7 @@ class Bomber:
 
     def remaining(self):
         if self.preparation:
-            return self.preparation.getTime() - reactor.seconds()
+            return self.preparation.when() - asyncio.get_running_loop().time()
         else:
             return None
 
@@ -220,7 +218,7 @@ def apply_script(protocol, connection, config):
 
         def on_map_change(self, M):
             for bomber in self.bomber_1, self.bomber_2:
-                if bomber.preparation and bomber.preparation.active():
+                if bomber.preparation is not None:
                     bomber.preparation.cancel()
 
                 bomber.stop()
