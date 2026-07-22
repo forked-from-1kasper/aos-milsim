@@ -17,8 +17,7 @@ from math import floor, inf, isinf, isnan
 from time import monotonic
 from random import choice
 
-from twisted.internet.error import AlreadyCalled, AlreadyCancelled
-from twisted.internet import reactor
+import asyncio
 
 from pyspades.constants import CHAT_ALL
 
@@ -63,14 +62,11 @@ class ExplosiveBelt:
         if dt < kamikaze_delay:
             return "Wait {:.1f} seconds.".format(kamikaze_delay - dt)
 
-        self.defer = reactor.callLater(fuse, self.callback)
+        self.defer = asyncio.get_running_loop().call_later(fuse, self.callback)
 
     def stop(self):
         if self.defer:
-            try:
-                self.defer.cancel()
-            except (AlreadyCalled, AlreadyCancelled):
-                pass
+            self.defer.cancel()
 
             self.last  = monotonic()
             self.defer = None
