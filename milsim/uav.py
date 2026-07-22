@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from math import floor, sqrt
 from enum import Enum, auto
 
-from twisted.internet import reactor
+import asyncio
 
 from pyspades.protocol import BaseProtocol
 from pyspades.common import Vertex3
@@ -67,7 +67,7 @@ class Drone:
         self.passed    = 0
 
         if by_server:
-            self.callback = reactor.callLater(drone_phase, self.start)
+            self.callback = asyncio.get_running_loop().call_later(drone_phase, self.start)
 
     def broadcast_report(self, mesg):
         self.radio_channel.broadcast_chat(
@@ -81,7 +81,7 @@ class Drone:
         self.arrive()
 
     def stop(self):
-        if self.callback and self.callback.active():
+        if self.callback is not None:
             self.callback.cancel()
             self.callback = None
 
@@ -97,7 +97,7 @@ class Drone:
         self.passed    = 0
 
         self.broadcast_report("Received. Watching for {}".format(target.name))
-        self.callback = reactor.callLater(drone_rate, self.ping)
+        self.callback = asyncio.get_running_loop().call_later(drone_rate, self.ping)
 
     def free(self):
         self.status    = Status.awaiting
@@ -119,7 +119,7 @@ class Drone:
             return self.free()
 
         if target.dead():
-            self.callback = reactor.callLater(drone_rate, self.ping)
+            self.callback = asyncio.get_running_loop().call_later(drone_rate, self.ping)
             return
 
         x, y, z = target.world_object.position.get()
@@ -151,14 +151,14 @@ class Drone:
                     self.broadcast_report("Bombed out. Awaiting for further instructions")
                 else:
                     self.status   = Status.inflight
-                    self.callback = reactor.callLater(drone_delay, self.arrive)
+                    self.callback = asyncio.get_running_loop().call_later(drone_delay, self.arrive)
                     self.broadcast_report("Bombed out. Will be ready in {} seconds".format(drone_delay))
         else:
-            self.callback = reactor.callLater(drone_rate, self.ping)
+            self.callback = asyncio.get_running_loop().call_later(drone_rate, self.ping)
 
     def remaining(self):
         if self.callback is not None:
-            return self.callback.getTime() - reactor.seconds()
+            return self.callback.when() - asyncio.get_running_loop().time()
 
 @command('drone', 'd')
 @alive_only
