@@ -18,7 +18,6 @@
 
 from time import strftime, gmtime, time, monotonic
 
-from twisted.internet import reactor
 from twisted.logger import Logger
 
 from piqueserver.commands import CommandError, _alias_map, command, player_only, get_player
