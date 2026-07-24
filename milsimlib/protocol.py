@@ -142,7 +142,7 @@ class MilsimProtocol(FeatureProtocol):
         self.available_proto_extensions.extend(milsim_extensions)
 
     def create_map_task(self, coro):
-        task = asyncio.create_task(coro)
+        task = self.create_task(coro)
         self.map_tasks_pool.add(task)
 
         task.add_done_callback(self.map_tasks_pool.discard)
