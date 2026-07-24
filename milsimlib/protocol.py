@@ -154,8 +154,7 @@ class MilsimProtocol(FeatureProtocol):
         self.map_rotator = self.map_rotator_type(self.maps)
 
     def make_map(self, rot_info):
-        from twisted.internet import threads
-        return threads.deferToThread(MapInfo, rot_info, self.map_dir)
+        return asyncio.to_thread(MapInfo, rot_info, self.map_dir)
 
     def on_connect(self, peer):
         log.info("{address} connected", address = peer.address)

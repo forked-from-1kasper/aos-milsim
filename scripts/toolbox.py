@@ -361,10 +361,9 @@ def advancecancel(connection):
     protocol = connection.protocol
 
     if defer := protocol.advance_deferred:
-        if not defer.called:
-            defer.cancel()
-
-            protocol.broadcast_chat('Map advance cancelled.')
+        defer.cancel()
+        protocol.advance_deferred = None
+        protocol.broadcast_chat('Map advance cancelled.')
 
 @command('listroles', 'roles', 'lsr')
 def c_roles(connection, argval = None):
@@ -511,21 +510,18 @@ def apply_script(protocol, connection, config):
 
             connection.on_login(self, name)
 
-    from twisted.internet.defer import CancelledError
-
     class ToolboxProtocol(protocol):
         advance_deferred = None
 
-        def advance_errback(self, failure):
+        def advance_complete(self, task):
             self.advance_deferred = None
-            failure.trap(CancelledError)
 
         def advance_rotation(self, message = None):
             if defer := self.advance_deferred:
                 defer.cancel()
 
             defer = protocol.advance_rotation(self, message)
-            defer.addErrback(self.advance_errback)
+            defer.add_done_callback(self.advance_complete)
 
             self.advance_deferred = defer
             return defer
