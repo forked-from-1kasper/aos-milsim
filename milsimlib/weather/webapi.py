@@ -20,7 +20,7 @@ import requests
 from requests.exceptions import RequestException
 from requests.models import Response
 
-from twisted.internet import threads
+import asyncio
 
 from pyspades.logger import getLogger
 
@@ -121,10 +121,7 @@ class WebProviderWeather(NoiseWeather):
         self.latitude  = latitude
         self.longitude = longitude
 
-        try:
-            self.download()
-        except Exception as exc:
-            pass
+        self.web_task() # Because this is called from the non-main thread
 
         self.download_stopwatch = Stopwatch(900, self.download)
 
@@ -134,8 +131,15 @@ class WebProviderWeather(NoiseWeather):
     def apply_response(self, json):
         raise NotImplementedError
 
+    def web_task_exception(self, task):
+        if exc := task.exception():
+            logger.error("GET {url}: unhandled error", url = self.url, exc_info = exc)
+
     def download(self):
-        threads.deferToThread(self.web_task)
+        coro = asyncio.to_thread(self.web_task)
+        task = asyncio.create_task(coro)
+
+        task.add_done_callback(self.web_task_exception)
 
     def web_task(self):
         try:
