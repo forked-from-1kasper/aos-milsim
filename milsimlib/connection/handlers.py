@@ -16,8 +16,6 @@
 from math import log10, copysign, isfinite
 from time import monotonic
 
-from twisted.internet import reactor
-
 from pyspades.constants import GRENADE_TOOL, TOOL_INTERVAL
 from pyspades.collision import distance_3d_vector
 from pyspades.logger import getLogger
@@ -199,7 +197,7 @@ def on_disconnect(self):
     FeatureConnection.on_disconnect(self)
 
 def on_tool_rapid_hack(self, tool):
-    t1, t2 = self.last_block, reactor.seconds()
+    t1, t2 = self.last_block, monotonic()
 
     self.last_block = t2
 

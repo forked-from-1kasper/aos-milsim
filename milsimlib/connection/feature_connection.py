@@ -21,7 +21,7 @@
 from time import monotonic
 from math import isfinite
 
-from twisted.internet import reactor
+import asyncio
 
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
@@ -151,9 +151,7 @@ def reset(self):
 
     if defer := self.spawn_call:
         self.spawn_call = None
-
-        if defer.active():
-            defer.cancel()
+        defer.cancel()
 
     if wo := self.world_object:
         self.world_object = None
@@ -173,8 +171,7 @@ def reset(self):
 
 def respawn(self):
     if defer := self.spawn_call:
-        if defer.active():
-            defer.cancel()
+        defer.cancel()
 
     self.spawn_call = None
 
@@ -185,7 +182,7 @@ def respawn(self):
     elif respawn_time <= 0:
         self.spawn()
     else:
-        self.spawn_call = reactor.callLater(respawn_time, self.spawn)
+        self.spawn_call = asyncio.get_running_loop().call_later(respawn_time, self.spawn)
 
 def kill(self, by = None, kill_type = WEAPON_KILL, grenade = None):
     if self.hp is None and kill_type != TEAM_CHANGE_KILL:
