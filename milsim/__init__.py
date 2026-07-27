@@ -41,8 +41,7 @@ def change_planned_map(connection, map_name):
     if rot_info := check_map(map_name, protocol.map_dir):
         protocol.planned_map = rot_info
         protocol.broadcast_chat(
-            '{} changed next map to {}'.format(nickname, map_name),
-            irc = True
+            '{} changed next map to {}'.format(nickname, map_name)
         )
     else:
         return 'Map {} not found'.format(map_name)

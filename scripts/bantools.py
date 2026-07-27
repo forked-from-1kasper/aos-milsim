@@ -61,8 +61,7 @@ def c_timelimit(connection, duration):
     protocol.broadcast_chat(
         "Time limit set to {} by {}".format(
             prettify_timespan(timelimit), connection.name
-        ),
-        irc = True
+        )
     )
 
 @command()
@@ -305,9 +304,7 @@ def apply_script(protocol, connection, config):
 
                 player.banned = pres
 
-        def broadcast_chat(self, value, global_message = True, sender = None, team = None, irc = False):
-            if irc: self.irc_say("* {}".format(value))
-
+        def broadcast_chat(self, value, global_message = True, sender = None, team = None):
             for player in self.connections.values():
                 if player is sender:
                     continue
@@ -378,7 +375,7 @@ def apply_script(protocol, connection, config):
                 message = "{} was kicked: {}".format(self.name, reason) if reason is not None else \
                           "{} was kicked".format(self.name)
 
-                self.protocol.broadcast_chat(message, irc = True)
+                self.protocol.broadcast_chat(message)
 
                 if EXTENSION_KICKREASON in self.proto_extensions and reason is not None:
                     contained           = loaders.ChatMessage()
