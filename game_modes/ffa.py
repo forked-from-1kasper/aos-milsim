@@ -19,7 +19,7 @@ from itertools import islice
 from random import randint
 from math import inf
 
-from twisted.internet import reactor
+import asyncio
 
 from pyspades.constants import CTF_MODE, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL
 from piqueserver.commands import command
@@ -70,10 +70,13 @@ def apply_script(protocol, connection, config):
         free_for_all = True
         hide_coord   = (inf, inf, 128)
 
-        def __init__(self, *arg, **kw):
+        def __init__(self, *w, **kw):
             self.scores = {}
-            self.send_top(True)
-            return protocol.__init__(self, *arg, **kw)
+            protocol.__init__(self, *w, **kw)
+
+        async def on_event_loop_start(self):
+            await protocol.on_event_loop_start(self)
+            self.create_task(self.send_top_loop())
 
         def on_map_change(self, map):
             self.scores = {}
@@ -93,12 +96,12 @@ def apply_script(protocol, connection, config):
         def on_flag_spawn(self, x, y, z, flag, entity_id):
             return self.hide_coord
 
-        def send_top(self, init = False):
-            if init is False:
+        async def send_top_loop(self):
+            while True:
+                await asyncio.sleep(ffa_top_frequency)
+
                 for line in reversed(game_top(self).split('\n')):
                     self.broadcast_chat(line)
-
-            reactor.callLater(ffa_top_frequency, self.send_top)
 
     class FreeForAllConnection(connection):
         score_hack = False
