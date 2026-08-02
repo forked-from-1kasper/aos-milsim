@@ -20,7 +20,7 @@ from pyspades.constants import GRENADE_TOOL, TOOL_INTERVAL
 from pyspades.collision import distance_3d_vector
 from pyspades.logger import getLogger
 
-from piqueserver.player import FeatureConnection
+from horseradish.player import FeatureConnection
 
 from milsimlib.engine import toMeters
 from milsimlib.common import iempty

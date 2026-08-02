@@ -16,7 +16,7 @@
 from pyspades import contained as loaders
 from pyspades.world import Character
 
-from piqueserver.player import FeatureConnection
+from horseradish.player import FeatureConnection
 
 from milsimlib.types import Inventory, Body
 from milsimlib.engine import WorldObject

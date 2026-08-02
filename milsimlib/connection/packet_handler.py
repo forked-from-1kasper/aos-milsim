@@ -34,7 +34,7 @@ from pyspades.constants import (
     BUILD_BLOCK, DESTROY_BLOCK, MAX_BLOCK_DISTANCE
 )
 
-from piqueserver.player import FeatureConnection
+from horseradish.player import FeatureConnection
 
 from milsimlib.common import ilen, clamp
 

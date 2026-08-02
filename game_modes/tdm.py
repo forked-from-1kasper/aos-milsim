@@ -17,8 +17,8 @@
 
 from pyspades.constants import CTF_MODE
 
-from piqueserver.commands import command
-from piqueserver.config import config
+from horseradish.commands import command
+from horseradish.config import config
 
 tdm_section    = config.section("tdm")
 tdm_kill_limit = tdm_section.option("kill_limit", 500).get()

@@ -23,8 +23,8 @@ from pyspades.protocol import BaseProtocol
 from pyspades.common import Vertex3
 from pyspades.world import Grenade
 
-from piqueserver.commands import command, get_player, CommandError
-from piqueserver.config import config
+from horseradish.commands import command, get_player, CommandError
+from horseradish.config import config
 
 from milsimlib.items import RadioChannel, military_radio_channel_1, military_radio_channel_2
 from milsimlib.blast import HighExplosive, HEGrenadeObject, sendGrenadePacket

@@ -1,4 +1,4 @@
-# Copyright © 2024–2025 rzrn
+# Copyright © 2024–2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -15,7 +15,7 @@
 
 from itertools import product
 
-from piqueserver.commands import command, player_only
+from horseradish.commands import command, player_only
 
 from pyspades.constants import BUILD_BLOCK, DESTROY_BLOCK
 from pyspades.common import get_color, make_color

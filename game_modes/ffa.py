@@ -22,8 +22,8 @@ from math import inf
 import asyncio
 
 from pyspades.constants import CTF_MODE, TEAM_CHANGE_KILL, CLASS_CHANGE_KILL
-from piqueserver.commands import command
-from piqueserver.config import config
+from horseradish.commands import command
+from horseradish.config import config
 
 ffa_section       = config.section("ffa")
 ffa_top_size      = ffa_section.option("top_size", 3).get()

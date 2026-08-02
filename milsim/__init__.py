@@ -1,7 +1,7 @@
 # Copyright © 2012 triplefox
 # Copyright © 2017 Samuel Walladge
 # Copyright © 2021 Jipok
-# Copyright © 2024 rzrn
+# Copyright © 2024, 2026 rzrn
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from piqueserver.commands import command
+from horseradish.commands import command
 
 from milsimlib import MilsimProtocol, MilsimConnection
 from milsimlib.map import check_map

@@ -20,7 +20,7 @@ import functools
 
 from pyspades.common import Vertex3
 
-from piqueserver.commands import CommandError
+from horseradish.commands import CommandError
 
 from milsimlib.constants import Pound, Yard, Inch
 from milsimlib.engine import toMeters

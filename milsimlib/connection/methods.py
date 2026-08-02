@@ -155,13 +155,13 @@ def item_shown(self, t):
 
     return P and Q and R
 
-import piqueserver.commands
+import horseradish.commands
 
 def get_player(self, nickname):
     if nickname is None:
         return self
     else:
-        return piqueserver.commands.get_player(
+        return horseradish.commands.get_player(
             self.protocol, nickname
         )
 

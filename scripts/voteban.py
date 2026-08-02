@@ -62,9 +62,9 @@ from pyspades.constants import ERROR_BANNED, ERROR_UNDEFINED
 from pyspades.common import prettify_timespan
 from pyspades.logger import getLogger
 
-from piqueserver.commands import command, player_only, get_player, join_arguments
-from piqueserver.config import config, cast_duration
-from piqueserver.utils import timeparse
+from horseradish.commands import command, player_only, get_player, join_arguments
+from horseradish.config import config, cast_duration
+from horseradish.utils import timeparse
 
 voteban_config = config.section('voteban')
 

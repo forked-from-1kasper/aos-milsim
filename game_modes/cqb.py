@@ -18,8 +18,8 @@ from math import inf
 from pyspades.contained import IntelCapture
 from pyspades.constants import CTF_MODE
 
-from piqueserver.commands import command, player_only
-from piqueserver.config import config
+from horseradish.commands import command, player_only
+from horseradish.config import config
 
 from milsimlib.grammar import RegularNoun, CompoundNoun, Verb3, Cardinal, VerbNTR, np_vp_past
 from milsimlib.connection import MilsimConnection

@@ -20,8 +20,8 @@ import random
 
 from pyspades.common import prettify_timespan
 
-from piqueserver.config import config, cast_duration
-from piqueserver.commands import command
+from horseradish.config import config, cast_duration
+from horseradish.commands import command
 
 votemap_config = config.section('votemap')
 votemap_ratio = votemap_config.option('percentage', 60).get() / 100.0

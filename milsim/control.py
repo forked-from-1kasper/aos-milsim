@@ -18,7 +18,7 @@ from itertools import product, islice
 
 import inspect
 
-from piqueserver.commands import command, get_player, player_only
+from horseradish.commands import command, get_player, player_only
 from pyspades.constants import MELEE_KILL
 from pyspades.common import Vertex3
 

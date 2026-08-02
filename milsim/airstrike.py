@@ -24,8 +24,8 @@ from pyspades.protocol import BaseProtocol
 from pyspades.constants import WEAPON_TOOL
 from pyspades.common import Vertex3
 
-from piqueserver.commands import command
-from piqueserver.config import config
+from horseradish.commands import command
+from horseradish.config import config
 
 from milsimlib.items import (
     RadioChannel, civil_radio_channel,

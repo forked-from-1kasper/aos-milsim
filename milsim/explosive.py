@@ -17,7 +17,7 @@ from collections import deque
 
 from pyspades.common import Vertex3
 
-from piqueserver.commands import command, player_only
+from horseradish.commands import command, player_only
 
 from milsimlib.common import (
     alive_only, apply_item, has_item,

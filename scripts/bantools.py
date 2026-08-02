@@ -18,10 +18,10 @@
 
 from time import strftime, gmtime, time, monotonic
 
-from piqueserver.commands import CommandError, _alias_map, command, player_only, get_player
-from piqueserver.config import config, cast_duration
-from piqueserver.player import FeatureConnection
-from piqueserver.server import FeatureProtocol
+from horseradish.commands import CommandError, _alias_map, command, player_only, get_player
+from horseradish.config import config, cast_duration
+from horseradish.player import FeatureConnection
+from horseradish.server import FeatureProtocol
 
 from pyspades.common import prettify_timespan, escape_control_codes
 from pyspades.player import ServerConnection, parse_command

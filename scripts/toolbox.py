@@ -18,8 +18,8 @@ from random import randint
 from time import time
 from math import inf
 
-from piqueserver.commands import command, player_only, handle_command, get_player
-from piqueserver.config import config
+from horseradish.commands import command, player_only, handle_command, get_player
+from horseradish.config import config
 
 from pyspades.enet import PEER_PACKET_LOSS_SCALE
 
@@ -241,7 +241,7 @@ def gc(connection):
 
     return str(collect())
 
-from piqueserver.commands import _alias_map, _commands
+from horseradish.commands import _alias_map, _commands
 
 @command('listalias', 'alias', 'lsal')
 def c_alias(connection, argval):
@@ -258,7 +258,7 @@ def c_alias(connection, argval):
     else:
         return "Unknown command: {}".format(argval)
 
-from piqueserver.commands import get_command_help
+from horseradish.commands import get_command_help
 
 @command('help', 'info')
 def c_help(connection, argval = None):

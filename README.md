@@ -2,7 +2,7 @@
 
 # Installation
 
-1. Install [rzrn/piqueserver2](https://github.com/rzrn/piqueserver2), **not** [piqueserver/piqueserver](https://github.com/piqueserver/piqueserver). This fork contains some important modifications, thus, do not expect scripts to work well without them.
+1. Install [rzrn/horseradish](https://github.com/rzrn/horseradish). [piqueserver/piqueserver](https://github.com/piqueserver/piqueserver) is **not** supported anymore. This fork contains some important modifications, thus, do not expect scripts to work well without them.
 2. Build C++ libraries with `make release`. You need GNU Make and a C++23‐conforming compiler for this (GCC 11+ or clang 13+). You may need to specifiy a path to `python3-config` binary and/or `pyspades` library manually with `make PYTHONCONFIG=/.../python3-config LIBPYSPADES=/.../pyspades/ release`.
 3. Add `milsim` script as the first script to your `config.toml` (it is expected to be placed to the root of this repository). You may find additional scripts in directories `milsim/` and `scripts/`. To add a file `milsim/XXX.py` write `"milsim.XXX"` to your `config.toml` and to add `scripts/YYY.py` write simply `"YYY"` to it. Most likely you need to add at least `milsim.control`.
 

@@ -32,8 +32,8 @@ from pyspades.constants import (
     BUILD_BLOCK, DESTROY_BLOCK, SPADE_DESTROY, GRENADE_DESTROY
 )
 
-from piqueserver.server import FeatureProtocol
-from piqueserver.config import config
+from horseradish.server import FeatureProtocol
+from horseradish.config import config
 
 from milsimlib.packets import (
     TracerPacket, HitEffectPacket,

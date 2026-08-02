@@ -17,7 +17,7 @@
 import zlib
 import enet
 
-from piqueserver.commands import command, player_only
+from horseradish.commands import command, player_only
 
 from pyspades.packet import register_packet, register_packet_handler, _client_loaders
 from pyspades import contained as loaders

@@ -25,8 +25,8 @@ import os
 
 from pyspades.logger import getLogger
 
-from piqueserver.map import MapNotFound
-from piqueserver.config import config
+from horseradish.map import MapNotFound
+from horseradish.config import config
 
 from milsimlib.types import Environment
 

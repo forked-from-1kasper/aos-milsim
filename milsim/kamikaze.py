@@ -24,8 +24,8 @@ from pyspades.constants import CHAT_ALL
 from pyspades import contained as loaders
 from pyspades.common import Vertex3
 
-from piqueserver.commands import command, player_only
-from piqueserver.config import config
+from horseradish.commands import command, player_only
+from horseradish.config import config
 
 from milsimlib.blast import HighExplosive, sendGrenadePacket
 from milsimlib import ismilsim
