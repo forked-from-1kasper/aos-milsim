@@ -63,11 +63,6 @@ class MapInfo:
     def __init__(self, rot_info, dirname):
         filepath = rot_info.get_filepath(dirname)
 
-        try:
-            fin = open(filepath, 'r')
-        except OSError:
-            raise MapNotFound(filepath)
-
         self.__dict__.update(
             __file__            = filepath,
             __name__            = "__main__",
@@ -97,12 +92,12 @@ class MapInfo:
         log.info("Loading map “{map_name}”...", map_name = self.name)
 
         try:
-            exec(
-                compile(fin.read(), filepath, 'exec'),
-                self.__dict__
-            )
-        finally:
-            fin.close()
+            with open(filepath, 'r') as fin:
+                source = fin.read()
+        except OSError:
+            raise MapNotFound(filepath)
+
+        exec(compile(source, filepath, 'exec'), self.__dict__)
 
         t1 = monotonic()
 
