@@ -170,27 +170,6 @@ def mail(connection, *w):
 
         return "Message sent"
 
-def c_getattr(o, k, v):
-    retval = getattr(o, k, v)
-    setattr(o, k, retval)
-    return retval
-
-def c_globals(connection):
-    ds = c_getattr(connection, 'globals', dict())
-
-    protocol = connection.protocol
-
-    ds.update(
-        connection = connection,
-        protocol   = protocol,
-        idx        = protocol.players.get,
-    )
-
-    return ds
-
-def format_exception(exc):
-    return "{}: {}".format(type(exc).__name__, exc)
-
 @command('eval', admin_only = True)
 def c_eval(connection, *w):
     """
@@ -198,15 +177,17 @@ def c_eval(connection, *w):
     /eval <code>
     """
 
+    protocol = connection.protocol
+
     expr = ' '.join(w)
 
     try:
-        ds = c_globals(connection)
+        ds = protocol.get_global_namespace(connection)
 
         retval = ds['_'] = eval(expr, ds)
         return str(retval)
     except Exception as exc:
-        return format_exception(exc)
+        return protocol.format_exception(exc)
 
 @command('exec', admin_only = True)
 def c_exec(connection, *w):
@@ -215,12 +196,14 @@ def c_exec(connection, *w):
     /exec <code>
     """
 
+    protocol = connection.protocol
+
     stmt = ' '.join(w)
 
     try:
-        exec(stmt, c_globals(connection))
+        exec(stmt, protocol.get_global_namespace(connection))
     except Exception as exc:
-        return format_exception(exc)
+        return protocol.format_exception(exc)
 
 @command('delenv', admin_only = True)
 def c_delenv(connection):
@@ -229,7 +212,8 @@ def c_delenv(connection):
     /delenv
     """
 
-    c_globals(connection).clear()
+    protocol = connection.protocol
+    protocol.get_global_namespace(connection).clear()
 
 from gc import collect
 @command(admin_only = True)
@@ -495,6 +479,11 @@ def c_whatsnext(connection):
 
     return "The next map is {}".format(protocol.planned_map.name)
 
+def setdefaultattr(o, k, v):
+    retval = getattr(o, k, v)
+    setattr(o, k, retval)
+    return retval
+
 def apply_script(protocol, connection, config):
     class ToolboxConnection(connection):
         def on_connect(self):
@@ -528,5 +517,21 @@ def apply_script(protocol, connection, config):
 
         def get_player_count(self):
             return sum(connection.existing_player_sent() for connection in self.connections.values())
+
+        def get_global_namespace(self, connection):
+            # We do this instead of `self._globals = dict()` in `ToolboxConnection.__init__`
+            # to make sure that `ConsoleInput` also has this attribute.
+            ds = setdefaultattr(connection, '_globals', dict())
+
+            ds.update(
+                connection = connection,
+                protocol   = self,
+                idx        = self.players.get,
+            )
+
+            return ds
+
+        def format_exception(self, exc):
+            return "{}: {}".format(type(exc).__name__, exc)
 
     return ToolboxProtocol, ToolboxConnection

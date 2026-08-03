@@ -505,8 +505,6 @@ def c_handover(player, nickname, ID):
     else:
         return "There's no [{}] in your backpack".format(ID.upper())
 
-from scripts.toolbox import c_globals, format_exception
-
 @command(admin_only = True)
 def give(connection, nickname, *w):
     """
@@ -517,11 +515,16 @@ def give(connection, nickname, *w):
     protocol = connection.protocol
     player = get_player(protocol, nickname)
 
+    if method := getattr(protocol, 'get_global_namespace', None):
+        ds = method(connection)
+    else:
+        return "The `toolbox` script is not loaded"
+
     if player.alive():
         try:
-            o = eval(' '.join(w), c_globals(connection))
+            o = eval(' '.join(w), ds)
         except Exception as exc:
-            return format_exception(exc)
+            return protocol.format_exception(exc)
 
         if isinstance(o, Item):
             player.inventory.push(o)
