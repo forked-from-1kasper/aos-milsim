@@ -65,7 +65,7 @@ class MapInfo:
 
         self.__dict__.update(
             __file__            = filepath,
-            __name__            = "__main__",
+            __name__            = rot_info.get_filename(dirname),
             name                = rot_info.name,
             short_name          = rot_info.name,
             author              = "(unknown)",
