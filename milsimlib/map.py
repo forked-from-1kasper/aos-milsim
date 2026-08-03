@@ -98,7 +98,7 @@ class MapInfo:
 
         try:
             exec(
-                compile(fin.read(), rot_info.get_filename(dirname), 'exec'),
+                compile(fin.read(), filepath, 'exec'),
                 self.__dict__
             )
         finally:
