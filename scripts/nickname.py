@@ -14,12 +14,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from itertools import count, filterfalse
+import os
+
+from horseradish.config import config
 
 TSV = lambda it: map(lambda x: tuple(x.rstrip("\n").split('\t')), it)
 ordinal = lambda k, v: (ord(k), v)
 
 # https://github.com/anyascii/anyascii
-with open("extra/anyascii/anyascii.tsv", "r") as fin:
+with open(os.path.join(config.config_dir, "extra/anyascii/anyascii.tsv"), "r") as fin:
     anyascii = dict(map(lambda w: ordinal(*w), TSV(fin)))
 
 deuce = lambda x: "Deuce" if len(x) <= 0 else x
