@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import zlib
-import enet
+import pyspades.enet as enet
 
 from horseradish.commands import command, player_only
 
@@ -111,7 +111,7 @@ def apply_script(protocol, connection, config):
             self.world_update = WorldUpdate(self, True)
             return protocol.__init__(self, *w, **kw)
 
-        def update_network(self):
+        def broadcast_world_update(self):
             if len(self.players) <= 0:
                 return
 
