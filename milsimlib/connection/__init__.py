@@ -108,7 +108,6 @@ class MilsimConnection(FeatureConnection):
         on_block_stepped,
         on_chat,
         on_chat_delivered,
-        on_client_info,
         on_disconnect,
         on_flag_capture,
         on_flag_taken,

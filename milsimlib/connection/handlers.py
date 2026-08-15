@@ -145,14 +145,6 @@ def on_flag_capture(self):
 
     FeatureConnection.on_flag_capture(self)
 
-def on_client_info(self):
-    log.info("{address} connected with {client}",
-        address  = self.address[0],
-        client   = self.client_string
-    )
-
-    FeatureConnection.on_client_info(self)
-
 def on_spawn(self, loc):
     FeatureConnection.on_spawn(self, loc)
 
