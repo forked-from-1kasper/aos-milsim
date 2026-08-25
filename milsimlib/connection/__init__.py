@@ -99,6 +99,7 @@ class MilsimConnection(FeatureConnection):
         handgrenades, sync, alive, dead, moving, height, eye, floor, drop, drop_inventory,
         get_drop_inventory, get_available_inventory, get_available_items, get_spread_modifier,
         gear_mass, item_shown, get_player, grenade_destroy, grenade_exploded, flashbang_exploded,
+        get_tool_object,
     )
 
     # (3) All `on_XXX_YYY` handlers, including the custom ones

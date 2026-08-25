@@ -66,30 +66,22 @@ limb_fracture_np = {
 }
 
 def set_tool(self, tool, sender = None):
-    self.tool             = tool
-    self.last_tool_update = monotonic()
+    if tool_object := self.get_tool_object(tool):
+        self.tool             = tool
+        self.last_tool_update = monotonic()
 
-    if tool == SPADE_TOOL:
-        tool_object = self.spade_object
-    if tool == BLOCK_TOOL:
-        tool_object = self.block_object
-    if tool == WEAPON_TOOL:
-        tool_object = self.weapon_object
-    if tool == GRENADE_TOOL:
-        tool_object = self.grenade_object
+        self.tool_object.on_tool_unequipped(tool_object)
+        tool_object.on_tool_equipped(tool_object)
 
-    self.tool_object.on_tool_unequipped(tool_object)
-    tool_object.on_tool_equipped(tool_object)
+        self.tool_object = tool_object
 
-    self.tool_object = tool_object
+        self.world_object.set_weapon(tool == WEAPON_TOOL)
+        self.on_tool_changed(tool)
 
-    self.world_object.set_weapon(tool == WEAPON_TOOL)
-    self.on_tool_changed(tool)
-
-    if self.filter_visibility_data or self.filter_animation_data:
-        return
-
-    self.protocol.broadcast_contained(self.newSetTool(), sender = sender, save = True)
+        if self.filter_visibility_data or self.filter_animation_data:
+            pass
+        else:
+            self.protocol.broadcast_contained(self.newSetTool(), sender = sender, save = True)
 
 def set_weapon(self, weapon, local = False, no_kill = False):
     if weapon_class := self.protocol.get_weapon(weapon):

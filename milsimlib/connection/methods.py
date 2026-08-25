@@ -190,3 +190,16 @@ def flashbang_exploded(self, grenade):
     self.protocol.create_map_task(
         flashbang_effect(self.protocol, self.player_id, grenade.position.copy())
     )
+
+def get_tool_object(self, tool):
+    if tool == SPADE_TOOL:
+        return self.spade_object
+
+    if tool == BLOCK_TOOL:
+        return self.block_object
+
+    if tool == WEAPON_TOOL:
+        return self.weapon_object
+
+    if tool == GRENADE_TOOL:
+        return self.grenade_object

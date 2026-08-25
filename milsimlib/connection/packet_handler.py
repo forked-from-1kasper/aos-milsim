@@ -119,9 +119,9 @@ def on_new_player_recieved(self, contained):
 
     if self.name is None:
         FeatureConnection.on_new_player_recieved(self, contained)
-    else:
+    elif team := self.protocol.teams.get(contained.team):
         self.set_weapon(contained.weapon, local = True)
-        self.set_team(self.protocol.teams[contained.team])
+        self.set_team(team)
 
 @register_packet_handler(loaders.ChangeTeam)
 def on_team_change_recieved(self, contained):
