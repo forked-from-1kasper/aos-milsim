@@ -160,7 +160,7 @@ class MilsimProtocol(FeatureProtocol):
         log.info("{address} connected", address = peer.address)
         FeatureProtocol.on_connect(self, peer)
 
-    def get_weapon(self, weapon):
+    def get_weapon_class(self, weapon):
         if weapon == RIFLE_WEAPON:
             return self.rifle
 

@@ -84,7 +84,7 @@ def set_tool(self, tool, sender = None):
             self.protocol.broadcast_contained(self.newSetTool(), sender = sender, save = True)
 
 def set_weapon(self, weapon, local = False, no_kill = False):
-    if weapon_class := self.protocol.get_weapon(weapon):
+    if weapon_class := self.protocol.get_weapon_class(weapon):
         self.weapon        = weapon
         self.weapon_object = weapon_class(self)
 
