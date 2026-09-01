@@ -1,11 +1,12 @@
 PYTHON       = python3
 PYTHONCONFIG = python3-config
+PYMODCMD     = 'from importlib.util import find_spec; print(find_spec("pyspades").origin)'
+LIBPYSPADES  = $(shell dirname `$(PYTHON) -c $(PYMODCMD)`)
 CXX          = c++
 CYTHON       = cython
 CXXFLAGS     = -pthread -fPIC -std=c++23 -Wno-mathematical-notation-identifier-extension -Ibuild/ -Iinclude/ -I$(LIBPYSPADES) $(shell $(PYTHONCONFIG) --includes)
 LDFLAGS      = -pthread -shared
-PYMODCMD     = 'from importlib.util import find_spec; print(find_spec("pyspades").origin)'
-LIBPYSPADES  = $(shell dirname `$(PYTHON) -c $(PYMODCMD)`)
+CYTHONFLAGS  = -I$(shell dirname $(LIBPYSPADES)) --cplus -3
 
 debug: CXXFLAGS += -g
 debug: all
@@ -25,7 +26,7 @@ clean:
 	rm -f build/*.o build/*.h build/*.cxx milsimlib/*.so
 
 build/%.cxx: source/%.pyx
-	$(CYTHON) --cplus -3 $< -o $@
+	$(CYTHON) $(CYTHONFLAGS) $< -o $@
 
 build/%.o: build/%.cxx
 	$(CXX) -c $(CXXFLAGS) $< -o $@
