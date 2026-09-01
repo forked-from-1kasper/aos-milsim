@@ -62,7 +62,7 @@ template<typename Real> inline Real igamma(const Real y) {
 
     // The standard bistection method goes here.
 
-    while (x2 - x1 > epsilon<Real>) {
+    for (size_t k = 0; k < 10'000 && x2 - x1 > epsilon<Real>; k++) {
         Real x = std::midpoint(x1, x2);
 
         if (lgamma(x) > logy)
@@ -104,7 +104,7 @@ template<typename Real> inline Real idigamma(const Real y) {
     Real x1 = 1.0 / log1p(exp(-y));
     Real x2 = exp(y) + 0.5;
 
-    while (x2 - x1 > epsilon<Real>) {
+    for (size_t k = 0; k < 10'000 && x2 - x1 > epsilon<Real>; k++) {
         Real x = std::midpoint(x1, x2);
 
         if (digamma(x) > y)
@@ -157,7 +157,7 @@ template<typename Real> inline auto shapeScaleWeibull(const Real p, const Real x
 
     Real ik1 = 0.0, ik2 = ikmax;
 
-    while (ik2 - ik1 > epsilon<Real>) {
+    for (size_t k = 0; k < 10'000 && ik2 - ik1 > epsilon<Real>; k++) {
         Real ik = std::midpoint(ik1, ik2);
 
         if (weibullGustFactor(log1mp, ik) > gf)
