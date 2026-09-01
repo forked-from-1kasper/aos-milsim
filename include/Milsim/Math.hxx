@@ -92,7 +92,7 @@ template<typename Real> inline Real digamma(Real x) /* x > 0.0 */ {
     constexpr Real x₀ = 6.0; // Threshold value for which the series above is accurate enough
 
     Real y = 0.0; while (x < x₀) { y -= 1.0 / x; x += 1.0; }
-    y += log<Real>(x) - 0.5 / x; DigammaLaurent::eval(x * x, y);
+    y += log(x) - 0.5 / x; DigammaLaurent::eval(x * x, y);
 
     return y;
 }
