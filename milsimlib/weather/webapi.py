@@ -13,8 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from math import log, isfinite, sqrt, pi
 from random import weibullvariate
-from math import log, isfinite
 import requests
 
 from requests.exceptions import RequestException
@@ -24,6 +24,7 @@ import asyncio
 
 from pyspades.logger import getLogger
 
+from milsimlib.engine import shapeScaleWeibull
 from milsimlib.types import StaticWeather
 from milsimlib.common import clamp
 
@@ -95,22 +96,12 @@ class NoiseWeather(StaticWeather):
         self.φ = clamp(0, 1, self.φ)
         self.c = clamp(0, 1, self.c)
 
-        # Estimate Weibull distribution parameters from two quantiles (https://www.johndcook.com/quantiles_parameters.pdf).
-        # For this distribution mean value is Γ(1 + 1/k)(ln2)^(−1/k) times larger than mode.
-        # It’s ≈1.4 for k = 1 and approaches 1 as k → +∞, so we take something between.
-        p1, x1 = 0.50, self.wind_speed / 1.2
-        p2, x2 = 0.99, self.wind_gusts
+        self.k, self.λ = shapeScaleWeibull(0.99, self.wind_gusts, self.wind_speed)
 
-        ε1, ε2 = -log(1 - p1), -log(1 - p2)
-
-        if x1 < 1e-3:
-            self.k = 0 # almost no wind
-        elif x2 < 1e-3:
-            self.k = 0 # almost no gusts
-        else:
-            self.k = log(ε2 / ε1) / log(x2 / x1)
-
-        self.λ = x1 / (ε1 ** (1 / self.k))
+        if not isfinite(self.k) or not isfinite(self.λ):
+            # Unable to fit the Weibull distribution, use the simple Rayleigh as a fallback instead.
+            # [*] https://en.wikipedia.org/wiki/Rayleigh_distribution
+            self.k, self.λ = 2.0, self.wind_speed * sqrt(2 / pi)
 
         self.apply_noise()
 

@@ -46,7 +46,7 @@ build/engine.h: build/engine.o
 
 build/packets.o:
 build/vxl.o: include/VXL.hxx
-build/engine.o: include/Milsim/PyEngine.hxx
+build/engine.o: include/Milsim/Math.hxx include/Milsim/PyEngine.hxx
 build/Engine.o: include/Milsim/Engine.hxx
 build/PyEngine.o: include/Milsim/Engine.hxx include/Milsim/PyEngine.hxx
 build/VXL.o: include/VXL.hxx
@@ -57,6 +57,7 @@ milsimlib/engine.so: build/PyEngine.o build/Engine.o
 include/Milsim/AABB.hxx: include/Milsim/Vector.hxx
 include/Milsim/Engine.hxx: build/engine.h include/Python.hxx include/Milsim/Vector.hxx include/Milsim/AABB.hxx include/Milsim/Fundamentals.hxx
 include/Milsim/Fundamentals.hxx: include/Milsim/Vector.hxx include/Milsim/AABB.hxx
+include/Milsim/Math.hxx:
 include/Milsim/PyEngine.hxx: include/Milsim/Fundamentals.hxx include/Python.hxx
 include/Milsim/Vector.hxx:
 

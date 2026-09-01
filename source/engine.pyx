@@ -15,6 +15,7 @@
 
 from cpython.ref cimport PyTypeObject
 from libcpp cimport bool as bool_t
+from libcpp.pair cimport pair
 from libc.math cimport floor
 
 from pyspades.common cimport Vector, Vertex3
@@ -51,6 +52,18 @@ cdef public class Material[object Material, type MaterialType]:
     def __init__(self, **kw):
         for k, v in kw.items():
             setattr(self, k, v)
+
+def digamma(y):
+    return c_digamma[double](y)
+
+def idigamma(y):
+    return c_idigamma[double](y)
+
+def igamma(y):
+    return c_igamma[double](y)
+
+def shapeScaleWeibull(p, x0, μ):
+    return c_shapeScaleWeibull[double](p, x0, μ)
 
 cdef public MapData * mapDataRef(object o):
     assert isinstance(o, VXLData)
@@ -115,6 +128,12 @@ cdef extern from "Milsim/PyEngine.hxx":
 
     void PyEngineReady()
     PyTypeObject PyEngineType
+
+cdef extern from "Milsim/Math.hxx":
+    cdef Real c_digamma "digamma"[Real](Real)
+    cdef Real c_idigamma "idigamma"[Real](const Real)
+    cdef Real c_igamma "igamma"[Real](const Real)
+    cdef pair[Real, Real] c_shapeScaleWeibull "shapeScaleWeibull"[Real](const Real p, const Real x, const Real μ)
 
 stefanBoltzmann     = c_stefanBoltzmann
 molarMassDryAir     = c_molarMassDryAir
