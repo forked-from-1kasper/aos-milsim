@@ -129,7 +129,7 @@ cdef extern from "Milsim/PyEngine.hxx":
     void PyEngineReady()
     PyTypeObject PyEngineType
 
-cdef extern from "Milsim/Math.hxx":
+cdef extern from "Math.hxx":
     cdef Real c_digamma "digamma"[Real](Real)
     cdef Real c_idigamma "idigamma"[Real](const Real)
     cdef Real c_igamma "igamma"[Real](const Real)
