@@ -156,10 +156,6 @@ class MilsimProtocol(FeatureProtocol):
     def make_map(self, rot_info):
         return asyncio.to_thread(MapInfo, rot_info, self.map_dir)
 
-    def on_connect(self, peer):
-        log.info("{address} connected", address = peer.address)
-        FeatureProtocol.on_connect(self, peer)
-
     def get_weapon_class(self, weapon):
         if weapon == RIFLE_WEAPON:
             return self.rifle
